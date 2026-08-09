@@ -26,7 +26,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const tenantId = session.tenant_id;
       const employeeId = session.reference_id;
 
@@ -70,7 +70,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const slips = await db.select().from(salarySlips)
         .where(and(eq(salarySlips.tenantId, session.tenant_id), eq(salarySlips.employeeId, session.reference_id)))
         .orderBy(desc(salarySlips.createdAt));
@@ -82,7 +82,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string(), id: z.number() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const slip = await db.query.salarySlips.findFirst({ where: eq(salarySlips.id, input.id) });
       const period = slip ? await db.query.payrollPeriods.findFirst({ where: eq(payrollPeriods.id, slip.payrollPeriodId) }) : null;
       const employee = await db.query.employees.findFirst({ where: eq(employees.id, slip?.employeeId) });
@@ -93,7 +93,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string(), status: z.string().optional() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const conditions = [eq(leaveRequests.tenantId, session.tenant_id), eq(leaveRequests.employeeId, session.reference_id)];
       if (input.status) conditions.push(eq(leaveRequests.status, input.status as any));
       const requests = await db.select().from(leaveRequests).where(and(...conditions)).orderBy(desc(leaveRequests.createdAt));
@@ -105,7 +105,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string(), leaveTypeId: z.number(), startDate: z.string(), endDate: z.string(), days: z.number(), reason: z.string().optional() }))
     .mutation(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const [{ id }] = await db.insert(leaveRequests).values({
         tenantId: session.tenant_id,
         employeeId: session.reference_id,
@@ -123,7 +123,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string(), id: z.number() }))
     .mutation(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       await db.update(leaveRequests).set({ status: "cancelled" })
         .where(and(eq(leaveRequests.id, input.id), eq(leaveRequests.employeeId, session.reference_id)));
       return { success: true };
@@ -133,7 +133,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string(), limit: z.number().default(30) }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       return db.select().from(attendance)
         .where(and(eq(attendance.tenantId, session.tenant_id), eq(attendance.employeeId, session.reference_id)))
         .orderBy(desc(attendance.date)).limit(input.limit);
@@ -143,7 +143,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string(), month: z.number().optional(), year: z.number().optional() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const now = new Date();
       const year = input.year || now.getFullYear();
       const month = input.month || now.getMonth() + 1;
@@ -170,7 +170,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const [rows] = await db.execute(sql`
         SELECT * FROM portal_documents
         WHERE tenant_id = ${session.tenant_id} AND portal_type = 'employee' AND reference_id = ${session.reference_id}
@@ -183,7 +183,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string(), name: z.string(), category: z.string(), fileUrl: z.string(), fileSize: z.number().optional(), mimeType: z.string().optional() }))
     .mutation(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const [result] = await db.execute(sql`
         INSERT INTO portal_documents (tenant_id, portal_type, reference_id, document_type, file_name, file_path, file_size, mime_type, uploaded_by)
         VALUES (${session.tenant_id}, 'employee', ${session.reference_id}, ${input.category}, ${input.name}, ${input.fileUrl}, ${input.fileSize || 0}, ${input.mimeType || "application/octet-stream"}, ${session.id})
@@ -195,7 +195,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const employee = await db.query.employees.findFirst({ where: eq(employees.id, session.reference_id) });
       const department = employee ? await db.query.departments.findFirst({ where: eq(departments.id, employee.departmentId) }) : null;
       const designation = employee ? await db.query.designations.findFirst({ where: eq(designations.id, employee.designationId) }) : null;
@@ -206,7 +206,7 @@ export const portalEmployeeRouter = createRouter({
     .input(z.object({ token: z.string(), phone: z.string().optional(), mobile: z.string().optional(), address: z.string().optional(), emergencyContact: z.string().optional(), emergencyPhone: z.string().optional() }))
     .mutation(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const updateData: any = {};
       if (input.phone) updateData.phone = input.phone;
       if (input.mobile) updateData.mobile = input.mobile;

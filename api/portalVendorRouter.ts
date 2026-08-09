@@ -25,7 +25,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const tenantId = session.tenant_id;
       const supplierId = session.reference_id;
 
@@ -54,7 +54,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string(), status: z.string().optional() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const conditions = [eq(purchaseOrders.tenantId, session.tenant_id), eq(purchaseOrders.supplierId, session.reference_id)];
       if (input.status) conditions.push(eq(purchaseOrders.status, input.status as any));
       return db.select().from(purchaseOrders).where(and(...conditions)).orderBy(desc(purchaseOrders.createdAt));
@@ -64,7 +64,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string(), id: z.number() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const po = await db.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.id) });
       const items = await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.poId, input.id));
       return { po, items };
@@ -74,7 +74,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       return db.select().from(invoices)
         .where(and(eq(invoices.tenantId, session.tenant_id), eq(invoices.customerId, session.reference_id)))
         .orderBy(desc(invoices.createdAt));
@@ -84,7 +84,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string(), poId: z.number(), invoiceNumber: z.string(), amount: z.string(), taxAmount: z.string().optional(), totalAmount: z.string() }))
     .mutation(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const po = await db.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.poId) });
       if (!po) throw new Error("Purchase order not found");
       const [{ id }] = await db.insert(invoices).values({
@@ -108,7 +108,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       return db.select().from(supplierPayments)
         .where(and(eq(supplierPayments.tenantId, session.tenant_id), eq(supplierPayments.supplierId, session.reference_id)))
         .orderBy(desc(supplierPayments.createdAt));
@@ -118,7 +118,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const supplier = await db.query.suppliers.findFirst({ where: eq(suppliers.id, session.reference_id) });
       return { portalUser: { id: session.id, name: session.name, email: session.email, portalType: session.portal_type }, supplier };
     }),
@@ -127,7 +127,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string(), name: z.string().optional(), phone: z.string().optional(), email: z.string().optional(), address: z.string().optional(), city: z.string().optional() }))
     .mutation(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const updateData: any = {};
       if (input.name) updateData.name = input.name;
       if (input.phone) updateData.phone = input.phone;
@@ -145,7 +145,7 @@ export const portalVendorRouter = createRouter({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const session = await getSession(input.token);
-      if (!session) throw new Error("Unauthorized");
+      if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
       const [rows] = await db.execute(sql`
         SELECT * FROM portal_messages
         WHERE tenant_id = ${session.tenant_id} AND receiver_type = 'vendor' AND receiver_id = ${session.reference_id}

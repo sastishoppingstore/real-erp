@@ -300,7 +300,8 @@ export const licenseAdminRouter = createRouter({
   exportActivationRequest: superAdminQuery
     .input(z.object({ licenseKey: z.string(), hardwareJson: z.string() }))
     .query(async ({ input }) => {
-      const hardware = JSON.parse(input.hardwareJson);
+      let hardware; 
+      try { hardware = JSON.parse(input.hardwareJson); } catch (e) { hardware = { fingerprint: input.hardwareJson }; }
       const requestJson = exportActivationRequest(input.licenseKey, hardware);
       return { requestJson };
     }),
