@@ -118921,6 +118921,26 @@ var posRouter = createRouter({
       transferTotal: Number(invoicesToday[0]?.transferTotal || 0)
     };
   }),
+  // Alias for backward-compat / frontend calls using todaySalesSummary (fixes 404)
+  todaySalesSummary: authedQuery.query(async ({ ctx }) => {
+    const db5 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    const invoicesToday = await db5.select({
+      total: sql`coalesce(sum(${invoices.totalAmount}),0)`,
+      count: sql`count(*)`,
+      cashTotal: sql`0`,
+      cardTotal: sql`0`,
+      transferTotal: sql`0`
+    }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.createdAt, new Date(today))));
+    return {
+      totalSales: Number(invoicesToday[0]?.total || 0),
+      count: invoicesToday[0]?.count || 0,
+      cashTotal: Number(invoicesToday[0]?.cashTotal || 0),
+      cardTotal: Number(invoicesToday[0]?.cardTotal || 0),
+      transferTotal: Number(invoicesToday[0]?.transferTotal || 0)
+    };
+  }),
   // REPORTS
   salesReport: authedQuery.input(external_exports.object({ from: external_exports.string().optional(), to: external_exports.string().optional() })).query(async ({ input, ctx }) => {
     const db5 = getDb();
@@ -131145,6 +131165,7 @@ var portalCustomerRouter = createRouter({
 });
 
 // api/portalVendorRouter.ts
+init_dist();
 init_connection();
 init_schema2();
 init_drizzle_orm();
@@ -131161,7 +131182,7 @@ async function getSession2(token) {
 var portalVendorRouter = createRouter({
   dashboard: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const supplierId = session.reference_id;
     const supplier = await db3.query.suppliers.findFirst({ where: eq(suppliers.id, supplierId) });
@@ -131178,26 +131199,26 @@ var portalVendorRouter = createRouter({
   }),
   poList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(purchaseOrders.tenantId, session.tenant_id), eq(purchaseOrders.supplierId, session.reference_id)];
     if (input.status) conditions.push(eq(purchaseOrders.status, input.status));
     return db3.select().from(purchaseOrders).where(and(...conditions)).orderBy(desc(purchaseOrders.createdAt));
   }),
   poGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const po = await db3.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.id) });
     const items = await db3.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.poId, input.id));
     return { po, items };
   }),
   invoiceList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db3.select().from(invoices).where(and(eq(invoices.tenantId, session.tenant_id), eq(invoices.customerId, session.reference_id))).orderBy(desc(invoices.createdAt));
   }),
   invoiceCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), poId: external_exports.number(), invoiceNumber: external_exports.string(), amount: external_exports.string(), taxAmount: external_exports.string().optional(), totalAmount: external_exports.string() })).mutation(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const po = await db3.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.poId) });
     if (!po) throw new Error("Purchase order not found");
     const [{ id }] = await db3.insert(invoices).values({
@@ -131218,18 +131239,18 @@ var portalVendorRouter = createRouter({
   }),
   paymentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db3.select().from(supplierPayments).where(and(eq(supplierPayments.tenantId, session.tenant_id), eq(supplierPayments.supplierId, session.reference_id))).orderBy(desc(supplierPayments.createdAt));
   }),
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const supplier = await db3.query.suppliers.findFirst({ where: eq(suppliers.id, session.reference_id) });
     return { portalUser: { id: session.id, name: session.name, email: session.email, portalType: session.portal_type }, supplier };
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string().optional(), phone: external_exports.string().optional(), email: external_exports.string().optional(), address: external_exports.string().optional(), city: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const updateData = {};
     if (input.name) updateData.name = input.name;
     if (input.phone) updateData.phone = input.phone;
@@ -131244,7 +131265,7 @@ var portalVendorRouter = createRouter({
   }),
   messages: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [rows] = await db3.execute(sql`
         SELECT * FROM portal_messages
         WHERE tenant_id = ${session.tenant_id} AND receiver_type = 'vendor' AND receiver_id = ${session.reference_id}
@@ -131255,6 +131276,7 @@ var portalVendorRouter = createRouter({
 });
 
 // api/portalEmployeeRouter.ts
+init_dist();
 init_connection();
 init_schema2();
 init_drizzle_orm();
@@ -131272,7 +131294,7 @@ var db4 = getDb();
 var portalEmployeeRouter = createRouter({
   dashboard: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const employeeId = session.reference_id;
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
@@ -131299,14 +131321,14 @@ var portalEmployeeRouter = createRouter({
   }),
   payslipList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const slips = await db4.select().from(salarySlips).where(and(eq(salarySlips.tenantId, session.tenant_id), eq(salarySlips.employeeId, session.reference_id))).orderBy(desc(salarySlips.createdAt));
     const periods = await db4.select().from(payrollPeriods).where(eq(payrollPeriods.tenantId, session.tenant_id));
     return slips.map((slip) => ({ ...slip, period: periods.find((p) => p.id === slip.payrollPeriodId) }));
   }),
   payslipGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const slip = await db4.query.salarySlips.findFirst({ where: eq(salarySlips.id, input.id) });
     const period = slip ? await db4.query.payrollPeriods.findFirst({ where: eq(payrollPeriods.id, slip.payrollPeriodId) }) : null;
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, slip?.employeeId) });
@@ -131314,7 +131336,7 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(leaveRequests.tenantId, session.tenant_id), eq(leaveRequests.employeeId, session.reference_id)];
     if (input.status) conditions.push(eq(leaveRequests.status, input.status));
     const requests = await db4.select().from(leaveRequests).where(and(...conditions)).orderBy(desc(leaveRequests.createdAt));
@@ -131323,7 +131345,7 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), leaveTypeId: external_exports.number(), startDate: external_exports.string(), endDate: external_exports.string(), days: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [{ id }] = await db4.insert(leaveRequests).values({
       tenantId: session.tenant_id,
       employeeId: session.reference_id,
@@ -131338,18 +131360,18 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestCancel: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     await db4.update(leaveRequests).set({ status: "cancelled" }).where(and(eq(leaveRequests.id, input.id), eq(leaveRequests.employeeId, session.reference_id)));
     return { success: true };
   }),
   attendanceList: publicQuery.input(external_exports.object({ token: external_exports.string(), limit: external_exports.number().default(30) })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db4.select().from(attendance).where(and(eq(attendance.tenantId, session.tenant_id), eq(attendance.employeeId, session.reference_id))).orderBy(desc(attendance.date)).limit(input.limit);
   }),
   attendanceStats: publicQuery.input(external_exports.object({ token: external_exports.string(), month: external_exports.number().optional(), year: external_exports.number().optional() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const now = /* @__PURE__ */ new Date();
     const year3 = input.year || now.getFullYear();
     const month = input.month || now.getMonth() + 1;
@@ -131369,7 +131391,7 @@ var portalEmployeeRouter = createRouter({
   }),
   documentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [rows] = await db4.execute(sql`
         SELECT * FROM portal_documents
         WHERE tenant_id = ${session.tenant_id} AND portal_type = 'employee' AND reference_id = ${session.reference_id}
@@ -131379,7 +131401,7 @@ var portalEmployeeRouter = createRouter({
   }),
   documentUpload: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string(), category: external_exports.string(), fileUrl: external_exports.string(), fileSize: external_exports.number().optional(), mimeType: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [result] = await db4.execute(sql`
         INSERT INTO portal_documents (tenant_id, portal_type, reference_id, document_type, file_name, file_path, file_size, mime_type, uploaded_by)
         VALUES (${session.tenant_id}, 'employee', ${session.reference_id}, ${input.category}, ${input.name}, ${input.fileUrl}, ${input.fileSize || 0}, ${input.mimeType || "application/octet-stream"}, ${session.id})
@@ -131388,7 +131410,7 @@ var portalEmployeeRouter = createRouter({
   }),
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, session.reference_id) });
     const department = employee ? await db4.query.departments.findFirst({ where: eq(departments.id, employee.departmentId) }) : null;
     const designation = employee ? await db4.query.designations.findFirst({ where: eq(designations.id, employee.designationId) }) : null;
@@ -131396,7 +131418,7 @@ var portalEmployeeRouter = createRouter({
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), phone: external_exports.string().optional(), mobile: external_exports.string().optional(), address: external_exports.string().optional(), emergencyContact: external_exports.string().optional(), emergencyPhone: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const updateData = {};
     if (input.phone) updateData.phone = input.phone;
     if (input.mobile) updateData.mobile = input.mobile;

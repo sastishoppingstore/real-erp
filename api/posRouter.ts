@@ -314,6 +314,28 @@ export const posRouter = createRouter({
     };
   }),
 
+  // Alias for backward-compat / frontend calls using todaySalesSummary (fixes 404)
+  todaySalesSummary: authedQuery.query(async ({ ctx }) => {
+    const db = getDb();
+    const tenantId = ctx.user.tenantId!;
+    const today = new Date().toISOString().split("T")[0];
+    const invoicesToday = await db.select({
+      total: sql<string>`coalesce(sum(${invoices.totalAmount}),0)`,
+      count: sql<number>`count(*)`,
+      cashTotal: sql<string>`0`,
+      cardTotal: sql<string>`0`,
+      transferTotal: sql<string>`0`,
+    }).from(invoices)
+      .where(and(eq(invoices.tenantId, tenantId), gte(invoices.createdAt, new Date(today))));
+    return {
+      totalSales: Number(invoicesToday[0]?.total || 0),
+      count: invoicesToday[0]?.count || 0,
+      cashTotal: Number(invoicesToday[0]?.cashTotal || 0),
+      cardTotal: Number(invoicesToday[0]?.cardTotal || 0),
+      transferTotal: Number(invoicesToday[0]?.transferTotal || 0),
+    };
+  }),
+
   // REPORTS
   salesReport: authedQuery
     .input(z.object({ from: z.string().optional(), to: z.string().optional() }))

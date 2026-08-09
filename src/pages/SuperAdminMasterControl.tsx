@@ -24,11 +24,31 @@ export default function SuperAdminMasterControl() {
   const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
   const [limits, setLimits] = useState({ userLimit: "", branchLimit: "", warehouseLimit: "", productLimit: "" });
 
+  // These queries do NOT depend on selectedCompany — safe to call first
   const stats = trpc.superAdmin.stats.dashboard.useQuery(undefined, { refetchInterval: 60000 });
   const companies = trpc.superAdmin.companies.list.useQuery({ limit: 100, offset: 0 }, { refetchInterval: 45000 });
   const readiness = trpc.superAdmin.compliance.globalReadiness.useQuery({ limit: 100, onlyNotReady: false }, { refetchInterval: 45000 });
   const tickets = trpc.superAdmin.supportTickets.list.useQuery({ limit: 8 }, { refetchInterval: 60000 });
   const audit = trpc.superAdmin.auditLogs.list.useQuery({ limit: 8, offset: 0 }, { refetchInterval: 60000 });
+
+  // Derive selectedCompany BEFORE any hooks that depend on it (fixes ReferenceError hoisting crash)
+  const tenantOptions = companies.data?.items ?? [];
+  const selectedCompany = tenantOptions.find((company: any) => company.id === selectedTenant) ?? tenantOptions[0];
+  const selectedCompanyId = selectedCompany?.id ?? 0;
+
+  // Queries that depend on selectedCompany — now safe because selectedCompany is defined above
+  const { data: tenantTheme, refetch: refetchTheme } = trpc.superAdmin.themes.getForTenant.useQuery(
+    { tenantId: selectedCompanyId },
+    { enabled: Boolean(selectedCompanyId) },
+  );
+  const modules = trpc.superAdmin.modules.listForTenant.useQuery(
+    { tenantId: selectedCompanyId },
+    { enabled: Boolean(selectedCompanyId), refetchInterval: 60000 },
+  );
+  const serviceEvents = trpc.superAdmin.serviceEvents.list.useQuery(
+    { tenantId: selectedCompany?.id, limit: 8 },
+    { enabled: Boolean(selectedCompanyId), refetchInterval: 60000 },
+  );
 
   const activate = trpc.superAdmin.companies.activate.useMutation({
     onSuccess: () => { utils.superAdmin.companies.list.invalidate(); toast.success("Company activated"); },
@@ -40,10 +60,6 @@ export default function SuperAdminMasterControl() {
     onSuccess: (data) => toast.success(`Impersonation audit started for ${data.tenantName}`),
     onError: (error) => toast.error(error.message),
   });
-  const { data: tenantTheme, refetch: refetchTheme } = trpc.superAdmin.themes.getForTenant.useQuery(
-    { tenantId: selectedCompany?.id ?? 0 },
-    { enabled: Boolean(selectedCompany?.id) },
-  );
   const overrideTheme = trpc.superAdmin.themes.override.useMutation({
     onSuccess: () => { refetchTheme(); toast.success("Theme updated"); },
     onError: (error) => toast.error(error.message),
@@ -79,18 +95,7 @@ export default function SuperAdminMasterControl() {
     });
     return map;
   }, [readiness.data]);
-
-  const tenantOptions = companies.data?.items ?? [];
-  const selectedCompany = tenantOptions.find((company: any) => company.id === selectedTenant) ?? tenantOptions[0];
   const selectedReadiness = selectedCompany ? readinessByTenant.get(selectedCompany.id) : null;
-  const modules = trpc.superAdmin.modules.listForTenant.useQuery(
-    { tenantId: selectedCompany?.id ?? 0 },
-    { enabled: Boolean(selectedCompany?.id), refetchInterval: 60000 },
-  );
-  const serviceEvents = trpc.superAdmin.serviceEvents.list.useQuery(
-    { tenantId: selectedCompany?.id, limit: 8 },
-    { enabled: Boolean(selectedCompany?.id), refetchInterval: 60000 },
-  );
   const readyPercent = readiness.data?.totalChecked
     ? Math.round(((readiness.data.ready || 0) / readiness.data.totalChecked) * 100)
     : 0;

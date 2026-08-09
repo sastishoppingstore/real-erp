@@ -315,6 +315,7 @@ export function CountryDetectionProvider({ children }: { children: ReactNode }) 
     if (overrides.selectedCountry) return; // User already made a choice
     const fetchIpData = async () => {
       try {
+        // Use backend proxy endpoint to detect country (avoids CORS issues)
         const edgeRes = await fetch("/api/localization/detect");
         if (edgeRes.ok) {
           const edgeData = await edgeRes.json();
@@ -331,31 +332,11 @@ export function CountryDetectionProvider({ children }: { children: ReactNode }) 
             return;
           }
         }
-      } catch (edgeErr) {
-        // Edge detect failed - fall back to ipapi.co or timezone
+      } catch {
+        // Backend detect failed — silently use timezone/language fallback (already applied in initial state)
       }
-
-      try {
-        // Fallback to direct IP API (expects CORS), if CORS blocked -> UI catches
-        const res = await fetch("https://ipapi.co/json/");
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.country_code) {
-            applyCountryProfile(data.country_code, {
-              setDetectedCountry,
-              setSelectedCountryState,
-              setLanguageState,
-              setCurrencyState,
-              setTimezoneState,
-              setTaxProfileState,
-              setDetectionBannerVisible,
-            }, data.timezone);
-          }
-        }
-      } catch (err) {
-        // CORS or fetch error - fallback handled by defaults
-        console.warn("IP API CORS/fetch blocked; using timezone/default country");
-      }
+      // Note: No direct ipapi.co call here to avoid CORS policy violations.
+      // Timezone-based country detection is already applied via detectCountry() at initialization.
     };
     fetchIpData();
   }, [overrides.selectedCountry]);
