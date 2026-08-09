@@ -117080,12 +117080,15 @@ var salesRouter = createRouter({
   invoiceCreate: authedQuery.input(external_exports.object({
     invoiceNumber: external_exports.string(),
     invoiceType: external_exports.enum(["standard", "simplified", "zatca"]).optional(),
-    customerId: external_exports.number(),
+    invoiceMode: external_exports.string().optional(),
+    customerId: external_exports.number().optional(),
     date: external_exports.string(),
     dueDate: external_exports.string().optional(),
     subTotal: external_exports.string(),
     taxAmount: external_exports.string().optional(),
     taxPercent: external_exports.string().optional(),
+    taxableAmount: external_exports.string().optional(),
+    discountAmount: external_exports.string().optional(),
     totalAmount: external_exports.string(),
     notes: external_exports.string().optional(),
     items: external_exports.array(external_exports.object({
@@ -117093,6 +117096,8 @@ var salesRouter = createRouter({
       description: external_exports.string(),
       quantity: external_exports.number(),
       unitPrice: external_exports.string(),
+      unit: external_exports.string().optional(),
+      sku: external_exports.string().optional(),
       taxPercent: external_exports.string().optional(),
       totalAmount: external_exports.string()
     }))
@@ -117103,30 +117108,37 @@ var salesRouter = createRouter({
     const settings = await db5.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, tenantId)
     });
-    const saudiInvoice = isSaudiCompany(settings) || invoiceData.invoiceType === "zatca";
+    const isForcedZatca = invoiceData.invoiceType === "zatca";
+    const saudiInvoice = isSaudiCompany(settings) || isForcedZatca;
     const currency = settings?.defaultCurrency || (saudiInvoice ? "SAR" : "USD");
     const taxPercent = invoiceData.taxPercent || (settings?.vatRate ? String(settings.vatRate) : saudiInvoice ? "15" : "0");
     const taxAmount = invoiceData.taxAmount || "0";
-    const invoiceType = saudiInvoice ? "zatca" : invoiceData.invoiceType || "standard";
     const sellerName = settings?.companyName || settings?.companyNameAr || "";
     const vatNumber = settings?.taxNumber || "";
-    if (saudiInvoice) {
-      if (!sellerName.trim()) {
-        throw new TRPCError2({
-          code: "BAD_REQUEST",
-          message: "Saudi ZATCA invoices require company name in Settings before billing."
-        });
-      }
-      if (!isValidSaudiVatNumber(vatNumber)) {
-        throw new TRPCError2({
-          code: "BAD_REQUEST",
-          message: "Saudi ZATCA invoices require a valid 15-digit VAT number that starts and ends with 3."
-        });
-      }
+    const isZatcaEligible = saudiInvoice && isValidSaudiVatNumber(vatNumber) && sellerName.trim();
+    const isSimplified = saudiInvoice && !isZatcaEligible;
+    const invoiceType = isZatcaEligible ? "zatca" : isSimplified ? "simplified" : invoiceData.invoiceType || "standard";
+    if (!sellerName.trim()) {
+      throw new TRPCError2({
+        code: "BAD_REQUEST",
+        message: "Please enter your company name in Settings \u2192 Company Profile before creating invoices."
+      });
     }
     const timestamp2 = (/* @__PURE__ */ new Date(`${invoiceData.date}T00:00:00.000Z`)).toISOString();
-    const zatcaQrCode = saudiInvoice ? buildZatcaQrPayload(sellerName, vatNumber, timestamp2, invoiceData.totalAmount, taxAmount) : void 0;
-    const zatcaXml = saudiInvoice ? buildSaudiInvoiceXml({
+    let zatcaQrCode;
+    if (isZatcaEligible || isSimplified) {
+      zatcaQrCode = buildZatcaQrPayload(sellerName, vatNumber || "0000000000000000", timestamp2, invoiceData.totalAmount, taxAmount);
+    } else {
+      const simpleQrObj = {
+        seller: sellerName,
+        total: invoiceData.totalAmount,
+        tax: taxAmount,
+        date: invoiceData.date,
+        invoice: invoiceData.invoiceNumber
+      };
+      zatcaQrCode = Buffer.from(JSON.stringify(simpleQrObj)).toString("base64");
+    }
+    const zatcaXml = isZatcaEligible ? buildSaudiInvoiceXml({
       invoiceNumber: invoiceData.invoiceNumber,
       date: invoiceData.date,
       sellerName,
@@ -117137,10 +117149,29 @@ var salesRouter = createRouter({
       taxAmount,
       totalAmount: invoiceData.totalAmount
     }) : void 0;
+    let resolvedCustomerId = invoiceData.customerId && invoiceData.customerId > 0 ? invoiceData.customerId : null;
+    if (!resolvedCustomerId) {
+      const walkIn = await db5.query.customers.findFirst({
+        where: and(eq(customers.tenantId, tenantId), eq(customers.code, "WALK-IN"))
+      });
+      if (walkIn) {
+        resolvedCustomerId = walkIn.id;
+      } else {
+        const [{ id: wid }] = await db5.insert(customers).values({
+          tenantId,
+          code: "WALK-IN",
+          name: "Walk-in Customer",
+          nameAr: "\u0639\u0645\u064A\u0644 \u0646\u0642\u062F\u064A",
+          country: settings?.country || "Saudi Arabia",
+          isActive: true
+        }).$returningId();
+        resolvedCustomerId = wid;
+      }
+    }
     const [{ id }] = await db5.insert(invoices).values({
       invoiceNumber: invoiceData.invoiceNumber,
       invoiceType,
-      customerId: invoiceData.customerId,
+      customerId: resolvedCustomerId,
       date: invoiceData.date,
       dueDate: invoiceData.dueDate,
       subTotal: invoiceData.subTotal,
@@ -117151,7 +117182,7 @@ var salesRouter = createRouter({
       tenantId,
       zatcaQrCode,
       zatcaXml,
-      zatcaStatus: saudiInvoice ? "pending" : void 0,
+      zatcaStatus: isZatcaEligible ? "pending" : void 0,
       terms: settings?.invoiceTerms,
       balanceDue: invoiceData.totalAmount,
       status: "draft"

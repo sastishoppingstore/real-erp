@@ -68,6 +68,7 @@ export default function InvoicesPage() {
   const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
+  const [invoiceTypeMode, setInvoiceTypeMode] = useState<"standard" | "zatca">("standard");
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [newProductName, setNewProductName] = useState("");
   const [newProductPurchasePrice, setNewProductPurchasePrice] = useState("");
@@ -176,8 +177,9 @@ export default function InvoicesPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!cart.length) { toast.error("Cart is empty"); return; }
-    if (!customerName) { toast.error("Enter customer name"); return; }
+    if (!cart.length) { toast.error("Add at least one item to the cart"); return; }
+    // customerName is optional - walk-in customer is used if not provided
+    const effectiveCustomerName = customerName.trim() || "Walk-in Customer";
     const items = cart.map(item => ({
       description: `[${item.id}] ${item.name}`,
       quantity: item.qty,
@@ -188,8 +190,9 @@ export default function InvoicesPage() {
     }));
     const payload = {
       invoiceNumber: `BILL-${Date.now().toString().slice(-6)}`,
-      customerId, date: new Date().toISOString().slice(0, 10), dueDate: "",
-      invoiceType: "standard", invoiceMode: "product" as InvoiceMode,
+      customerId: customerId || 0,
+      date: new Date().toISOString().slice(0, 10), dueDate: "",
+      invoiceType: invoiceTypeMode, invoiceMode: "product" as InvoiceMode,
       subTotal: subtotal.toFixed(2), taxAmount: vat.toFixed(2),
       taxPercent: taxPercent.toString(), totalAmount: total.toFixed(2),
       discountAmount: discount.toString(), taxableAmount: taxable.toFixed(2),
@@ -203,7 +206,11 @@ export default function InvoicesPage() {
   };
 
   const handlePrint = () => {
-    const items = cart.map((item, i) => ({ no: i + 1, name: item.name, qty: item.qty, rate: item.price, total: item.price * item.qty }));
+    // Allow print from cart OR from currently viewed invoice
+    const printItems = cart.length > 0
+      ? cart.map((item, i) => ({ no: i + 1, name: item.name, qty: item.qty, rate: item.price, total: item.price * item.qty }))
+      : [];
+    if (printItems.length === 0 && !viewInvoiceId) { toast.error("Add items to cart before printing"); return; }
     const qrData = btoa(JSON.stringify({
       seller: companyNameAr || companyName, vat: companyVat,
       total: total.toFixed(2), tax: vat.toFixed(2), date: new Date().toISOString(),
@@ -219,6 +226,7 @@ body{font-family:Arial,sans-serif;background:#f5f5f5;padding:10mm}
 .company-info h2{font-size:16px;color:#d4af37;font-weight:700}
 .info-line{font-size:12px;color:#333;margin:2px 0}
 .title{text-align:center;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;padding:12px;margin:15px 0;font-size:18px;font-weight:700;border-radius:5px}
+.badge{display:inline-block;background:#d4af37;color:#1e3c72;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;margin-left:8px}
 .customer{border:1px solid #ddd;padding:15px;margin:15px 0;border-radius:5px}
 .customer h3{color:#1e3c72;margin-bottom:8px}
 .customer p{margin:3px 0;font-size:13px}
@@ -230,12 +238,13 @@ tr:nth-child(even){background:#f9f9f9}
 .totals{margin-top:20px;padding:15px;background:#f5f5f5;border-radius:5px}
 .total-row{display:flex;justify-content:space-between;padding:8px 15px;font-size:14px}
 .total-row.grand{background:linear-gradient(135deg,#d4af37,#f9d423);color:#1e3c72;font-weight:900;font-size:18px;border-radius:5px;margin-top:10px}
+.qr-section{text-align:center;margin:15px 0;padding:15px;border:1px dashed #ccc;border-radius:5px}
+.qr-section p{font-size:11px;color:#666;margin-top:5px}
 .footer{margin-top:20px;text-align:center;padding:15px;border-top:2px solid #ddd;font-size:16px;font-weight:700;color:#1e3c72}
 @media print{body{background:#fff;padding:0}.invoice{box-shadow:none;margin:0}}
 </style></head><body>
 <div class="invoice">
 <div class="header">
-<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}" style="width:100%"></div>
 <div class="company-info">
 <h1>${companyName}</h1>${companyNameAr ? `<h2>${companyNameAr}</h2>` : ""}
 ${companyLogo ? `<img src="${companyLogo}" style="max-width:60px;max-height:40px">` : ""}
@@ -243,8 +252,12 @@ ${companyAddress ? `<div class="info-line">${companyAddress}</div>` : ""}
 ${companyPhone ? `<div class="info-line">${companyPhone}</div>` : ""}
 ${companyVat ? `<div class="info-line"><strong>VAT: ${companyVat}</strong></div>` : ""}
 </div>
+<div class="qr-section" style="width:120px">
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" style="width:100px;height:100px">
+<p>${invoiceTypeMode === "zatca" ? "ZATCA QR" : "Invoice QR"}</p>
 </div>
-<div class="title">TAX INVOICE / فاتورة ضريبية</div>
+</div>
+<div class="title">TAX INVOICE / فاتورة ضريبية<span class="badge">${invoiceTypeMode === "zatca" ? "ZATCA" : "Standard"}</span></div>
 <div class="customer">
 <h3>Customer / العميل</h3>
 <p><strong>${customerName || "Walk-in Customer"}</strong></p>
@@ -253,20 +266,28 @@ ${customerAddress ? `<p>Address: ${customerAddress}</p>` : ""}
 ${customerVat ? `<p>VAT: ${customerVat}</p>` : ""}
 </div>
 <table><thead><tr><th>#</th><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
-${items.map(i => `<tr><td>${i.no}</td><td>${i.name}</td><td>${i.qty}</td><td>${i.rate.toFixed(2)}</td><td>${i.total.toFixed(2)}</td></tr>`).join("")}
+${printItems.map(i => `<tr><td>${i.no}</td><td>${i.name}</td><td>${i.qty}</td><td>${i.rate.toFixed(2)}</td><td>${i.total.toFixed(2)}</td></tr>`).join("")}
 </tbody></table>
 <div class="totals">
 <div class="total-row"><span>Subtotal:</span><span>${currency} ${subtotal.toFixed(2)}</span></div>
 ${discount > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} ${discount.toFixed(2)}</span></div>` : ""}
-<div class="total-row"><span>Sales Tax ${taxPercent}%:</span><span>${currency} ${vat.toFixed(2)}</span></div>
+<div class="total-row"><span>VAT ${taxPercent}%:</span><span>${currency} ${vat.toFixed(2)}</span></div>
 <div class="total-row grand"><span>TOTAL:</span><span>${currency} ${total.toFixed(2)}</span></div>
 </div>
 ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-radius:5px;font-size:13px"><strong>Note:</strong> ${note}</div>` : ""}
 <div class="footer">شكراً لتعاملكم معنا / Thank You For Your Business!</div>
 </div>
-<script>window.print();</script></body></html>`;
+<script>window.onload=function(){window.print();}<\/script></body></html>`;
     const w = window.open("", "_blank");
-    if (!w) return;
+    if (!w) {
+      // Popup blocked — open as data URL instead
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.target = "_blank"; a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
     w.document.write(html); w.document.close();
   };
 
@@ -497,6 +518,40 @@ ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-rad
           <div className="mt-3">
             <Label className="text-xs">Note</Label>
             <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional" className="h-8 text-xs" />
+          </div>
+
+          {/* Invoice Type Toggle */}
+          <div className="mt-3 p-3 rounded-lg border bg-slate-50">
+            <Label className="text-xs font-semibold text-slate-600 block mb-2">Invoice Type / نوع الفاتورة</Label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setInvoiceTypeMode("standard")}
+                className={`flex-1 py-1.5 px-3 rounded text-xs font-semibold border transition-all ${
+                  invoiceTypeMode === "standard"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-slate-600 border-slate-300 hover:bg-slate-100"
+                }`}
+              >
+                📄 Standard
+              </button>
+              <button
+                type="button"
+                onClick={() => setInvoiceTypeMode("zatca")}
+                className={`flex-1 py-1.5 px-3 rounded text-xs font-semibold border transition-all ${
+                  invoiceTypeMode === "zatca"
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : "bg-white text-slate-600 border-slate-300 hover:bg-slate-100"
+                }`}
+              >
+                🇸🇦 ZATCA
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              {invoiceTypeMode === "zatca"
+                ? "ZATCA compliant (TLV QR + XML). Requires valid VAT number in Settings."
+                : "Standard invoice with QR code. Works without ZATCA setup."}
+            </p>
           </div>
 
           <div className="flex gap-2 mt-4">
