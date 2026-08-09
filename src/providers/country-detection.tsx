@@ -331,7 +331,12 @@ export function CountryDetectionProvider({ children }: { children: ReactNode }) 
             return;
           }
         }
+      } catch (edgeErr) {
+        // Edge detect failed - fall back to ipapi.co or timezone
+      }
 
+      try {
+        // Fallback to direct IP API (expects CORS), if CORS blocked -> UI catches
         const res = await fetch("https://ipapi.co/json/");
         if (res.ok) {
           const data = await res.json();
@@ -348,7 +353,8 @@ export function CountryDetectionProvider({ children }: { children: ReactNode }) 
           }
         }
       } catch (err) {
-        console.error("IP detection failed, falling back to timezone", err);
+        // CORS or fetch error - fallback handled by defaults
+        console.warn("IP API CORS/fetch blocked; using timezone/default country");
       }
     };
     fetchIpData();

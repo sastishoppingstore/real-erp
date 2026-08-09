@@ -68,8 +68,8 @@ var require_main = __commonJS({
     function supportsAnsi() {
       return process.stdout.isTTY;
     }
-    function dim(text3) {
-      return supportsAnsi() ? `\x1B[2m${text3}\x1B[0m` : text3;
+    function dim(text2) {
+      return supportsAnsi() ? `\x1B[2m${text2}\x1B[0m` : text2;
     }
     var LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
     function parse6(src) {
@@ -731,9 +731,9 @@ function getCauseFromUnknown(cause) {
   return void 0;
 }
 function getTRPCErrorFromUnknown(cause) {
-  if (cause instanceof TRPCError) return cause;
+  if (cause instanceof TRPCError2) return cause;
   if (cause instanceof Error && cause.name === "TRPCError") return cause;
-  const trpcError = new TRPCError({
+  const trpcError = new TRPCError2({
     code: "INTERNAL_SERVER_ERROR",
     cause
   });
@@ -864,7 +864,7 @@ function createCallerFactory() {
         const procedure = await getProcedureAtPath(router, fullPath);
         let ctx = void 0;
         try {
-          if (!procedure) throw new TRPCError({
+          if (!procedure) throw new TRPCError2({
             code: "NOT_FOUND",
             message: `No procedure found on path "${path2}"`
           });
@@ -923,7 +923,7 @@ function mergeRouters(...routerList) {
 function isTrackedEnvelope(value) {
   return Array.isArray(value) && value[2] === trackedSymbol;
 }
-var defaultFormatter, import_defineProperty, UnknownCauseError, TRPCError, import_objectSpread2$1, defaultTransformer, import_objectSpread22, lazyMarker, emptyRouter, reservedWords, trackedSymbol;
+var defaultFormatter, import_defineProperty, UnknownCauseError, TRPCError2, import_objectSpread2$1, defaultTransformer, import_objectSpread22, lazyMarker, emptyRouter, reservedWords, trackedSymbol;
 var init_tracked_DWInO6EQ = __esm({
   "node_modules/@trpc/server/dist/tracked-DWInO6EQ.mjs"() {
     init_getErrorShape_BPSzUA7W();
@@ -938,7 +938,7 @@ var init_tracked_DWInO6EQ = __esm({
         Object.assign(this, cause);
       }
     };
-    TRPCError = class extends Error {
+    TRPCError2 = class extends Error {
       constructor(opts) {
         var _ref, _opts$message, _this$cause;
         const cause = getCauseFromUnknown(opts.cause);
@@ -1478,11 +1478,11 @@ function wrapper(html, subtitle) {
 </body>
 </html>`;
 }
-function button(link, text3, color = yascoBrand.primary) {
+function button(link, text2, color = yascoBrand.primary) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px auto;">
     <tr>
       <td style="background:${color};border-radius:8px;text-align:center;">
-        <a href="${link}" target="_blank" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">${text3}</a>
+        <a href="${link}" target="_blank" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">${text2}</a>
       </td>
     </tr>
   </table>`;
@@ -32153,12 +32153,12 @@ var require_helpers = __commonJS({
       const REQUIRE_TERMINATOR = "";
       highlightFn = __require(`cardinal${REQUIRE_TERMINATOR}`).highlight;
     } catch {
-      highlightFn = (text3) => {
+      highlightFn = (text2) => {
         if (!cardinalRecommended) {
           console.log("For nicer debug output consider install cardinal@^2.0.0");
           cardinalRecommended = true;
         }
-        return text3;
+        return text2;
       };
     }
     function printDebugWithCode(msg, code) {
@@ -38216,7 +38216,7 @@ function createInputMiddleware(parse6) {
     try {
       parsedInput = await parse6(rawInput);
     } catch (cause) {
-      throw new TRPCError({
+      throw new TRPCError2({
         code: "BAD_REQUEST",
         cause
       });
@@ -38235,7 +38235,7 @@ function createOutputMiddleware(parse6) {
       const data = await parse6(result.data);
       return (0, import_objectSpread2$2.default)((0, import_objectSpread2$2.default)({}, result), {}, { data });
     } catch (cause) {
-      throw new TRPCError({
+      throw new TRPCError2({
         message: "Output validation failed",
         code: "INTERNAL_SERVER_ERROR",
         cause
@@ -38384,7 +38384,7 @@ function createProcedureCaller(_def) {
   async function procedure(opts) {
     if (!opts || !("getRawInput" in opts)) throw new Error(codeblock);
     const result = await callRecursive(0, _def, opts);
-    if (!result) throw new TRPCError({
+    if (!result) throw new TRPCError2({
       code: "INTERNAL_SERVER_ERROR",
       message: "No result from middlewares - did you forget to `return next()`?"
     });
@@ -41420,13 +41420,13 @@ var require_parse_options = __commonJS({
 var require_identifiers = __commonJS({
   "node_modules/bullmq/node_modules/semver/internal/identifiers.js"(exports, module) {
     "use strict";
-    var numeric2 = /^[0-9]+$/;
+    var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
       if (typeof a === "number" && typeof b === "number") {
         return a === b ? 0 : a < b ? -1 : 1;
       }
-      const anum = numeric2.test(a);
-      const bnum = numeric2.test(b);
+      const anum = numeric.test(a);
+      const bnum = numeric.test(b);
       if (anum && bnum) {
         a = +a;
         b = +b;
@@ -72002,7 +72002,7 @@ var require_luxon = __commonJS({
     function eraForDateTime(dt, length) {
       return eras(length)[dt.year < 0 ? 0 : 1];
     }
-    function formatRelativeTime(unit, count4, numeric2 = "always", narrow = false) {
+    function formatRelativeTime(unit, count4, numeric = "always", narrow = false) {
       const units2 = {
         years: ["year", "yr."],
         quarters: ["quarter", "qtr."],
@@ -72014,7 +72014,7 @@ var require_luxon = __commonJS({
         seconds: ["second", "sec."]
       };
       const lastable = ["hours", "minutes", "seconds"].indexOf(unit) === -1;
-      if (numeric2 === "auto" && lastable) {
+      if (numeric === "auto" && lastable) {
         const isDay = unit === "days";
         switch (count4) {
           case 1:
@@ -72844,12 +72844,12 @@ var require_luxon = __commonJS({
        * @example Duration.fromISO('P5Y3M').toObject() //=> { years: 5, months: 3 }
        * @return {Duration}
        */
-      static fromISO(text3, opts) {
-        const [parsed] = parseISODuration(text3);
+      static fromISO(text2, opts) {
+        const [parsed] = parseISODuration(text2);
         if (parsed) {
           return _Duration.fromObject(parsed, opts);
         } else {
-          return _Duration.invalid("unparsable", `the input "${text3}" can't be parsed as ISO 8601`);
+          return _Duration.invalid("unparsable", `the input "${text2}" can't be parsed as ISO 8601`);
         }
       }
       /**
@@ -72868,12 +72868,12 @@ var require_luxon = __commonJS({
        * @example Duration.fromISOTime('T1100').toObject() //=> { hours: 11, minutes: 0, seconds: 0 }
        * @return {Duration}
        */
-      static fromISOTime(text3, opts) {
-        const [parsed] = parseISOTimeOnly(text3);
+      static fromISOTime(text2, opts) {
+        const [parsed] = parseISOTimeOnly(text2);
         if (parsed) {
           return _Duration.fromObject(parsed, opts);
         } else {
-          return _Duration.invalid("unparsable", `the input "${text3}" can't be parsed as ISO 8601`);
+          return _Duration.invalid("unparsable", `the input "${text2}" can't be parsed as ISO 8601`);
         }
       }
       /**
@@ -73538,8 +73538,8 @@ var require_luxon = __commonJS({
        * @see https://en.wikipedia.org/wiki/ISO_8601#Time_intervals
        * @return {Interval}
        */
-      static fromISO(text3, opts) {
-        const [s2, e] = (text3 || "").split("/", 2);
+      static fromISO(text2, opts) {
+        const [s2, e] = (text2 || "").split("/", 2);
         if (s2 && e) {
           let start, startIsValid;
           try {
@@ -73570,7 +73570,7 @@ var require_luxon = __commonJS({
             }
           }
         }
-        return _Interval.invalid("unparsable", `the input "${text3}" can't be parsed as ISO 8601`);
+        return _Interval.invalid("unparsable", `the input "${text2}" can't be parsed as ISO 8601`);
       }
       /**
        * Check if an object is an Interval. Works across context boundaries
@@ -74800,7 +74800,7 @@ var require_luxon = __commonJS({
         o
       };
     }
-    function parseDataToDateTime(parsed, parsedZone, opts, format, text3, specificOffset) {
+    function parseDataToDateTime(parsed, parsedZone, opts, format, text2, specificOffset) {
       const {
         setZone,
         zone
@@ -74813,7 +74813,7 @@ var require_luxon = __commonJS({
         });
         return setZone ? inst : inst.setZone(zone);
       } else {
-        return DateTime.invalid(new Invalid("unparsable", `the input "${text3}" can't be parsed as ${format}`));
+        return DateTime.invalid(new Invalid("unparsable", `the input "${text2}" can't be parsed as ${format}`));
       }
     }
     function toTechFormat(dt, format, allowZ = true) {
@@ -75335,9 +75335,9 @@ var require_luxon = __commonJS({
        * @example DateTime.fromISO('2016-W05-4')
        * @return {DateTime}
        */
-      static fromISO(text3, opts = {}) {
-        const [vals, parsedZone] = parseISODate(text3);
-        return parseDataToDateTime(vals, parsedZone, opts, "ISO 8601", text3);
+      static fromISO(text2, opts = {}) {
+        const [vals, parsedZone] = parseISODate(text2);
+        return parseDataToDateTime(vals, parsedZone, opts, "ISO 8601", text2);
       }
       /**
        * Create a DateTime from an RFC 2822 string
@@ -75354,9 +75354,9 @@ var require_luxon = __commonJS({
        * @example DateTime.fromRFC2822('25 Nov 2016 13:23 Z')
        * @return {DateTime}
        */
-      static fromRFC2822(text3, opts = {}) {
-        const [vals, parsedZone] = parseRFC2822Date(text3);
-        return parseDataToDateTime(vals, parsedZone, opts, "RFC 2822", text3);
+      static fromRFC2822(text2, opts = {}) {
+        const [vals, parsedZone] = parseRFC2822Date(text2);
+        return parseDataToDateTime(vals, parsedZone, opts, "RFC 2822", text2);
       }
       /**
        * Create a DateTime from an HTTP header date
@@ -75374,8 +75374,8 @@ var require_luxon = __commonJS({
        * @example DateTime.fromHTTP('Sun Nov  6 08:49:37 1994')
        * @return {DateTime}
        */
-      static fromHTTP(text3, opts = {}) {
-        const [vals, parsedZone] = parseHTTPDate(text3);
+      static fromHTTP(text2, opts = {}) {
+        const [vals, parsedZone] = parseHTTPDate(text2);
         return parseDataToDateTime(vals, parsedZone, opts, "HTTP", opts);
       }
       /**
@@ -75392,8 +75392,8 @@ var require_luxon = __commonJS({
        * @param {string} opts.outputCalendar - the output calendar to set on the resulting DateTime instance
        * @return {DateTime}
        */
-      static fromFormat(text3, fmt, opts = {}) {
-        if (isUndefined2(text3) || isUndefined2(fmt)) {
+      static fromFormat(text2, fmt, opts = {}) {
+        if (isUndefined2(text2) || isUndefined2(fmt)) {
           throw new InvalidArgumentError("fromFormat requires an input string and a format");
         }
         const {
@@ -75403,18 +75403,18 @@ var require_luxon = __commonJS({
           locale,
           numberingSystem,
           defaultToEN: true
-        }), [vals, parsedZone, specificOffset, invalid] = parseFromTokens(localeToUse, text3, fmt);
+        }), [vals, parsedZone, specificOffset, invalid] = parseFromTokens(localeToUse, text2, fmt);
         if (invalid) {
           return _DateTime.invalid(invalid);
         } else {
-          return parseDataToDateTime(vals, parsedZone, opts, `format ${fmt}`, text3, specificOffset);
+          return parseDataToDateTime(vals, parsedZone, opts, `format ${fmt}`, text2, specificOffset);
         }
       }
       /**
        * @deprecated use fromFormat instead
        */
-      static fromString(text3, fmt, opts = {}) {
-        return _DateTime.fromFormat(text3, fmt, opts);
+      static fromString(text2, fmt, opts = {}) {
+        return _DateTime.fromFormat(text2, fmt, opts);
       }
       /**
        * Create a DateTime from a SQL date, time, or datetime
@@ -75437,9 +75437,9 @@ var require_luxon = __commonJS({
        * @example DateTime.fromSQL('09:12:34.342')
        * @return {DateTime}
        */
-      static fromSQL(text3, opts = {}) {
-        const [vals, parsedZone] = parseSQL(text3);
-        return parseDataToDateTime(vals, parsedZone, opts, "SQL", text3);
+      static fromSQL(text2, opts = {}) {
+        const [vals, parsedZone] = parseSQL(text2);
+        return parseDataToDateTime(vals, parsedZone, opts, "SQL", text2);
       }
       /**
        * Create an invalid DateTime.
@@ -76624,7 +76624,7 @@ var require_luxon = __commonJS({
        * @param {Object} options - options taken by fromFormat()
        * @return {Object}
        */
-      static fromFormatExplain(text3, fmt, options = {}) {
+      static fromFormatExplain(text2, fmt, options = {}) {
         const {
           locale = null,
           numberingSystem = null
@@ -76633,13 +76633,13 @@ var require_luxon = __commonJS({
           numberingSystem,
           defaultToEN: true
         });
-        return explainFromTokens(localeToUse, text3, fmt);
+        return explainFromTokens(localeToUse, text2, fmt);
       }
       /**
        * @deprecated use fromFormatExplain instead
        */
-      static fromStringExplain(text3, fmt, options = {}) {
-        return _DateTime.fromFormatExplain(text3, fmt, options);
+      static fromStringExplain(text2, fmt, options = {}) {
+        return _DateTime.fromFormatExplain(text2, fmt, options);
       }
       /**
        * Build a parser for `fmt` using the given locale. This parser can be passed
@@ -76674,8 +76674,8 @@ var require_luxon = __commonJS({
        * @param {Object} opts - options taken by fromFormat()
        * @returns {DateTime}
        */
-      static fromFormatParser(text3, formatParser, opts = {}) {
-        if (isUndefined2(text3) || isUndefined2(formatParser)) {
+      static fromFormatParser(text2, formatParser, opts = {}) {
+        if (isUndefined2(text2) || isUndefined2(formatParser)) {
           throw new InvalidArgumentError("fromFormatParser requires an input string and a format parser");
         }
         const {
@@ -76694,11 +76694,11 @@ var require_luxon = __commonJS({
           zone,
           specificOffset,
           invalidReason
-        } = formatParser.explainFromTokens(text3);
+        } = formatParser.explainFromTokens(text2);
         if (invalidReason) {
           return _DateTime.invalid(invalidReason);
         } else {
-          return parseDataToDateTime(result, zone, opts, `format ${formatParser.format}`, text3, specificOffset);
+          return parseDataToDateTime(result, zone, opts, `format ${formatParser.format}`, text2, specificOffset);
         }
       }
       // FORMAT PRESETS
@@ -91473,7 +91473,7 @@ var require_version_check = __commonJS({
 // node_modules/qrcode/lib/core/regex.js
 var require_regex = __commonJS({
   "node_modules/qrcode/lib/core/regex.js"(exports) {
-    var numeric2 = "[0-9]+";
+    var numeric = "[0-9]+";
     var alphanumeric = "[A-Z $%*+\\-./:]+";
     var kanji = "(?:[u3000-u303F]|[u3040-u309F]|[u30A0-u30FF]|[uFF00-uFFEF]|[u4E00-u9FAF]|[u2605-u2606]|[u2190-u2195]|u203B|[u2010u2015u2018u2019u2025u2026u201Cu201Du2225u2260]|[u0391-u0451]|[u00A7u00A8u00B1u00B4u00D7u00F7])+";
     kanji = kanji.replace(/u/g, "\\u");
@@ -91481,10 +91481,10 @@ var require_regex = __commonJS({
     exports.KANJI = new RegExp(kanji, "g");
     exports.BYTE_KANJI = new RegExp("[^A-Z0-9 $%*+\\-./:]+", "g");
     exports.BYTE = new RegExp(byte, "g");
-    exports.NUMERIC = new RegExp(numeric2, "g");
+    exports.NUMERIC = new RegExp(numeric, "g");
     exports.ALPHANUMERIC = new RegExp(alphanumeric, "g");
     var TEST_KANJI = new RegExp("^" + kanji + "$");
-    var TEST_NUMERIC = new RegExp("^" + numeric2 + "$");
+    var TEST_NUMERIC = new RegExp("^" + numeric + "$");
     var TEST_ALPHANUMERIC = new RegExp("^[A-Z0-9 $%*+\\-./:]+$");
     exports.testKanji = function testKanji(str) {
       return TEST_KANJI.test(str);
@@ -94949,7 +94949,7 @@ var require_browser2 = __commonJS({
     var QRCode2 = require_qrcode();
     var CanvasRenderer = require_canvas();
     var SvgRenderer = require_svg_tag();
-    function renderCanvas(renderFunc, canvas, text3, opts, cb) {
+    function renderCanvas(renderFunc, canvas, text2, opts, cb) {
       const args = [].slice.call(arguments, 1);
       const argsNum = args.length;
       const isLastArgCb = typeof args[argsNum - 1] === "function";
@@ -94961,8 +94961,8 @@ var require_browser2 = __commonJS({
           throw new Error("Too few arguments provided");
         }
         if (argsNum === 2) {
-          cb = text3;
-          text3 = canvas;
+          cb = text2;
+          text2 = canvas;
           canvas = opts = void 0;
         } else if (argsNum === 3) {
           if (canvas.getContext && typeof cb === "undefined") {
@@ -94970,8 +94970,8 @@ var require_browser2 = __commonJS({
             opts = void 0;
           } else {
             cb = opts;
-            opts = text3;
-            text3 = canvas;
+            opts = text2;
+            text2 = canvas;
             canvas = void 0;
           }
         }
@@ -94980,16 +94980,16 @@ var require_browser2 = __commonJS({
           throw new Error("Too few arguments provided");
         }
         if (argsNum === 1) {
-          text3 = canvas;
+          text2 = canvas;
           canvas = opts = void 0;
         } else if (argsNum === 2 && !canvas.getContext) {
-          opts = text3;
-          text3 = canvas;
+          opts = text2;
+          text2 = canvas;
           canvas = void 0;
         }
         return new Promise(function(resolve, reject) {
           try {
-            const data = QRCode2.create(text3, opts);
+            const data = QRCode2.create(text2, opts);
             resolve(renderFunc(data, canvas, opts));
           } catch (e) {
             reject(e);
@@ -94997,7 +94997,7 @@ var require_browser2 = __commonJS({
         });
       }
       try {
-        const data = QRCode2.create(text3, opts);
+        const data = QRCode2.create(text2, opts);
         cb(null, renderFunc(data, canvas, opts));
       } catch (e) {
         cb(e);
@@ -95021,8 +95021,8 @@ var require_server2 = __commonJS({
     var Utf8Renderer = require_utf8();
     var TerminalRenderer = require_terminal2();
     var SvgRenderer = require_svg();
-    function checkParams(text3, opts, cb) {
-      if (typeof text3 === "undefined") {
+    function checkParams(text2, opts, cb) {
+      if (typeof text2 === "undefined") {
         throw new Error("String required as first argument");
       }
       if (typeof cb === "undefined") {
@@ -95069,11 +95069,11 @@ var require_server2 = __commonJS({
           return Utf8Renderer;
       }
     }
-    function render(renderFunc, text3, params) {
+    function render(renderFunc, text2, params) {
       if (!params.cb) {
         return new Promise(function(resolve, reject) {
           try {
-            const data = QRCode2.create(text3, params.opts);
+            const data = QRCode2.create(text2, params.opts);
             return renderFunc(data, params.opts, function(err, data2) {
               return err ? reject(err) : resolve(data2);
             });
@@ -95083,7 +95083,7 @@ var require_server2 = __commonJS({
         });
       }
       try {
-        const data = QRCode2.create(text3, params.opts);
+        const data = QRCode2.create(text2, params.opts);
         return renderFunc(data, params.opts, params.cb);
       } catch (e) {
         params.cb(e);
@@ -95091,43 +95091,43 @@ var require_server2 = __commonJS({
     }
     exports.create = QRCode2.create;
     exports.toCanvas = require_browser2().toCanvas;
-    exports.toString = function toString(text3, opts, cb) {
-      const params = checkParams(text3, opts, cb);
+    exports.toString = function toString(text2, opts, cb) {
+      const params = checkParams(text2, opts, cb);
       const type = params.opts ? params.opts.type : void 0;
       const renderer = getStringRendererFromType(type);
-      return render(renderer.render, text3, params);
+      return render(renderer.render, text2, params);
     };
-    exports.toDataURL = function toDataURL(text3, opts, cb) {
-      const params = checkParams(text3, opts, cb);
+    exports.toDataURL = function toDataURL(text2, opts, cb) {
+      const params = checkParams(text2, opts, cb);
       const renderer = getRendererFromType(params.opts.type);
-      return render(renderer.renderToDataURL, text3, params);
+      return render(renderer.renderToDataURL, text2, params);
     };
-    exports.toBuffer = function toBuffer(text3, opts, cb) {
-      const params = checkParams(text3, opts, cb);
+    exports.toBuffer = function toBuffer(text2, opts, cb) {
+      const params = checkParams(text2, opts, cb);
       const renderer = getRendererFromType(params.opts.type);
-      return render(renderer.renderToBuffer, text3, params);
+      return render(renderer.renderToBuffer, text2, params);
     };
-    exports.toFile = function toFile(path2, text3, opts, cb) {
-      if (typeof path2 !== "string" || !(typeof text3 === "string" || typeof text3 === "object")) {
+    exports.toFile = function toFile(path2, text2, opts, cb) {
+      if (typeof path2 !== "string" || !(typeof text2 === "string" || typeof text2 === "object")) {
         throw new Error("Invalid argument");
       }
       if (arguments.length < 3 && !canPromise()) {
         throw new Error("Too few arguments provided");
       }
-      const params = checkParams(text3, opts, cb);
+      const params = checkParams(text2, opts, cb);
       const type = params.opts.type || getTypeFromFilename(path2);
       const renderer = getRendererFromType(type);
       const renderToFile = renderer.renderToFile.bind(null, path2);
-      return render(renderToFile, text3, params);
+      return render(renderToFile, text2, params);
     };
-    exports.toFileStream = function toFileStream(stream, text3, opts) {
+    exports.toFileStream = function toFileStream(stream, text2, opts) {
       if (arguments.length < 2) {
         throw new Error("Too few arguments provided");
       }
-      const params = checkParams(text3, opts, stream.emit.bind(stream, "error"));
+      const params = checkParams(text2, opts, stream.emit.bind(stream, "error"));
       const renderer = getRendererFromType("png");
       const renderToFileStream = renderer.renderToFileStream.bind(null, stream);
-      render(renderToFileStream, text3, params);
+      render(renderToFileStream, text2, params);
     };
   }
 });
@@ -95195,7 +95195,7 @@ async function submitInvoice(params) {
     orderBy: desc(zatcaXmlDocuments.createdAt)
   });
   if (!xmlDoc?.signedXml) {
-    throw new TRPCError({
+    throw new TRPCError2({
       code: "BAD_REQUEST",
       message: "Invoice must be signed before submission"
     });
@@ -97129,7 +97129,7 @@ var HonoRequest = class {
    * ```
    */
   json() {
-    return this.#cachedBody("text").then((text3) => JSON.parse(text3));
+    return this.#cachedBody("text").then((text2) => JSON.parse(text2));
   }
   /**
    * `.text()` can parse Request body of type `text/plain`
@@ -97675,9 +97675,9 @@ var Context = class {
    * })
    * ```
    */
-  text = (text3, arg, headers) => {
-    return !this.#preparedHeaders && !this.#status && !arg && !headers && !this.finalized ? new Response(text3) : this.#newResponse(
-      text3,
+  text = (text2, arg, headers) => {
+    return !this.#preparedHeaders && !this.#status && !arg && !headers && !this.finalized ? new Response(text2) : this.#newResponse(
+      text2,
       arg,
       setDefaultContentType(TEXT_PLAIN, headers)
     );
@@ -98902,7 +98902,7 @@ function parseConnectionParamsFromUnknown(parsed) {
     if (nonStringValues.length > 0) throw new Error(`Expected connectionParams to be string values. Got ${nonStringValues.map(([key2, value]) => `${key2}: ${typeof value}`).join(", ")}`);
     return parsed;
   } catch (cause) {
-    throw new TRPCError({
+    throw new TRPCError2({
       code: "PARSE_ERROR",
       message: "Invalid connection params shape",
       cause
@@ -98914,7 +98914,7 @@ function parseConnectionParamsFromString(str) {
   try {
     parsed = JSON.parse(str);
   } catch (cause) {
-    throw new TRPCError({
+    throw new TRPCError2({
       code: "PARSE_ERROR",
       message: "Not JSON-parsable query params",
       cause
@@ -98936,8 +98936,8 @@ function memo(fn) {
       var _promise2;
       if (value !== sym) return value;
       (_promise2 = promise2) !== null && _promise2 !== void 0 || (promise2 = fn().catch((cause) => {
-        if (cause instanceof TRPCError) throw cause;
-        throw new TRPCError({
+        if (cause instanceof TRPCError2) throw cause;
+        throw new TRPCError2({
           code: "BAD_REQUEST",
           message: cause instanceof Error ? cause.message : "Invalid input",
           cause
@@ -98963,7 +98963,7 @@ var jsonContentTypeHandler = {
     const isBatchCall = opts.searchParams.get("batch") === "1";
     const maxBatchSize = opts.maxBatchSize;
     const paths = isBatchCall ? opts.path.split(",") : [opts.path];
-    if (isBatchCall && typeof maxBatchSize === "number" && paths.length > maxBatchSize) throw new TRPCError({
+    if (isBatchCall && typeof maxBatchSize === "number" && paths.length > maxBatchSize) throw new TRPCError2({
       code: "BAD_REQUEST",
       message: `Batch call exceeds maximum size`
     });
@@ -98979,7 +98979,7 @@ var jsonContentTypeHandler = {
         result[0] = opts.router._def._config.transformer.input.deserialize(inputs);
         return result;
       }
-      if (!isObject(inputs)) throw new TRPCError({
+      if (!isObject(inputs)) throw new TRPCError2({
         code: "BAD_REQUEST",
         message: '"input" needs to be an object when doing a batch call'
       });
@@ -99020,7 +99020,7 @@ var jsonContentTypeHandler = {
       var _call$procedure;
       return (_call$procedure = call.procedure) === null || _call$procedure === void 0 ? void 0 : _call$procedure._def.type;
     }).filter(Boolean));
-    if (types.size > 1) throw new TRPCError({
+    if (types.size > 1) throw new TRPCError2({
       code: "BAD_REQUEST",
       message: `Cannot mix procedure types in call: ${Array.from(types).join(", ")}`
     });
@@ -99045,7 +99045,7 @@ var formDataContentTypeHandler = {
   },
   async parse(opts) {
     const { req } = opts;
-    if (req.method !== "POST") throw new TRPCError({
+    if (req.method !== "POST") throw new TRPCError2({
       code: "METHOD_NOT_SUPPORTED",
       message: "Only POST requests are supported for multipart/form-data requests"
     });
@@ -99078,7 +99078,7 @@ var octetStreamContentTypeHandler = {
   },
   async parse(opts) {
     const { req } = opts;
-    if (req.method !== "POST") throw new TRPCError({
+    if (req.method !== "POST") throw new TRPCError2({
       code: "METHOD_NOT_SUPPORTED",
       message: "Only POST requests are supported for application/octet-stream requests"
     });
@@ -99111,7 +99111,7 @@ function getContentTypeHandler(req) {
   const handler = handlers.find((handler$1) => handler$1.isMatch(req));
   if (handler) return handler;
   if (!handler && req.method === "GET") return jsonContentTypeHandler;
-  throw new TRPCError({
+  throw new TRPCError2({
     code: "UNSUPPORTED_MEDIA_TYPE",
     message: req.headers.has("content-type") ? `Unsupported content-type "${req.headers.get("content-type")}` : "Missing content-type header"
   });
@@ -100260,11 +100260,11 @@ async function resolveResponse(opts) {
   try {
     const [infoError, info] = infoTuple;
     if (infoError) throw infoError;
-    if (info.isBatchCall && !allowBatching) throw new TRPCError({
+    if (info.isBatchCall && !allowBatching) throw new TRPCError2({
       code: "BAD_REQUEST",
       message: `Batching is not enabled on the server`
     });
-    if (isStreamCall && !info.isBatchCall) throw new TRPCError({
+    if (isStreamCall && !info.isBatchCall) throw new TRPCError2({
       message: `Streaming requests must be batched (you can do a batch of 1)`,
       code: "BAD_REQUEST"
     });
@@ -100274,17 +100274,17 @@ async function resolveResponse(opts) {
       const combinedAbort = combinedAbortController(opts.req.signal);
       try {
         if (opts.error) throw opts.error;
-        if (!proc) throw new TRPCError({
+        if (!proc) throw new TRPCError2({
           code: "NOT_FOUND",
           message: `No procedure found on path "${call.path}"`
         });
-        if (!methodMapper[proc._def.type].includes(req.method)) throw new TRPCError({
+        if (!methodMapper[proc._def.type].includes(req.method)) throw new TRPCError2({
           code: "METHOD_NOT_SUPPORTED",
           message: `Unsupported ${req.method}-request to ${proc._def.type} procedure at path "${call.path}"`
         });
         if (proc._def.type === "subscription") {
           var _config$sse2;
-          if (info.isBatchCall) throw new TRPCError({
+          if (info.isBatchCall) throw new TRPCError2({
             code: "BAD_REQUEST",
             message: `Cannot batch subscription calls`
           });
@@ -100333,7 +100333,7 @@ async function resolveResponse(opts) {
         case "mutation":
         case "query": {
           headers.set("content-type", "application/json");
-          if (isDataStream(result === null || result === void 0 ? void 0 : result.data)) throw new TRPCError({
+          if (isDataStream(result === null || result === void 0 ? void 0 : result.data)) throw new TRPCError2({
             code: "UNSUPPORTED_MEDIA_TYPE",
             message: "Cannot use stream-like response in non-streaming request - use httpBatchStreamLink"
           });
@@ -100361,11 +100361,11 @@ async function resolveResponse(opts) {
         case "subscription": {
           const iterable = run(() => {
             if (error48) return errorToAsyncIterable(error48);
-            if (!experimentalSSE) return errorToAsyncIterable(new TRPCError({
+            if (!experimentalSSE) return errorToAsyncIterable(new TRPCError2({
               code: "METHOD_NOT_SUPPORTED",
               message: 'Missing experimental flag "sseSubscriptions"'
             }));
-            if (!isObservable(result.data) && !isAsyncIterable(result.data)) return errorToAsyncIterable(new TRPCError({
+            if (!isObservable(result.data) && !isAsyncIterable(result.data)) return errorToAsyncIterable(new TRPCError2({
               message: `Subscription ${call.path} did not return an observable or a AsyncGenerator`,
               code: "INTERNAL_SERVER_ERROR"
             }));
@@ -100506,7 +100506,7 @@ async function resolveResponse(opts) {
     const results = (await Promise.all(rpcCalls)).map((res) => {
       const [error48, result] = res;
       if (error48) return res;
-      if (isDataStream(result.data)) return [new TRPCError({
+      if (isDataStream(result.data)) return [new TRPCError2({
         code: "UNSUPPORTED_MEDIA_TYPE",
         message: "Cannot use stream-like response in non-streaming request - use httpBatchStreamLink"
       }), void 0];
@@ -107846,8 +107846,8 @@ function ko_default() {
 }
 
 // node_modules/zod/v4/locales/lt.js
-var capitalizeFirstCharacter = (text3) => {
-  return text3.charAt(0).toUpperCase() + text3.slice(1);
+var capitalizeFirstCharacter = (text2) => {
+  return text2.charAt(0).toUpperCase() + text2.slice(1);
 };
 function getUnitTypeFromNumber(number4) {
   const abs = Math.abs(number4);
@@ -115675,7 +115675,7 @@ var publicQuery = t.procedure;
 var requireAuth = t.middleware(async (opts) => {
   const { ctx, next } = opts;
   if (!ctx.user) {
-    throw new TRPCError({
+    throw new TRPCError2({
       code: "UNAUTHORIZED",
       message: ErrorMessages.unauthenticated
     });
@@ -115695,7 +115695,7 @@ function requireRole(role) {
     const allowed = roleHierarchy[role] || [role];
     const isAllowed = ctx.user && allowed.includes(ctx.user.role);
     if (!ctx.user || !isAllowed) {
-      throw new TRPCError({
+      throw new TRPCError2({
         code: "FORBIDDEN",
         message: ErrorMessages.insufficientRole
       });
@@ -116494,7 +116494,7 @@ var TemplateEngine = class {
     const title = language === "ar" && template.titleAr ? template.titleAr : template.title;
     const body = language === "ar" && template.messageAr ? template.messageAr : template.message;
     const bodyAr = language === "ar" ? void 0 : template.messageAr;
-    const compiled = (text3) => text3.replace(/\{\{(\w+)\}\}/g, (_, key2) => String(variables[key2] ?? `{{${key2}}}`));
+    const compiled = (text2) => text2.replace(/\{\{(\w+)\}\}/g, (_, key2) => String(variables[key2] ?? `{{${key2}}}`));
     return { subject: compiled(title), body: compiled(body), bodyAr: bodyAr ? compiled(bodyAr) : void 0 };
   }
   async listTemplates(tenantId) {
@@ -117112,13 +117112,13 @@ var salesRouter = createRouter({
     const vatNumber = settings?.taxNumber || "";
     if (saudiInvoice) {
       if (!sellerName.trim()) {
-        throw new TRPCError({
+        throw new TRPCError2({
           code: "BAD_REQUEST",
           message: "Saudi ZATCA invoices require company name in Settings before billing."
         });
       }
       if (!isValidSaudiVatNumber(vatNumber)) {
-        throw new TRPCError({
+        throw new TRPCError2({
           code: "BAD_REQUEST",
           message: "Saudi ZATCA invoices require a valid 15-digit VAT number that starts and ends with 3."
         });
@@ -117226,10 +117226,10 @@ var salesRouter = createRouter({
       where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
     });
     if (!existingInvoice) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     if (isIssuedOrZatcaLocked(existingInvoice)) {
-      throw new TRPCError({
+      throw new TRPCError2({
         code: "BAD_REQUEST",
         message: "Issued, paid, reported, or cleared invoices are immutable. Use a credit/debit note instead."
       });
@@ -117249,13 +117249,13 @@ var salesRouter = createRouter({
     let zatcaStatus = existingInvoice.zatcaStatus;
     if (saudiInvoice) {
       if (!sellerName.trim()) {
-        throw new TRPCError({
+        throw new TRPCError2({
           code: "BAD_REQUEST",
           message: "Saudi ZATCA invoices require company name in Settings before billing."
         });
       }
       if (!isValidSaudiVatNumber(vatNumber)) {
-        throw new TRPCError({
+        throw new TRPCError2({
           code: "BAD_REQUEST",
           message: "Saudi ZATCA invoices require a valid 15-digit VAT number that starts and ends with 3."
         });
@@ -117316,10 +117316,10 @@ var salesRouter = createRouter({
       where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
     });
     if (!existingInvoice) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     if (isIssuedOrZatcaLocked(existingInvoice)) {
-      throw new TRPCError({
+      throw new TRPCError2({
         code: "BAD_REQUEST",
         message: "Cannot delete issued, paid, reported, or cleared invoices. Create a credit/debit note instead."
       });
@@ -121743,7 +121743,7 @@ function encodeZatcaTlv2(tag2, value) {
   const encoder2 = new TextEncoder();
   const valueBytes = encoder2.encode(value);
   if (valueBytes.length > 255) {
-    throw new TRPCError({
+    throw new TRPCError2({
       code: "BAD_REQUEST",
       message: `ZATCA QR tag ${tag2} is too long for TLV encoding.`
     });
@@ -122077,15 +122077,15 @@ var taxComplianceRouter = createRouter({
     const invoice = await db5.query.invoices.findFirst({
       where: and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, tenantId))
     });
-    if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+    if (!invoice) throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
     const settings = await db5.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, tenantId)
     });
     if (!settings?.companyName && !settings?.companyNameAr) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Saudi ZATCA requires company name before issuing." });
+      throw new TRPCError2({ code: "BAD_REQUEST", message: "Saudi ZATCA requires company name before issuing." });
     }
     if (!validSaudiVat(settings?.taxNumber || "")) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Saudi VAT number must be 15 digits and start/end with 3." });
+      throw new TRPCError2({ code: "BAD_REQUEST", message: "Saudi VAT number must be 15 digits and start/end with 3." });
     }
     const items = await db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id));
     const xml = buildSimplifiedZatcaXml(invoice, items, {
@@ -122181,7 +122181,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const settings = await db5.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
@@ -122222,7 +122222,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const status = invoice.zatcaStatus || "pending";
     const statusMap = {
@@ -122249,7 +122249,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const settings = await db5.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
@@ -122282,7 +122282,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const items = await db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.invoiceId));
     const settings = await db5.query.companySettings.findFirst({
@@ -122365,7 +122365,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const submissionNumber = `FBR-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const submittedAt = isoNow();
@@ -122405,7 +122405,7 @@ var taxComplianceRouter = createRouter({
       orderBy: desc(auditLogs.createdAt)
     });
     if (!log) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Submission not found" });
+      throw new TRPCError2({ code: "NOT_FOUND", message: "Submission not found" });
     }
     return {
       submissionNumber: input.submissionNumber,
@@ -122874,7 +122874,7 @@ function validSaudiVat2(vatNumber) {
 function tlv(tag2, value) {
   const bytes = new TextEncoder().encode(value || "");
   if (bytes.length > 255) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: `ZATCA QR tag ${tag2} is longer than 255 bytes.` });
+    throw new TRPCError2({ code: "BAD_REQUEST", message: `ZATCA QR tag ${tag2} is longer than 255 bytes.` });
   }
   const out = new Uint8Array(2 + bytes.length);
   out[0] = tag2;
@@ -122952,12 +122952,12 @@ async function buildInvoicePackage(invoiceId, tenantId, invoiceMode) {
     db5.query.invoices.findFirst({ where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)) }),
     getLegalOrSettings(tenantId)
   ]);
-  if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+  if (!invoice) throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
   if (!validSaudiVat2(legal.vatNumber)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Saudi VAT Number must be 15 digits, start with 3, and end with 3." });
+    throw new TRPCError2({ code: "BAD_REQUEST", message: "Saudi VAT Number must be 15 digits, start with 3, and end with 3." });
   }
   if (!legal.legalNameEn && !legal.legalNameAr) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Company legal name is required before generating ZATCA documents." });
+    throw new TRPCError2({ code: "BAD_REQUEST", message: "Company legal name is required before generating ZATCA documents." });
   }
   const [items, customer, existingStatus] = await Promise.all([
     db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id)),
@@ -123526,7 +123526,7 @@ var zatcaRouter = createRouter({
       where: and(eq(zatcaXmlDocuments.tenantId, tenantId), eq(zatcaXmlDocuments.invoiceId, input.invoiceId)),
       orderBy: desc(zatcaXmlDocuments.createdAt)
     });
-    if (!signed?.signedXml) throw new TRPCError({ code: "BAD_REQUEST", message: "Sign invoice before clearance." });
+    if (!signed?.signedXml) throw new TRPCError2({ code: "BAD_REQUEST", message: "Sign invoice before clearance." });
     const statusRow = await db5.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
     const credential = await db5.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)), orderBy: desc(zatcaCredentials.updatedAt) });
     const result = await callZatcaApi({
@@ -123549,7 +123549,7 @@ var zatcaRouter = createRouter({
       where: and(eq(zatcaXmlDocuments.tenantId, tenantId), eq(zatcaXmlDocuments.invoiceId, input.invoiceId)),
       orderBy: desc(zatcaXmlDocuments.createdAt)
     });
-    if (!signed?.signedXml) throw new TRPCError({ code: "BAD_REQUEST", message: "Sign invoice before reporting." });
+    if (!signed?.signedXml) throw new TRPCError2({ code: "BAD_REQUEST", message: "Sign invoice before reporting." });
     const statusRow = await db5.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
     const credential = await db5.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)), orderBy: desc(zatcaCredentials.updatedAt) });
     const result = await callZatcaApi({
@@ -125653,11 +125653,11 @@ var syncRouter = createRouter({
   })).mutation(async ({ input, ctx }) => {
     const db5 = getDb();
     const tbl = tableMap[input.entityType];
-    if (!tbl) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown entity type" });
+    if (!tbl) throw new TRPCError2({ code: "BAD_REQUEST", message: "Unknown entity type" });
     const existing = await db5.select().from(tbl).where(
       and(eq(tbl.tenantId, ctx.user.tenantId), eq(tbl.localUuid, input.localUuid))
     ).limit(1);
-    if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Record not found" });
+    if (existing.length === 0) throw new TRPCError2({ code: "NOT_FOUND", message: "Record not found" });
     if (input.resolution === "keep_local") {
       await db5.update(tbl).set({ version: sql`version + 1`, updatedAt: /* @__PURE__ */ new Date() }).where(eq(tbl.localUuid, input.localUuid));
     } else if (input.resolution === "keep_server") {
@@ -126911,7 +126911,12 @@ var licenseAdminRouter = createRouter({
   }),
   // ─── Offline activation ──────────────────────────────────────────
   exportActivationRequest: superAdminQuery.input(external_exports.object({ licenseKey: external_exports.string(), hardwareJson: external_exports.string() })).query(async ({ input }) => {
-    const hardware = JSON.parse(input.hardwareJson);
+    let hardware;
+    try {
+      hardware = JSON.parse(input.hardwareJson);
+    } catch (e) {
+      hardware = { fingerprint: input.hardwareJson };
+    }
     const requestJson = exportActivationRequest(input.licenseKey, hardware);
     return { requestJson };
   }),
@@ -130894,10 +130899,10 @@ var portalAuthRouter = createRouter({
       `);
     const user = users2?.[0];
     if (!user || !verifyPassword(input.password, user.password_hash)) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+      throw new TRPCError2({ code: "UNAUTHORIZED", message: "Invalid credentials" });
     }
     if (!user.is_active) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Account is deactivated" });
+      throw new TRPCError2({ code: "FORBIDDEN", message: "Account is deactivated" });
     }
     const token = generateToken();
     const refreshToken = generateToken();
@@ -130932,7 +130937,7 @@ var portalAuthRouter = createRouter({
       `);
     const session = sessions?.[0];
     if (!session || new Date(session.expires_at) < /* @__PURE__ */ new Date()) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Session expired" });
+      throw new TRPCError2({ code: "UNAUTHORIZED", message: "Session expired" });
     }
     const newToken = generateToken();
     const newRefreshToken = generateToken();
@@ -130952,7 +130957,7 @@ var portalAuthRouter = createRouter({
       `);
     const row = sessions?.[0];
     if (!row || new Date(row.expires_at) < /* @__PURE__ */ new Date()) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired session" });
+      throw new TRPCError2({ code: "UNAUTHORIZED", message: "Invalid or expired session" });
     }
     await db5.execute(sql`
         UPDATE portal_sessions SET last_activity_at = NOW() WHERE id = ${row.id}
@@ -130994,7 +130999,7 @@ async function getSession(token) {
 var portalCustomerRouter = createRouter({
   dashboard: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const customerId = session.reference_id;
     const customer = await db2.query.customers.findFirst({ where: eq(customers.id, customerId) });
@@ -131012,14 +131017,14 @@ var portalCustomerRouter = createRouter({
   }),
   invoiceList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(invoices.tenantId, session.tenant_id), eq(invoices.customerId, session.reference_id)];
     if (input.status) conditions.push(eq(invoices.status, input.status));
     return db2.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
   }),
   invoiceGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const invoice = await db2.query.invoices.findFirst({ where: eq(invoices.id, input.id) });
     const items = await db2.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.id));
     const company = await db2.query.companySettings.findFirst({ where: eq(companySettings.tenantId, session.tenant_id) });
@@ -131027,7 +131032,7 @@ var portalCustomerRouter = createRouter({
   }),
   paymentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db2.select().from(customerPayments).where(and(eq(customerPayments.tenantId, session.tenant_id), eq(customerPayments.customerId, session.reference_id))).orderBy(desc(customerPayments.createdAt));
   }),
   initiatePayment: publicQuery.input(external_exports.object({
@@ -131037,7 +131042,7 @@ var portalCustomerRouter = createRouter({
     paymentMethod: external_exports.enum(["card", "bank_transfer", "online"])
   })).mutation(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const paymentNumber = `ONL-${Date.now().toString().slice(-8)}`;
     const [{ id }] = await db2.insert(customerPayments).values({
       tenantId: session.tenant_id,
@@ -131053,21 +131058,21 @@ var portalCustomerRouter = createRouter({
   }),
   orderList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(salesOrders.tenantId, session.tenant_id), eq(salesOrders.customerId, session.reference_id)];
     if (input.status) conditions.push(eq(salesOrders.status, input.status));
     return db2.select().from(salesOrders).where(and(...conditions)).orderBy(desc(salesOrders.createdAt));
   }),
   orderGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const order = await db2.query.salesOrders.findFirst({ where: eq(salesOrders.id, input.id) });
     const items = await db2.select().from(salesOrderItems).where(eq(salesOrderItems.orderId, input.id));
     return { order, items };
   }),
   ticketList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const customer = await db2.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
     const conditions = [eq(supportTickets.tenantId, session.tenant_id), eq(supportTickets.requesterEmail, customer?.email || "")];
     if (input.status) conditions.push(eq(supportTickets.status, input.status));
@@ -131075,7 +131080,7 @@ var portalCustomerRouter = createRouter({
   }),
   ticketCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), subject: external_exports.string(), description: external_exports.string(), priority: external_exports.enum(["low", "medium", "high", "urgent"]).optional() })).mutation(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const customer = await db2.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
     const ticketNumber = `PTK-${Date.now().toString().slice(-6)}`;
     const [{ id }] = await db2.insert(supportTickets).values({
@@ -131093,12 +131098,12 @@ var portalCustomerRouter = createRouter({
   }),
   ticketComments: publicQuery.input(external_exports.object({ token: external_exports.string(), ticketId: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db2.select().from(ticketComments).where(and(eq(ticketComments.ticketId, input.ticketId), eq(ticketComments.isInternal, false))).orderBy(ticketComments.createdAt);
   }),
   addComment: publicQuery.input(external_exports.object({ token: external_exports.string(), ticketId: external_exports.number(), comment: external_exports.string() })).mutation(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [{ id }] = await db2.insert(ticketComments).values({
       ticketId: input.ticketId,
       comment: input.comment,
@@ -131108,13 +131113,13 @@ var portalCustomerRouter = createRouter({
   }),
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const customer = await db2.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
     return { portalUser: { id: session.id, name: session.name, email: session.email, portalType: session.portal_type }, customer };
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string().optional(), phone: external_exports.string().optional(), email: external_exports.string().optional(), address: external_exports.string().optional(), city: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const updateData = {};
     if (input.name) updateData.name = input.name;
     if (input.phone) updateData.phone = input.phone;
@@ -131129,7 +131134,7 @@ var portalCustomerRouter = createRouter({
   }),
   messages: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [rows] = await db2.execute(sql`
         SELECT * FROM portal_messages
         WHERE tenant_id = ${session.tenant_id} AND receiver_type = 'customer' AND receiver_id = ${session.reference_id}
@@ -131156,7 +131161,7 @@ async function getSession2(token) {
 var portalVendorRouter = createRouter({
   dashboard: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const supplierId = session.reference_id;
     const supplier = await db3.query.suppliers.findFirst({ where: eq(suppliers.id, supplierId) });
@@ -131173,26 +131178,26 @@ var portalVendorRouter = createRouter({
   }),
   poList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(purchaseOrders.tenantId, session.tenant_id), eq(purchaseOrders.supplierId, session.reference_id)];
     if (input.status) conditions.push(eq(purchaseOrders.status, input.status));
     return db3.select().from(purchaseOrders).where(and(...conditions)).orderBy(desc(purchaseOrders.createdAt));
   }),
   poGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const po = await db3.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.id) });
     const items = await db3.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.poId, input.id));
     return { po, items };
   }),
   invoiceList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db3.select().from(invoices).where(and(eq(invoices.tenantId, session.tenant_id), eq(invoices.customerId, session.reference_id))).orderBy(desc(invoices.createdAt));
   }),
   invoiceCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), poId: external_exports.number(), invoiceNumber: external_exports.string(), amount: external_exports.string(), taxAmount: external_exports.string().optional(), totalAmount: external_exports.string() })).mutation(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const po = await db3.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.poId) });
     if (!po) throw new Error("Purchase order not found");
     const [{ id }] = await db3.insert(invoices).values({
@@ -131213,18 +131218,18 @@ var portalVendorRouter = createRouter({
   }),
   paymentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db3.select().from(supplierPayments).where(and(eq(supplierPayments.tenantId, session.tenant_id), eq(supplierPayments.supplierId, session.reference_id))).orderBy(desc(supplierPayments.createdAt));
   }),
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const supplier = await db3.query.suppliers.findFirst({ where: eq(suppliers.id, session.reference_id) });
     return { portalUser: { id: session.id, name: session.name, email: session.email, portalType: session.portal_type }, supplier };
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string().optional(), phone: external_exports.string().optional(), email: external_exports.string().optional(), address: external_exports.string().optional(), city: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const updateData = {};
     if (input.name) updateData.name = input.name;
     if (input.phone) updateData.phone = input.phone;
@@ -131239,7 +131244,7 @@ var portalVendorRouter = createRouter({
   }),
   messages: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [rows] = await db3.execute(sql`
         SELECT * FROM portal_messages
         WHERE tenant_id = ${session.tenant_id} AND receiver_type = 'vendor' AND receiver_id = ${session.reference_id}
@@ -131267,7 +131272,7 @@ var db4 = getDb();
 var portalEmployeeRouter = createRouter({
   dashboard: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const employeeId = session.reference_id;
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
@@ -131294,14 +131299,14 @@ var portalEmployeeRouter = createRouter({
   }),
   payslipList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const slips = await db4.select().from(salarySlips).where(and(eq(salarySlips.tenantId, session.tenant_id), eq(salarySlips.employeeId, session.reference_id))).orderBy(desc(salarySlips.createdAt));
     const periods = await db4.select().from(payrollPeriods).where(eq(payrollPeriods.tenantId, session.tenant_id));
     return slips.map((slip) => ({ ...slip, period: periods.find((p) => p.id === slip.payrollPeriodId) }));
   }),
   payslipGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const slip = await db4.query.salarySlips.findFirst({ where: eq(salarySlips.id, input.id) });
     const period = slip ? await db4.query.payrollPeriods.findFirst({ where: eq(payrollPeriods.id, slip.payrollPeriodId) }) : null;
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, slip?.employeeId) });
@@ -131309,7 +131314,7 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(leaveRequests.tenantId, session.tenant_id), eq(leaveRequests.employeeId, session.reference_id)];
     if (input.status) conditions.push(eq(leaveRequests.status, input.status));
     const requests = await db4.select().from(leaveRequests).where(and(...conditions)).orderBy(desc(leaveRequests.createdAt));
@@ -131318,7 +131323,7 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), leaveTypeId: external_exports.number(), startDate: external_exports.string(), endDate: external_exports.string(), days: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [{ id }] = await db4.insert(leaveRequests).values({
       tenantId: session.tenant_id,
       employeeId: session.reference_id,
@@ -131333,18 +131338,18 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestCancel: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     await db4.update(leaveRequests).set({ status: "cancelled" }).where(and(eq(leaveRequests.id, input.id), eq(leaveRequests.employeeId, session.reference_id)));
     return { success: true };
   }),
   attendanceList: publicQuery.input(external_exports.object({ token: external_exports.string(), limit: external_exports.number().default(30) })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db4.select().from(attendance).where(and(eq(attendance.tenantId, session.tenant_id), eq(attendance.employeeId, session.reference_id))).orderBy(desc(attendance.date)).limit(input.limit);
   }),
   attendanceStats: publicQuery.input(external_exports.object({ token: external_exports.string(), month: external_exports.number().optional(), year: external_exports.number().optional() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const now = /* @__PURE__ */ new Date();
     const year3 = input.year || now.getFullYear();
     const month = input.month || now.getMonth() + 1;
@@ -131364,7 +131369,7 @@ var portalEmployeeRouter = createRouter({
   }),
   documentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [rows] = await db4.execute(sql`
         SELECT * FROM portal_documents
         WHERE tenant_id = ${session.tenant_id} AND portal_type = 'employee' AND reference_id = ${session.reference_id}
@@ -131374,7 +131379,7 @@ var portalEmployeeRouter = createRouter({
   }),
   documentUpload: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string(), category: external_exports.string(), fileUrl: external_exports.string(), fileSize: external_exports.number().optional(), mimeType: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [result] = await db4.execute(sql`
         INSERT INTO portal_documents (tenant_id, portal_type, reference_id, document_type, file_name, file_path, file_size, mime_type, uploaded_by)
         VALUES (${session.tenant_id}, 'employee', ${session.reference_id}, ${input.category}, ${input.name}, ${input.fileUrl}, ${input.fileSize || 0}, ${input.mimeType || "application/octet-stream"}, ${session.id})
@@ -131383,7 +131388,7 @@ var portalEmployeeRouter = createRouter({
   }),
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, session.reference_id) });
     const department = employee ? await db4.query.departments.findFirst({ where: eq(departments.id, employee.departmentId) }) : null;
     const designation = employee ? await db4.query.designations.findFirst({ where: eq(designations.id, employee.designationId) }) : null;
@@ -131391,7 +131396,7 @@ var portalEmployeeRouter = createRouter({
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), phone: external_exports.string().optional(), mobile: external_exports.string().optional(), address: external_exports.string().optional(), emergencyContact: external_exports.string().optional(), emergencyPhone: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const updateData = {};
     if (input.phone) updateData.phone = input.phone;
     if (input.mobile) updateData.mobile = input.mobile;
@@ -135671,789 +135676,160 @@ var wsRouter = createRouter({
 // api/workshopRouter.ts
 init_connection();
 
-// node_modules/drizzle-orm/sqlite-core/columns/blob.js
-init_entity();
-init_utils();
-
-// node_modules/drizzle-orm/sqlite-core/columns/common.js
-init_column_builder();
-init_column();
-init_entity();
-
-// node_modules/drizzle-orm/sqlite-core/foreign-keys.js
-init_entity();
-init_table_utils();
-var ForeignKeyBuilder3 = class {
-  static [entityKind] = "SQLiteForeignKeyBuilder";
-  /** @internal */
-  reference;
-  /** @internal */
-  _onUpdate;
-  /** @internal */
-  _onDelete;
-  constructor(config2, actions) {
-    this.reference = () => {
-      const { name: name2, columns, foreignColumns } = config2();
-      return { name: name2, columns, foreignTable: foreignColumns[0].table, foreignColumns };
-    };
-    if (actions) {
-      this._onUpdate = actions.onUpdate;
-      this._onDelete = actions.onDelete;
-    }
-  }
-  onUpdate(action) {
-    this._onUpdate = action;
-    return this;
-  }
-  onDelete(action) {
-    this._onDelete = action;
-    return this;
-  }
-  /** @internal */
-  build(table) {
-    return new ForeignKey3(table, this);
-  }
-};
-var ForeignKey3 = class {
-  constructor(table, builder) {
-    this.table = table;
-    this.reference = builder.reference;
-    this.onUpdate = builder._onUpdate;
-    this.onDelete = builder._onDelete;
-  }
-  static [entityKind] = "SQLiteForeignKey";
-  reference;
-  onUpdate;
-  onDelete;
-  getName() {
-    const { name: name2, columns, foreignColumns } = this.reference();
-    const columnNames = columns.map((column) => column.name);
-    const foreignColumnNames = foreignColumns.map((column) => column.name);
-    const chunks = [
-      this.table[TableName],
-      ...columnNames,
-      foreignColumns[0].table[TableName],
-      ...foreignColumnNames
-    ];
-    return name2 ?? `${chunks.join("_")}_fk`;
-  }
-};
-
-// node_modules/drizzle-orm/sqlite-core/unique-constraint.js
-init_entity();
-init_table_utils();
-function uniqueKeyName3(table, columns) {
-  return `${table[TableName]}_${columns.join("_")}_unique`;
-}
-var UniqueConstraintBuilder3 = class {
-  constructor(columns, name2) {
-    this.name = name2;
-    this.columns = columns;
-  }
-  static [entityKind] = "SQLiteUniqueConstraintBuilder";
-  /** @internal */
-  columns;
-  /** @internal */
-  build(table) {
-    return new UniqueConstraint3(table, this.columns, this.name);
-  }
-};
-var UniqueOnConstraintBuilder3 = class {
-  static [entityKind] = "SQLiteUniqueOnConstraintBuilder";
-  /** @internal */
-  name;
-  constructor(name2) {
-    this.name = name2;
-  }
-  on(...columns) {
-    return new UniqueConstraintBuilder3(columns, this.name);
-  }
-};
-var UniqueConstraint3 = class {
-  constructor(table, columns, name2) {
-    this.table = table;
-    this.columns = columns;
-    this.name = name2 ?? uniqueKeyName3(this.table, this.columns.map((column) => column.name));
-  }
-  static [entityKind] = "SQLiteUniqueConstraint";
-  columns;
-  name;
-  getName() {
-    return this.name;
-  }
-};
-
-// node_modules/drizzle-orm/sqlite-core/columns/common.js
-var SQLiteColumnBuilder = class extends ColumnBuilder {
-  static [entityKind] = "SQLiteColumnBuilder";
-  foreignKeyConfigs = [];
-  references(ref, actions = {}) {
-    this.foreignKeyConfigs.push({ ref, actions });
-    return this;
-  }
-  unique(name2) {
-    this.config.isUnique = true;
-    this.config.uniqueName = name2;
-    return this;
-  }
-  generatedAlwaysAs(as, config2) {
-    this.config.generated = {
-      as,
-      type: "always",
-      mode: config2?.mode ?? "virtual"
-    };
-    return this;
-  }
-  /** @internal */
-  buildForeignKeys(column, table) {
-    return this.foreignKeyConfigs.map(({ ref, actions }) => {
-      return ((ref2, actions2) => {
-        const builder = new ForeignKeyBuilder3(() => {
-          const foreignColumn = ref2();
-          return { columns: [column], foreignColumns: [foreignColumn] };
-        });
-        if (actions2.onUpdate) {
-          builder.onUpdate(actions2.onUpdate);
-        }
-        if (actions2.onDelete) {
-          builder.onDelete(actions2.onDelete);
-        }
-        return builder.build(table);
-      })(ref, actions);
-    });
-  }
-};
-var SQLiteColumn = class extends Column {
-  constructor(table, config2) {
-    if (!config2.uniqueName) {
-      config2.uniqueName = uniqueKeyName3(table, [config2.name]);
-    }
-    super(table, config2);
-    this.table = table;
-  }
-  static [entityKind] = "SQLiteColumn";
-};
-
-// node_modules/drizzle-orm/sqlite-core/columns/blob.js
-var SQLiteBigIntBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteBigIntBuilder";
-  constructor(name2) {
-    super(name2, "bigint", "SQLiteBigInt");
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteBigInt(table, this.config);
-  }
-};
-var SQLiteBigInt = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteBigInt";
-  getSQLType() {
-    return "blob";
-  }
-  mapFromDriverValue(value) {
-    if (typeof Buffer !== "undefined" && Buffer.from) {
-      const buf = Buffer.isBuffer(value) ? value : value instanceof ArrayBuffer ? Buffer.from(value) : value.buffer ? Buffer.from(value.buffer, value.byteOffset, value.byteLength) : Buffer.from(value);
-      return BigInt(buf.toString("utf8"));
-    }
-    return BigInt(textDecoder.decode(value));
-  }
-  mapToDriverValue(value) {
-    return Buffer.from(value.toString());
-  }
-};
-var SQLiteBlobJsonBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteBlobJsonBuilder";
-  constructor(name2) {
-    super(name2, "json", "SQLiteBlobJson");
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteBlobJson(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteBlobJson = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteBlobJson";
-  getSQLType() {
-    return "blob";
-  }
-  mapFromDriverValue(value) {
-    if (typeof Buffer !== "undefined" && Buffer.from) {
-      const buf = Buffer.isBuffer(value) ? value : value instanceof ArrayBuffer ? Buffer.from(value) : value.buffer ? Buffer.from(value.buffer, value.byteOffset, value.byteLength) : Buffer.from(value);
-      return JSON.parse(buf.toString("utf8"));
-    }
-    return JSON.parse(textDecoder.decode(value));
-  }
-  mapToDriverValue(value) {
-    return Buffer.from(JSON.stringify(value));
-  }
-};
-var SQLiteBlobBufferBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteBlobBufferBuilder";
-  constructor(name2) {
-    super(name2, "buffer", "SQLiteBlobBuffer");
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteBlobBuffer(table, this.config);
-  }
-};
-var SQLiteBlobBuffer = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteBlobBuffer";
-  mapFromDriverValue(value) {
-    if (Buffer.isBuffer(value)) {
-      return value;
-    }
-    return Buffer.from(value);
-  }
-  getSQLType() {
-    return "blob";
-  }
-};
-function blob(a, b) {
-  const { name: name2, config: config2 } = getColumnNameAndConfig(a, b);
-  if (config2?.mode === "json") {
-    return new SQLiteBlobJsonBuilder(name2);
-  }
-  if (config2?.mode === "bigint") {
-    return new SQLiteBigIntBuilder(name2);
-  }
-  return new SQLiteBlobBufferBuilder(name2);
-}
-
-// node_modules/drizzle-orm/sqlite-core/columns/custom.js
-init_entity();
-init_utils();
-var SQLiteCustomColumnBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteCustomColumnBuilder";
-  constructor(name2, fieldConfig, customTypeParams) {
-    super(name2, "custom", "SQLiteCustomColumn");
-    this.config.fieldConfig = fieldConfig;
-    this.config.customTypeParams = customTypeParams;
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteCustomColumn(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteCustomColumn = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteCustomColumn";
-  sqlName;
-  mapTo;
-  mapFrom;
-  constructor(table, config2) {
-    super(table, config2);
-    this.sqlName = config2.customTypeParams.dataType(config2.fieldConfig);
-    this.mapTo = config2.customTypeParams.toDriver;
-    this.mapFrom = config2.customTypeParams.fromDriver;
-  }
-  getSQLType() {
-    return this.sqlName;
-  }
-  mapFromDriverValue(value) {
-    return typeof this.mapFrom === "function" ? this.mapFrom(value) : value;
-  }
-  mapToDriverValue(value) {
-    return typeof this.mapTo === "function" ? this.mapTo(value) : value;
-  }
-};
-function customType2(customTypeParams) {
-  return (a, b) => {
-    const { name: name2, config: config2 } = getColumnNameAndConfig(a, b);
-    return new SQLiteCustomColumnBuilder(
-      name2,
-      config2,
-      customTypeParams
-    );
-  };
-}
-
-// node_modules/drizzle-orm/sqlite-core/columns/integer.js
-init_entity();
-init_sql();
-init_utils();
-var SQLiteBaseIntegerBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteBaseIntegerBuilder";
-  constructor(name2, dataType, columnType) {
-    super(name2, dataType, columnType);
-    this.config.autoIncrement = false;
-  }
-  primaryKey(config2) {
-    if (config2?.autoIncrement) {
-      this.config.autoIncrement = true;
-    }
-    this.config.hasDefault = true;
-    return super.primaryKey();
-  }
-};
-var SQLiteBaseInteger = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteBaseInteger";
-  autoIncrement = this.config.autoIncrement;
-  getSQLType() {
-    return "integer";
-  }
-};
-var SQLiteIntegerBuilder = class extends SQLiteBaseIntegerBuilder {
-  static [entityKind] = "SQLiteIntegerBuilder";
-  constructor(name2) {
-    super(name2, "number", "SQLiteInteger");
-  }
-  build(table) {
-    return new SQLiteInteger(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteInteger = class extends SQLiteBaseInteger {
-  static [entityKind] = "SQLiteInteger";
-};
-var SQLiteTimestampBuilder = class extends SQLiteBaseIntegerBuilder {
-  static [entityKind] = "SQLiteTimestampBuilder";
-  constructor(name2, mode) {
-    super(name2, "date", "SQLiteTimestamp");
-    this.config.mode = mode;
-  }
-  /**
-   * @deprecated Use `default()` with your own expression instead.
-   *
-   * Adds `DEFAULT (cast((julianday('now') - 2440587.5)*86400000 as integer))` to the column, which is the current epoch timestamp in milliseconds.
-   */
-  defaultNow() {
-    return this.default(sql`(cast((julianday('now') - 2440587.5)*86400000 as integer))`);
-  }
-  build(table) {
-    return new SQLiteTimestamp(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteTimestamp = class extends SQLiteBaseInteger {
-  static [entityKind] = "SQLiteTimestamp";
-  mode = this.config.mode;
-  mapFromDriverValue(value) {
-    if (this.config.mode === "timestamp") {
-      return new Date(value * 1e3);
-    }
-    return new Date(value);
-  }
-  mapToDriverValue(value) {
-    const unix = value.getTime();
-    if (this.config.mode === "timestamp") {
-      return Math.floor(unix / 1e3);
-    }
-    return unix;
-  }
-};
-var SQLiteBooleanBuilder = class extends SQLiteBaseIntegerBuilder {
-  static [entityKind] = "SQLiteBooleanBuilder";
-  constructor(name2, mode) {
-    super(name2, "boolean", "SQLiteBoolean");
-    this.config.mode = mode;
-  }
-  build(table) {
-    return new SQLiteBoolean(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteBoolean = class extends SQLiteBaseInteger {
-  static [entityKind] = "SQLiteBoolean";
-  mode = this.config.mode;
-  mapFromDriverValue(value) {
-    return Number(value) === 1;
-  }
-  mapToDriverValue(value) {
-    return value ? 1 : 0;
-  }
-};
-function integer2(a, b) {
-  const { name: name2, config: config2 } = getColumnNameAndConfig(a, b);
-  if (config2?.mode === "timestamp" || config2?.mode === "timestamp_ms") {
-    return new SQLiteTimestampBuilder(name2, config2.mode);
-  }
-  if (config2?.mode === "boolean") {
-    return new SQLiteBooleanBuilder(name2, config2.mode);
-  }
-  return new SQLiteIntegerBuilder(name2);
-}
-
-// node_modules/drizzle-orm/sqlite-core/columns/numeric.js
-init_entity();
-init_utils();
-var SQLiteNumericBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteNumericBuilder";
-  constructor(name2) {
-    super(name2, "string", "SQLiteNumeric");
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteNumeric(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteNumeric = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteNumeric";
-  mapFromDriverValue(value) {
-    if (typeof value === "string") return value;
-    return String(value);
-  }
-  getSQLType() {
-    return "numeric";
-  }
-};
-var SQLiteNumericNumberBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteNumericNumberBuilder";
-  constructor(name2) {
-    super(name2, "number", "SQLiteNumericNumber");
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteNumericNumber(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteNumericNumber = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteNumericNumber";
-  mapFromDriverValue(value) {
-    if (typeof value === "number") return value;
-    return Number(value);
-  }
-  mapToDriverValue = String;
-  getSQLType() {
-    return "numeric";
-  }
-};
-var SQLiteNumericBigIntBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteNumericBigIntBuilder";
-  constructor(name2) {
-    super(name2, "bigint", "SQLiteNumericBigInt");
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteNumericBigInt(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteNumericBigInt = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteNumericBigInt";
-  mapFromDriverValue = BigInt;
-  mapToDriverValue = String;
-  getSQLType() {
-    return "numeric";
-  }
-};
-function numeric(a, b) {
-  const { name: name2, config: config2 } = getColumnNameAndConfig(a, b);
-  const mode = config2?.mode;
-  return mode === "number" ? new SQLiteNumericNumberBuilder(name2) : mode === "bigint" ? new SQLiteNumericBigIntBuilder(name2) : new SQLiteNumericBuilder(name2);
-}
-
-// node_modules/drizzle-orm/sqlite-core/columns/real.js
-init_entity();
-var SQLiteRealBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteRealBuilder";
-  constructor(name2) {
-    super(name2, "number", "SQLiteReal");
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteReal(table, this.config);
-  }
-};
-var SQLiteReal = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteReal";
-  getSQLType() {
-    return "real";
-  }
-};
-function real2(name2) {
-  return new SQLiteRealBuilder(name2 ?? "");
-}
-
-// node_modules/drizzle-orm/sqlite-core/columns/text.js
-init_entity();
-init_utils();
-var SQLiteTextBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteTextBuilder";
-  constructor(name2, config2) {
-    super(name2, "string", "SQLiteText");
-    this.config.enumValues = config2.enum;
-    this.config.length = config2.length;
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteText(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteText = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteText";
-  enumValues = this.config.enumValues;
-  length = this.config.length;
-  constructor(table, config2) {
-    super(table, config2);
-  }
-  getSQLType() {
-    return `text${this.config.length ? `(${this.config.length})` : ""}`;
-  }
-};
-var SQLiteTextJsonBuilder = class extends SQLiteColumnBuilder {
-  static [entityKind] = "SQLiteTextJsonBuilder";
-  constructor(name2) {
-    super(name2, "json", "SQLiteTextJson");
-  }
-  /** @internal */
-  build(table) {
-    return new SQLiteTextJson(
-      table,
-      this.config
-    );
-  }
-};
-var SQLiteTextJson = class extends SQLiteColumn {
-  static [entityKind] = "SQLiteTextJson";
-  getSQLType() {
-    return "text";
-  }
-  mapFromDriverValue(value) {
-    return JSON.parse(value);
-  }
-  mapToDriverValue(value) {
-    return JSON.stringify(value);
-  }
-};
-function text2(a, b = {}) {
-  const { name: name2, config: config2 } = getColumnNameAndConfig(a, b);
-  if (config2.mode === "json") {
-    return new SQLiteTextJsonBuilder(name2);
-  }
-  return new SQLiteTextBuilder(name2, config2);
-}
-
-// node_modules/drizzle-orm/sqlite-core/table.js
-init_entity();
-init_table();
-
-// node_modules/drizzle-orm/sqlite-core/columns/all.js
-function getSQLiteColumnBuilders() {
-  return {
-    blob,
-    customType: customType2,
-    integer: integer2,
-    numeric,
-    real: real2,
-    text: text2
-  };
-}
-
-// node_modules/drizzle-orm/sqlite-core/table.js
-var InlineForeignKeys3 = /* @__PURE__ */ Symbol.for("drizzle:SQLiteInlineForeignKeys");
-var SQLiteTable = class extends Table {
-  static [entityKind] = "SQLiteTable";
-  /** @internal */
-  static Symbol = Object.assign({}, Table.Symbol, {
-    InlineForeignKeys: InlineForeignKeys3
-  });
-  /** @internal */
-  [Table.Symbol.Columns];
-  /** @internal */
-  [InlineForeignKeys3] = [];
-  /** @internal */
-  [Table.Symbol.ExtraConfigBuilder] = void 0;
-};
-function sqliteTableBase(name2, columns, extraConfig, schema, baseName = name2) {
-  const rawTable = new SQLiteTable(name2, schema, baseName);
-  const parsedColumns = typeof columns === "function" ? columns(getSQLiteColumnBuilders()) : columns;
-  const builtColumns = Object.fromEntries(
-    Object.entries(parsedColumns).map(([name22, colBuilderBase]) => {
-      const colBuilder = colBuilderBase;
-      colBuilder.setName(name22);
-      const column = colBuilder.build(rawTable);
-      rawTable[InlineForeignKeys3].push(...colBuilder.buildForeignKeys(column, rawTable));
-      return [name22, column];
-    })
-  );
-  const table = Object.assign(rawTable, builtColumns);
-  table[Table.Symbol.Columns] = builtColumns;
-  table[Table.Symbol.ExtraConfigColumns] = builtColumns;
-  if (extraConfig) {
-    table[SQLiteTable.Symbol.ExtraConfigBuilder] = extraConfig;
-  }
-  return table;
-}
-var sqliteTable = (name2, columns, extraConfig) => {
-  return sqliteTableBase(name2, columns, extraConfig);
-};
-
 // db/schema-workshop.ts
+init_mysql_core();
 init_drizzle_orm();
-var workshopJobCards = sqliteTable("workshop_job_cards", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  tenantId: integer2("tenant_id").notNull(),
-  vehicleId: integer2("vehicle_id").notNull(),
-  customerId: integer2("customer_id").notNull(),
-  jobNumber: text2("job_number").notNull(),
-  serviceType: text2("service_type").notNull(),
-  description: text2("description"),
-  status: text2("status", { enum: ["pending", "in_progress", "quality_check", "completed", "delivered", "cancelled"] }).default("pending").notNull(),
-  priority: text2("priority", { enum: ["normal", "urgent", "express"] }).default("normal"),
-  estimatedCost: text2("estimated_cost"),
-  actualCost: text2("actual_cost"),
-  technicianId: integer2("technician_id"),
-  estimatedHours: real2("estimated_hours"),
-  actualHours: real2("actual_hours"),
-  startDate: text2("start_date"),
-  completionDate: text2("completion_date"),
-  warrantyMonths: integer2("warranty_months").default(3),
-  customerApproval: integer2("customer_approval", { mode: "boolean" }).default(false),
-  approvedAt: text2("approved_at"),
-  invoiceId: integer2("invoice_id"),
-  notes: text2("notes"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`),
-  updatedAt: text2("updated_at").default(sql`(datetime('now'))`)
+var workshopJobCards = mysqlTable("workshop_job_cards", {
+  id: int2("id").autoincrement().primaryKey(),
+  tenantId: int2("tenant_id").notNull(),
+  vehicleId: int2("vehicle_id").notNull(),
+  customerId: int2("customer_id").notNull(),
+  jobNumber: varchar("job_number", { length: 100 }).notNull(),
+  serviceType: varchar("service_type", { length: 150 }).notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["pending", "in_progress", "quality_check", "completed", "delivered", "cancelled"]).default("pending").notNull(),
+  priority: mysqlEnum("priority", ["normal", "urgent", "express"]).default("normal"),
+  estimatedCost: text("estimated_cost"),
+  actualCost: text("actual_cost"),
+  technicianId: int2("technician_id"),
+  estimatedHours: double("estimated_hours"),
+  actualHours: double("actual_hours"),
+  startDate: varchar("start_date", { length: 60 }),
+  completionDate: varchar("completion_date", { length: 60 }),
+  warrantyMonths: int2("warranty_months").default(3),
+  customerApproval: boolean4("customer_approval").default(false),
+  approvedAt: varchar("approved_at", { length: 60 }),
+  invoiceId: int2("invoice_id"),
+  notes: text("notes"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`),
+  updatedAt: varchar("updated_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopJobParts = sqliteTable("workshop_job_parts", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  jobCardId: integer2("job_card_id").notNull(),
-  partName: text2("part_name").notNull(),
-  partNumber: text2("part_number"),
-  quantity: real2("quantity").default(1),
-  unitPrice: text2("unit_price"),
-  totalPrice: text2("total_price"),
-  supplierId: integer2("supplier_id"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopJobParts = mysqlTable("workshop_job_parts", {
+  id: int2("id").autoincrement().primaryKey(),
+  jobCardId: int2("job_card_id").notNull(),
+  partName: varchar("part_name", { length: 255 }).notNull(),
+  partNumber: varchar("part_number", { length: 100 }),
+  quantity: double("quantity").default(1),
+  unitPrice: text("unit_price"),
+  totalPrice: text("total_price"),
+  supplierId: int2("supplier_id"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopJobLabor = sqliteTable("workshop_job_labor", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  jobCardId: integer2("job_card_id").notNull(),
-  technicianId: integer2("technician_id"),
-  description: text2("description"),
-  hours: real2("hours"),
-  rate: text2("rate"),
-  total: text2("total"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopJobLabor = mysqlTable("workshop_job_labor", {
+  id: int2("id").autoincrement().primaryKey(),
+  jobCardId: int2("job_card_id").notNull(),
+  technicianId: int2("technician_id"),
+  description: text("description"),
+  hours: double("hours"),
+  rate: text("rate"),
+  total: text("total"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopVehicles = sqliteTable("workshop_vehicles", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  tenantId: integer2("tenant_id").notNull(),
-  customerId: integer2("customer_id").notNull(),
-  make: text2("make").notNull(),
-  model: text2("model").notNull(),
-  year: integer2("year").notNull(),
-  plateNumber: text2("plate_number"),
-  vin: text2("vin"),
-  color: text2("color"),
-  mileage: text2("mileage"),
-  nextServiceMileage: text2("next_service_mileage"),
-  nextServiceDate: text2("next_service_date"),
-  insuranceCompany: text2("insurance_company"),
-  policyNumber: text2("policy_number"),
-  insuranceExpiry: text2("insurance_expiry"),
-  registrationExpiry: text2("registration_expiry"),
-  notes: text2("notes"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopVehicles = mysqlTable("workshop_vehicles", {
+  id: int2("id").autoincrement().primaryKey(),
+  tenantId: int2("tenant_id").notNull(),
+  customerId: int2("customer_id").notNull(),
+  make: varchar("make", { length: 100 }).notNull(),
+  model: varchar("model", { length: 100 }).notNull(),
+  year: int2("year").notNull(),
+  plateNumber: varchar("plate_number", { length: 50 }),
+  vin: varchar("vin", { length: 100 }),
+  color: varchar("color", { length: 50 }),
+  mileage: varchar("mileage", { length: 50 }),
+  nextServiceMileage: varchar("next_service_mileage", { length: 50 }),
+  nextServiceDate: varchar("next_service_date", { length: 60 }),
+  insuranceCompany: varchar("insurance_company", { length: 255 }),
+  policyNumber: varchar("policy_number", { length: 100 }),
+  insuranceExpiry: varchar("insurance_expiry", { length: 60 }),
+  registrationExpiry: varchar("registration_expiry", { length: 60 }),
+  notes: text("notes"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopEstimates = sqliteTable("workshop_estimates", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  tenantId: integer2("tenant_id").notNull(),
-  vehicleId: integer2("vehicle_id").notNull(),
-  customerId: integer2("customer_id").notNull(),
-  estimateNumber: text2("estimate_number").notNull(),
-  status: text2("status", { enum: ["draft", "pending", "approved", "rejected", "converted"] }).default("draft").notNull(),
-  partsTotal: text2("parts_total"),
-  laborTotal: text2("labor_total"),
-  subletTotal: text2("sublet_total"),
-  taxAmount: text2("tax_amount"),
-  totalAmount: text2("total_amount").notNull(),
-  notes: text2("notes"),
-  sentMethod: text2("sent_method"),
-  sentAt: text2("sent_at"),
-  approvedAt: text2("approved_at"),
-  convertedToJobId: integer2("converted_to_job_id"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopEstimates = mysqlTable("workshop_estimates", {
+  id: int2("id").autoincrement().primaryKey(),
+  tenantId: int2("tenant_id").notNull(),
+  vehicleId: int2("vehicle_id").notNull(),
+  customerId: int2("customer_id").notNull(),
+  estimateNumber: varchar("estimate_number", { length: 100 }).notNull(),
+  status: mysqlEnum("status", ["draft", "pending", "approved", "rejected", "converted"]).default("draft").notNull(),
+  partsTotal: text("parts_total"),
+  laborTotal: text("labor_total"),
+  subletTotal: text("sublet_total"),
+  taxAmount: text("tax_amount"),
+  totalAmount: text("total_amount").notNull(),
+  notes: text("notes"),
+  sentMethod: varchar("sent_method", { length: 50 }),
+  sentAt: varchar("sent_at", { length: 60 }),
+  approvedAt: varchar("approved_at", { length: 60 }),
+  convertedToJobId: int2("converted_to_job_id"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopEstimateItems = sqliteTable("workshop_estimate_items", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  estimateId: integer2("estimate_id").notNull(),
-  type: text2("type", { enum: ["part", "labor", "sublet"] }).notNull(),
-  description: text2("description").notNull(),
-  quantity: real2("quantity").default(1),
-  unitPrice: text2("unit_price"),
-  total: text2("total")
+var workshopEstimateItems = mysqlTable("workshop_estimate_items", {
+  id: int2("id").autoincrement().primaryKey(),
+  estimateId: int2("estimate_id").notNull(),
+  type: mysqlEnum("type", ["part", "labor", "sublet"]).notNull(),
+  description: text("description").notNull(),
+  quantity: double("quantity").default(1),
+  unitPrice: text("unit_price"),
+  total: text("total")
 });
-var workshopTechnicians = sqliteTable("workshop_technicians", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  tenantId: integer2("tenant_id").notNull(),
-  name: text2("name").notNull(),
-  phone: text2("phone"),
-  email: text2("email"),
-  specialty: text2("specialty"),
-  hourlyRate: text2("hourly_rate"),
-  isActive: integer2("is_active", { mode: "boolean" }).default(true),
-  jobsCompleted: integer2("jobs_completed").default(0),
-  avgRating: real2("avg_rating"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopTechnicians = mysqlTable("workshop_technicians", {
+  id: int2("id").autoincrement().primaryKey(),
+  tenantId: int2("tenant_id").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  specialty: varchar("specialty", { length: 150 }),
+  hourlyRate: text("hourly_rate"),
+  isActive: boolean4("is_active").default(true),
+  jobsCompleted: int2("jobs_completed").default(0),
+  avgRating: double("avg_rating"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopInspections = sqliteTable("workshop_inspections", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  tenantId: integer2("tenant_id").notNull(),
-  jobCardId: integer2("job_card_id").notNull(),
-  checklistJson: text2("checklist_json"),
-  photos: text2("photos"),
-  customerSignature: text2("customer_signature"),
-  technicianSignature: text2("technician_signature"),
-  notes: text2("notes"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopInspections = mysqlTable("workshop_inspections", {
+  id: int2("id").autoincrement().primaryKey(),
+  tenantId: int2("tenant_id").notNull(),
+  jobCardId: int2("job_card_id").notNull(),
+  checklistJson: text("checklist_json"),
+  photos: text("photos"),
+  customerSignature: text("customer_signature"),
+  technicianSignature: text("technician_signature"),
+  notes: text("notes"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopServiceTypes = sqliteTable("workshop_service_types", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  tenantId: integer2("tenant_id").notNull(),
-  name: text2("name").notNull(),
-  nameAr: text2("name_ar"),
-  description: text2("description"),
-  estimatedHours: real2("estimated_hours"),
-  defaultPrice: text2("default_price"),
-  isActive: integer2("is_active", { mode: "boolean" }).default(true),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopServiceTypes = mysqlTable("workshop_service_types", {
+  id: int2("id").autoincrement().primaryKey(),
+  tenantId: int2("tenant_id").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  nameAr: varchar("name_ar", { length: 255 }),
+  description: text("description"),
+  estimatedHours: double("estimated_hours"),
+  defaultPrice: text("default_price"),
+  isActive: boolean4("is_active").default(true),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopBaySchedule = sqliteTable("workshop_bay_schedule", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  tenantId: integer2("tenant_id").notNull(),
-  bayNumber: integer2("bay_number").notNull(),
-  jobCardId: integer2("job_card_id"),
-  date: text2("date").notNull(),
-  startTime: text2("start_time"),
-  endTime: text2("end_time"),
-  status: text2("status", { enum: ["available", "occupied", "maintenance", "reserved"] }).default("available"),
-  notes: text2("notes"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopBaySchedule = mysqlTable("workshop_bay_schedule", {
+  id: int2("id").autoincrement().primaryKey(),
+  tenantId: int2("tenant_id").notNull(),
+  bayNumber: int2("bay_number").notNull(),
+  jobCardId: int2("job_card_id"),
+  date: varchar("date", { length: 60 }).notNull(),
+  startTime: varchar("start_time", { length: 30 }),
+  endTime: varchar("end_time", { length: 30 }),
+  status: mysqlEnum("status", ["available", "occupied", "maintenance", "reserved"]).default("available"),
+  notes: text("notes"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
-var workshopPayments = sqliteTable("workshop_payments", {
-  id: integer2("id").primaryKey({ autoIncrement: true }),
-  tenantId: integer2("tenant_id").notNull(),
-  jobCardId: integer2("job_card_id"),
-  estimateId: integer2("estimate_id"),
-  amount: text2("amount").notNull(),
-  paymentMethod: text2("payment_method", { enum: ["cash", "card", "bank_transfer", "sadad", "wallet", "insurance"] }).default("cash"),
-  referenceNumber: text2("reference_number"),
-  notes: text2("notes"),
-  createdAt: text2("created_at").default(sql`(datetime('now'))`)
+var workshopPayments = mysqlTable("workshop_payments", {
+  id: int2("id").autoincrement().primaryKey(),
+  tenantId: int2("tenant_id").notNull(),
+  jobCardId: int2("job_card_id"),
+  estimateId: int2("estimate_id"),
+  amount: text("amount").notNull(),
+  paymentMethod: mysqlEnum("payment_method", ["cash", "card", "bank_transfer", "sadad", "wallet", "insurance"]).default("cash"),
+  referenceNumber: varchar("reference_number", { length: 100 }),
+  notes: text("notes"),
+  createdAt: varchar("created_at", { length: 60 }).default(sql`(now())`)
 });
 
 // api/workshopRouter.ts
@@ -136498,8 +135874,8 @@ var workshopRouter = createRouter({
     const db5 = getDb();
     const { id, ...data } = input;
     const updateData = { ...data };
-    if (data.status === "in_progress") updateData.startDate = sql`(datetime('now'))`;
-    if (data.status === "completed" || data.status === "delivered") updateData.completionDate = sql`(datetime('now'))`;
+    if (data.status === "in_progress") updateData.startDate = sql`(now())`;
+    if (data.status === "completed" || data.status === "delivered") updateData.completionDate = sql`(now())`;
     await db5.update(workshopJobCards).set(updateData).where(eq(workshopJobCards.id, id));
     return { success: true };
   }),
@@ -136594,7 +135970,7 @@ var workshopRouter = createRouter({
   }),
   estimateApprove: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
     const db5 = getDb();
-    await db5.update(workshopEstimates).set({ status: "approved", approvedAt: sql`(datetime('now'))` }).where(eq(workshopEstimates.id, input.id));
+    await db5.update(workshopEstimates).set({ status: "approved", approvedAt: sql`(now())` }).where(eq(workshopEstimates.id, input.id));
     return { success: true };
   }),
   estimateConvertToJob: authedQuery.input(external_exports.object({ estimateId: external_exports.number() })).mutation(async ({ input, ctx }) => {
@@ -136704,7 +136080,7 @@ var workshopRouter = createRouter({
     const [activeJobs] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "in_progress")));
     const [pendingJobs] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "pending")));
     const [qcJobs] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "quality_check")));
-    const [completedToday] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "completed"), gte(workshopJobCards.completionDate, sql`date('now')`)));
+    const [completedToday] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "completed"), gte(workshopJobCards.completionDate, sql`CURDATE()`)));
     const [totalVehicles] = await db5.select({ count: sql`count(*)` }).from(workshopVehicles).where(eq(workshopVehicles.tenantId, tenantId));
     const [totalTechs] = await db5.select({ count: sql`count(*)` }).from(workshopTechnicians).where(eq(workshopTechnicians.tenantId, tenantId));
     const [totalRevenue] = await db5.select({ total: sql`coalesce(sum(cast(amount as real)), '0')` }).from(workshopPayments).where(eq(workshopPayments.tenantId, tenantId));
