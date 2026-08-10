@@ -19,7 +19,7 @@ type CartItem = { id: string; name: string; price: number; qty: number; sku?: st
 type InvoiceMode = "product" | "service" | "construction";
 
 // Sub-component to render invoice preview (WYSIWYG - same HTML as print)
-function InvoicePreview({ detail }: { detail: any }) {
+function InvoicePreview({ detail, companyData }: { detail: any; companyData: any }) {
   if (!detail?.invoice) return null;
   const dInv = detail.invoice;
   const dItems = (detail.items || []).map((it: any, i: number) => ({
@@ -37,11 +37,16 @@ function InvoicePreview({ detail }: { detail: any }) {
   const pCustVat = dCust?.vatNumber || dCust?.taxNumber || "";
   const pType = dInv.invoiceType === "zatca" ? "zatca" : "standard";
   const html = generateInvoiceHtml({
-    companyName: dInv.companyName || "", companyNameAr: dInv.companyNameAr,
-    companyLogo: dInv.companyLogo, companyAddress: dInv.companyAddress,
-    companyPhone: dInv.companyPhone, companyVat: dInv.companyVat,
-    currency: dInv.currency || "SAR", taxPercent: dInv.taxPercent || "15",
-    note: dInv.notes || "", pSub, pDisc, pVat, pTotal,
+    companyName: companyData.companyName || "Company Name",
+    companyNameAr: companyData.companyNameAr || "",
+    companyLogo: companyData.companyLogo || "",
+    companyAddress: companyData.companyAddress || "",
+    companyPhone: companyData.companyPhone || "",
+    companyVat: companyData.companyVat || "",
+    currency: companyData.currency || "SAR",
+    taxPercent: dInv.taxPercent || "15",
+    note: dInv.notes || "",
+    pSub, pDisc, pVat, pTotal,
     pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems: dItems
   });
   return (
@@ -602,7 +607,7 @@ export default function InvoicesPage() {
           <DialogDescription id="invoice-view-desc" className="sr-only">Invoice preview - what you see is what you print</DialogDescription>
           <div className="flex-1 overflow-y-auto bg-slate-100 p-4">
             {detail?.invoice && !invoiceDetail.isPending && (
-              <InvoicePreview detail={detail} />
+              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyAddress, companyPhone, companyVat, currency }} />
             )}
             {!detail?.invoice && !invoiceDetail.isPending && (
               <div className="py-16 text-center text-slate-400">Loading invoice...</div>
