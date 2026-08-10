@@ -40,6 +40,7 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
     companyName: companyData.companyName || "Company Name",
     companyNameAr: companyData.companyNameAr || "",
     companyLogo: companyData.companyLogo || "",
+    companyStamp: companyData.companyStamp || "",
     companyAddress: companyData.companyAddress || "",
     companyPhone: companyData.companyPhone || "",
     companyVat: companyData.companyVat || "",
@@ -180,6 +181,7 @@ export default function InvoicesPage() {
   const companyPhone = settings?.phone || "";
   const companyVat = settings?.taxNumber || settings?.vatNumber || "";
   const companyLogo = settings?.logo || "";
+  const companyStamp = settings?.stamp || "";
   const companyCountry = settings?.country || "";
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -348,7 +350,7 @@ export default function InvoicesPage() {
     const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
 
     const html = generateInvoiceHtml({
-      companyName, companyNameAr, companyLogo, companyAddress, companyPhone, companyVat,
+      companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat,
       currency, taxPercent, note, pSub, pDisc, pVat, pTotal,
       pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems
     });
@@ -607,7 +609,7 @@ export default function InvoicesPage() {
           <DialogDescription id="invoice-view-desc" className="sr-only">Invoice preview - what you see is what you print</DialogDescription>
           <div className="flex-1 overflow-y-auto bg-slate-100 p-4">
             {detail?.invoice && !invoiceDetail.isPending && (
-              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyAddress, companyPhone, companyVat, currency }} />
+              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, currency }} />
             )}
             {!detail?.invoice && !invoiceDetail.isPending && (
               <div className="py-16 text-center text-slate-400">Loading invoice...</div>

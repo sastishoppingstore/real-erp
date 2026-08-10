@@ -5,6 +5,7 @@ export function generateInvoiceHtml(params: {
   companyName: string;
   companyNameAr?: string;
   companyLogo?: string;
+  companyStamp?: string;
   companyAddress?: string;
   companyPhone?: string;
   companyVat?: string;
@@ -23,7 +24,7 @@ export function generateInvoiceHtml(params: {
   printItems: Array<{ no: number; name: string; qty: number; rate: number; total: number }>;
 }) {
   const {
-    companyName, companyNameAr, companyLogo, companyAddress, companyPhone, companyVat,
+    companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat,
     currency, taxPercent, note, pSub, pDisc, pVat, pTotal,
     pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems
   } = params;
@@ -94,7 +95,12 @@ ${pDisc > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} $
 <div class="total-row grand"><span>TOTAL:</span><span>${currency} ${pTotal.toFixed(2)}</span></div>
 </div>
 ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9ff;border-radius:5px;font-size:13px"><strong>Note:</strong> ${note}</div>` : ''}
-<div class="footer">شكراً لتعاملكم معنا / Thank You For Your Business!</div>
+<div class="footer">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:15px">
+    <div>${companyStamp ? `<img src="${companyStamp}" style="max-width:80px;max-height:80px;opacity:0.8">` : ''}</div>
+    <div>شكراً لتعاملكم معنا / Thank You For Your Business!</div>
+  </div>
+</div>
 </div>
 <script>window.onload=function(){window.print();}</script></body></html>`;
 }

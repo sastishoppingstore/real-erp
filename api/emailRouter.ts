@@ -75,6 +75,7 @@ export const emailRouter = createRouter({
         companyName: companySettings?.companyName || "Company",
         companyNameAr: companySettings?.companyNameAr || "",
         companyLogo: companySettings?.logo || "",
+        companyStamp: companySettings?.stamp || "",
         companyAddress: companySettings?.address || "",
         companyPhone: companySettings?.phone || "",
         companyVat: companySettings?.taxNumber || "",

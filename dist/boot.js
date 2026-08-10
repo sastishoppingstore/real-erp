@@ -11021,6 +11021,7 @@ var init_schema2 = __esm({
       taxNumber: varchar("tax_number", { length: 100 }),
       registrationNumber: varchar("registration_number", { length: 100 }),
       logo: mediumtext("logo"),
+      stamp: mediumtext("stamp"),
       favicon: text("favicon"),
       primaryColor: varchar("primary_color", { length: 20 }).default("#2563eb").notNull(),
       secondaryColor: varchar("secondary_color", { length: 20 }).default("#64748b").notNull(),
@@ -118780,6 +118781,7 @@ var settingsRouter = createRouter({
     invoicePrefix: external_exports.string().optional(),
     invoiceTerms: external_exports.string().optional(),
     logo: external_exports.string().optional(),
+    stamp: external_exports.string().optional(),
     theme: external_exports.string().optional(),
     primaryColor: external_exports.string().optional(),
     secondaryColor: external_exports.string().optional(),
@@ -125566,6 +125568,7 @@ function generateInvoiceHtml(params) {
     companyName,
     companyNameAr,
     companyLogo,
+    companyStamp,
     companyAddress,
     companyPhone,
     companyVat,
@@ -125651,7 +125654,12 @@ ${pDisc > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} $
 <div class="total-row grand"><span>TOTAL:</span><span>${currency} ${pTotal.toFixed(2)}</span></div>
 </div>
 ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9ff;border-radius:5px;font-size:13px"><strong>Note:</strong> ${note}</div>` : ""}
-<div class="footer">\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627 / Thank You For Your Business!</div>
+<div class="footer">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:15px">
+    <div>${companyStamp ? `<img src="${companyStamp}" style="max-width:80px;max-height:80px;opacity:0.8">` : ""}</div>
+    <div>\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627 / Thank You For Your Business!</div>
+  </div>
+</div>
 </div>
 <script>window.onload=function(){window.print();}</script></body></html>`;
 }
@@ -125709,6 +125717,7 @@ var emailRouter = createRouter({
       companyName: companySettings2?.companyName || "Company",
       companyNameAr: companySettings2?.companyNameAr || "",
       companyLogo: companySettings2?.logo || "",
+      companyStamp: companySettings2?.stamp || "",
       companyAddress: companySettings2?.address || "",
       companyPhone: companySettings2?.phone || "",
       companyVat: companySettings2?.taxNumber || "",

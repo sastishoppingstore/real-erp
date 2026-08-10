@@ -23,7 +23,7 @@ export default function SettingsPage() {
     companyName: "", companyNameAr: "", tradeName: "", email: "", phone: "", mobile: "", website: "",
     address: "", city: "", country: "Saudi Arabia", zipCode: "",
     taxNumber: "", crNumber: "", vatRate: "15", defaultCurrency: "SAR", invoiceTerms: "",
-    logo: "", theme: "light",
+    logo: "", stamp: "", theme: "light",
     primaryColor: "#2563eb", secondaryColor: "#64748b", zatcaEnabled: false, zatcaSandbox: true,
   });
 
@@ -48,6 +48,7 @@ export default function SettingsPage() {
         defaultCurrency: settings.defaultCurrency ?? "SAR",
         invoiceTerms: settings.invoiceTerms ?? "",
         logo: settings.logo ?? "",
+        stamp: settings.stamp ?? "",
         theme: settings.theme ?? "light",
         primaryColor: settings.primaryColor ?? "#2563eb",
         secondaryColor: settings.secondaryColor ?? "#64748b",
@@ -84,7 +85,10 @@ export default function SettingsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>Trade Name</Label><Input value={form.tradeName} placeholder="Retail / Branch Name" onChange={e => setForm({...form, tradeName: e.target.value})} /></div>
-                <div><Label>Company Logo</Label><ImageUpload value={form.logo} onChange={(dataUrl) => setForm({...form, logo: dataUrl})} /><p className="text-xs text-slate-400 mt-1">Upload logo image (PNG, JPG) - will be saved as base64</p></div>
+                <div className="flex gap-6">
+                  <div><Label>Company Logo</Label><ImageUpload value={form.logo} onChange={(dataUrl) => setForm({...form, logo: dataUrl})} /><p className="text-xs text-slate-400 mt-1">Upload logo (PNG, JPG)</p></div>
+                  <div><Label>Company Stamp / Signature</Label><ImageUpload value={form.stamp} onChange={(dataUrl) => setForm({...form, stamp: dataUrl})} /><p className="text-xs text-slate-400 mt-1">Upload stamp/seal (PNG with transparency)</p></div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>Email</Label><Input value={form.email} placeholder="info@company.sa" onChange={e => setForm({...form, email: e.target.value})} /></div>

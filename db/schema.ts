@@ -33,6 +33,7 @@ export const tenants = mysqlTable("tenants", {
   taxNumber: varchar("tax_number", { length: 100 }),
   registrationNumber: varchar("registration_number", { length: 100 }),
   logo: mediumtext("logo"),
+  stamp: mediumtext("stamp"),
   favicon: text("favicon"),
   primaryColor: varchar("primary_color", { length: 20 }).default("#2563eb").notNull(),
   secondaryColor: varchar("secondary_color", { length: 20 }).default("#64748b").notNull(),
