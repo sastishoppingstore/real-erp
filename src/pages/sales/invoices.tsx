@@ -12,14 +12,14 @@ import ActionButton3D from "@/components/ui/ActionButton3D";
 import SaudiInvoicePrint from "./SaudiInvoicePrint";
 import { generateInvoiceHtml } from "@/lib/invoiceHtml";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
 type CartItem = { id: string; name: string; price: number; qty: number; sku?: string; discountPercent?: number };
 type InvoiceMode = "product" | "service" | "construction";
 
-// Sub-component to render invoice as iframe (WYSIWYG - same HTML as print)
-function InvoiceIframe({ detail }: { detail: any }) {
+// Sub-component to render invoice preview (WYSIWYG - same HTML as print)
+function InvoicePreview({ detail }: { detail: any }) {
   if (!detail?.invoice) return null;
   const dInv = detail.invoice;
   const dItems = (detail.items || []).map((it: any, i: number) => ({
@@ -44,15 +44,11 @@ function InvoiceIframe({ detail }: { detail: any }) {
     note: dInv.notes || "", pSub, pDisc, pVat, pTotal,
     pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems: dItems
   });
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
   return (
-    <iframe
-      src={url}
-      className="w-full h-full border-0 bg-white rounded-lg shadow-lg"
+    <div
+      className="invoice-preview-container"
       style={{ minHeight: "85vh" }}
-      title="Invoice Preview"
-      onLoad={() => setTimeout(() => URL.revokeObjectURL(url), 10000)}
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
@@ -602,9 +598,12 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Scrollable Invoice Content — WYSIWYG iframe with same HTML as print */}
+          {/* Scrollable Invoice Content — WYSIWYG with same HTML as print */}
+          <DialogDescription id="invoice-view-desc" className="sr-only">Invoice preview - what you see is what you print</DialogDescription>
           <div className="flex-1 overflow-y-auto bg-slate-100 p-4">
-            <InvoiceIframe detail={detail} />
+            {detail?.invoice && !invoiceDetail.isPending && (
+              <InvoicePreview detail={detail} />
+            )}
             {!detail?.invoice && !invoiceDetail.isPending && (
               <div className="py-16 text-center text-slate-400">Loading invoice...</div>
             )}

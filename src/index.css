@@ -188,3 +188,16 @@ html {
   transform: none !important;
   translate: 0 !important;
 }
+
+/* ── Invoice Preview Container (WYSIWYG) ──────────────── */
+.invoice-preview-container {
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+.invoice-preview-container .invoice {
+  background: #fff;
+  padding: 20mm;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
