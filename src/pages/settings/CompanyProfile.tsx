@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,16 @@ import {
   FileText, Printer, CheckCircle2, Image, Eye, Copy, Info,
 } from "lucide-react";
 
+// Helper: convert File to base64
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function CompanyProfilePage() {
   const { language } = useLanguage();
   const isAr = language === "ar";
@@ -27,7 +37,7 @@ export default function CompanyProfilePage() {
     companyName: "", companyNameAr: "", tradeName: "", email: "", phone: "", mobile: "", website: "",
     address: "", city: "", country: "Saudi Arabia", zipCode: "",
     taxNumber: "", crNumber: "", vatRate: "15", defaultCurrency: "SAR", invoiceTerms: "",
-    logo: "", theme: "light", primaryColor: "#1E3A5F", secondaryColor: "#64748b",
+    logo: "", signature: "", stamp: "", theme: "light", primaryColor: "#1E3A5F", secondaryColor: "#64748b",
     invoicePrefix: "INV-", quotationPrefix: "QT-", purchaseOrderPrefix: "PO-", salesOrderPrefix: "SO-",
     invoiceFooterText: "", invoiceFooterTextAr: "",
     zatcaEnabled: true, zatcaSandbox: true,
@@ -54,6 +64,8 @@ export default function CompanyProfilePage() {
   const [whatsappApiKey, setWhatsappApiKey] = useState("");
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [stampFile, setStampFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const logoFileRef = useRef<File | null>(null);
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState("branding");
   const [deliveryNotePrefix, setDeliveryNotePrefix] = useState("DN-");
@@ -82,6 +94,8 @@ export default function CompanyProfilePage() {
         defaultCurrency: settings.defaultCurrency ?? "SAR",
         invoiceTerms: settings.invoiceTerms ?? "",
         logo: settings.logo ?? "",
+        signature: settings.signature ?? "",
+        stamp: settings.stamp ?? "",
         theme: settings.theme ?? "light",
         primaryColor: settings.primaryColor ?? "#1E3A5F",
         secondaryColor: settings.secondaryColor ?? "#64748b",
@@ -117,8 +131,44 @@ export default function CompanyProfilePage() {
   }, [settings]);
 
   const handleSave = async () => {
+    // Convert logo file to base64 if selected
+    let logoBase64 = form.logo;
+    if (logoFileRef.current) {
+      try {
+        logoBase64 = await fileToBase64(logoFileRef.current);
+        setForm(prev => ({ ...prev, logo: logoBase64 }));
+      } catch (e) {
+        console.error("Logo conversion failed", e);
+      }
+    }
+
+    // Convert signature file to base64 if selected
+    let signatureBase64 = form.signature;
+    if (signatureFile) {
+      try {
+        signatureBase64 = await fileToBase64(signatureFile);
+        setForm(prev => ({ ...prev, signature: signatureBase64 }));
+      } catch (e) {
+        console.error("Signature conversion failed", e);
+      }
+    }
+
+    // Convert stamp file to base64 if selected
+    let stampBase64 = form.stamp;
+    if (stampFile) {
+      try {
+        stampBase64 = await fileToBase64(stampFile);
+        setForm(prev => ({ ...prev, stamp: stampBase64 }));
+      } catch (e) {
+        console.error("Stamp conversion failed", e);
+      }
+    }
+
     await updateSettings.mutateAsync({
       ...form,
+      logo: logoBase64,
+      signature: signatureBase64,
+      stamp: stampBase64,
       primaryColor: invoiceHeaderColor,
       bankName,
       bankAccountName,
@@ -192,17 +242,42 @@ export default function CompanyProfilePage() {
 
               <div className="space-y-2">
                 <Label>{isAr ? "شعار الشركة" : "Company Logo"}</Label>
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-4">
                   {form.logo ? (
-                    <img src={form.logo} alt="Logo" className="h-16 w-16 object-contain border rounded-lg p-1" />
+                    <img src={form.logo} alt="Logo" className="h-20 w-20 object-contain border rounded-lg p-1 bg-white" />
                   ) : (
-                    <div className="h-16 w-16 border-2 border-dashed rounded-lg flex items-center justify-center text-slate-400">
-                      <Image className="size-6" />
+                    <div className="h-20 w-20 border-2 border-dashed rounded-lg flex items-center justify-center text-slate-400">
+                      <Image className="size-8" />
                     </div>
                   )}
-                  <div className="flex-1">
-                    <Input value={form.logo} onChange={e => setForm({...form, logo: e.target.value})} placeholder="Logo URL or base64" />
-                    <p className="text-xs text-slate-500 mt-1">{isAr ? "الصق رابط الشعار أو استخدم base64" : "Paste logo URL or use base64"}</p>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("logo-upload")?.click()}>
+                        <Upload className="size-3.5 mr-1" /> {isAr ? "رفع شعار" : "Upload Logo"}
+                      </Button>
+                      <input
+                        id="logo-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={e => {
+                          const file = e.target.files?.[0] || null;
+                          setLogoFile(file);
+                          logoFileRef.current = file;
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => setForm(prev => ({ ...prev, logo: reader.result as string }));
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      {form.logo && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setForm(prev => ({ ...prev, logo: "" })); setLogoFile(null); logoFileRef.current = null; }}>
+                          {isAr ? "إزالة" : "Remove"}
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">{isAr ? "PNG, JPG حتى 5MB. سيظهر على الفواتير." : "PNG, JPG up to 5MB. Will appear on invoices."}</p>
                   </div>
                 </div>
               </div>
@@ -211,21 +286,79 @@ export default function CompanyProfilePage() {
                 <div className="space-y-2">
                   <Label>{isAr ? "توقيع المدير" : "Manager Signature"}</Label>
                   <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" onClick={() => document.getElementById("sig-upload")?.click()}>
-                      <PenTool className="size-3.5 mr-1" /> {isAr ? "رفع" : "Upload"}
-                    </Button>
-                    <input id="sig-upload" type="file" accept="image/*" className="hidden" onChange={e => setSignatureFile(e.target.files?.[0] || null)} />
-                    {signatureFile && <span className="text-xs text-green-600"><CheckCircle2 className="size-3.5 inline mr-1" />{signatureFile.name}</span>}
+                    {form.signature ? (
+                      <img src={form.signature} alt="Signature" className="h-12 w-24 object-contain border rounded p-1 bg-white" />
+                    ) : (
+                      <div className="h-12 w-24 border border-dashed rounded flex items-center justify-center text-slate-400">
+                        <PenTool className="size-4" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("sig-upload")?.click()}>
+                          <Upload className="size-3.5 mr-1" /> {isAr ? "رفع" : "Upload"}
+                        </Button>
+                        <input
+                          id="sig-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0] || null;
+                            setSignatureFile(file);
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = () => setForm(prev => ({ ...prev, signature: reader.result as string }));
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                        {form.signature && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => { setForm(prev => ({ ...prev, signature: "" })); setSignatureFile(null); }}>
+                            ✕
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>{isAr ? "ختم الشركة" : "Company Stamp"}</Label>
                   <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" onClick={() => document.getElementById("stamp-upload")?.click()}>
-                      <Stamp className="size-3.5 mr-1" /> {isAr ? "رفع" : "Upload"}
-                    </Button>
-                    <input id="stamp-upload" type="file" accept="image/*" className="hidden" onChange={e => setStampFile(e.target.files?.[0] || null)} />
-                    {stampFile && <span className="text-xs text-green-600"><CheckCircle2 className="size-3.5 inline mr-1" />{stampFile.name}</span>}
+                    {form.stamp ? (
+                      <img src={form.stamp} alt="Stamp" className="h-12 w-12 object-contain border rounded p-1 bg-white" />
+                    ) : (
+                      <div className="h-12 w-12 border border-dashed rounded flex items-center justify-center text-slate-400">
+                        <Stamp className="size-4" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("stamp-upload")?.click()}>
+                          <Upload className="size-3.5 mr-1" /> {isAr ? "رفع" : "Upload"}
+                        </Button>
+                        <input
+                          id="stamp-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0] || null;
+                            setStampFile(file);
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = () => setForm(prev => ({ ...prev, stamp: reader.result as string }));
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                        {form.stamp && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => { setForm(prev => ({ ...prev, stamp: "" })); setStampFile(null); }}>
+                            ✕
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

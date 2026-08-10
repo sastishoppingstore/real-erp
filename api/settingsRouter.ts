@@ -36,6 +36,7 @@ export const settingsRouter = createRouter({
       invoicePrefix: z.string().optional(),
       invoiceTerms: z.string().optional(),
       logo: z.string().optional(),
+      signature: z.string().optional(),
       stamp: z.string().optional(),
       theme: z.string().optional(),
       primaryColor: z.string().optional(),
