@@ -11,6 +11,7 @@ import { Building2, Receipt, Palette, Shield, Bot, Eye, EyeOff, LayoutDashboard,
 import { TaxComplianceSettings } from "./TaxComplianceSettings";
 import ThemeSelector from "@/components/ThemeSelector";
 import { useLayoutTheme } from "@/providers/layoutTheme";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 export default function SettingsPage() {
   const { data: settings, refetch } = trpc.settings.companySettingsGet.useQuery();
@@ -83,7 +84,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>Trade Name</Label><Input value={form.tradeName} placeholder="Retail / Branch Name" onChange={e => setForm({...form, tradeName: e.target.value})} /></div>
-                <div><Label>Logo URL or Base64</Label><Input value={form.logo} placeholder="https://.../logo.png" onChange={e => setForm({...form, logo: e.target.value})} /></div>
+                <div><Label>Company Logo</Label><ImageUpload value={form.logo} onChange={(dataUrl) => setForm({...form, logo: dataUrl})} /><p className="text-xs text-slate-400 mt-1">Upload logo image (PNG, JPG) - will be saved as base64</p></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>Email</Label><Input value={form.email} placeholder="info@company.sa" onChange={e => setForm({...form, email: e.target.value})} /></div>

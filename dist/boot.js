@@ -11020,7 +11020,7 @@ var init_schema2 = __esm({
       country: varchar("country", { length: 100 }).default("Saudi Arabia").notNull(),
       taxNumber: varchar("tax_number", { length: 100 }),
       registrationNumber: varchar("registration_number", { length: 100 }),
-      logo: text("logo"),
+      logo: mediumtext("logo"),
       favicon: text("favicon"),
       primaryColor: varchar("primary_color", { length: 20 }).default("#2563eb").notNull(),
       secondaryColor: varchar("secondary_color", { length: 20 }).default("#64748b").notNull(),
@@ -11441,7 +11441,7 @@ var init_schema2 = __esm({
       id: serial("id").primaryKey(),
       tenantId: bigint4("tenant_id", { mode: "number", unsigned: true }).notNull(),
       name: varchar("name", { length: 255 }).notNull(),
-      logo: text("logo"),
+      logo: mediumtext("logo"),
       description: text("description"),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
@@ -12480,7 +12480,7 @@ var init_schema2 = __esm({
       theme: varchar("theme", { length: 20 }).default("light").notNull(),
       primaryColor: varchar("primary_color", { length: 20 }).default("#2563eb").notNull(),
       secondaryColor: varchar("secondary_color", { length: 20 }).default("#64748b").notNull(),
-      logo: text("logo"),
+      logo: mediumtext("logo"),
       favicon: text("favicon"),
       zatcaEnabled: boolean4("zatca_enabled").default(false),
       zatcaSandbox: boolean4("zatca_sandbox").default(true),
