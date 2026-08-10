@@ -178,7 +178,7 @@ export const posRouter = createRouter({
         await db.insert(invoiceItems).values({
           invoiceId,
           productId: item.productId,
-          description: item.description,
+          description: (item.description && item.description.trim()) ? item.description : (item.productId ? `Item #${item.productId}` : "POS Sale"),
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discountPercent: item.discount,

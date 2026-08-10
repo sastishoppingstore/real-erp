@@ -24,7 +24,12 @@ export default function InvoicesPage() {
   const { data: settings } = trpc.settings.companySettingsGet.useQuery();
 
   const createInvoice = trpc.sales.invoiceCreate.useMutation({
-    onSuccess: () => { refetch(); toast.success("Bill created"); clearCart(); },
+    onSuccess: () => {
+      toast.success("Bill created");
+      clearCart();
+      // Force immediate refetch so list updates instantly
+      refetch();
+    },
     onError: (error) => toast.error(error.message),
   });
   const updateInvoice = trpc.sales.invoiceUpdate.useMutation({
@@ -51,6 +56,30 @@ export default function InvoicesPage() {
     onSuccess: () => { refetchCategories(); toast.success("Category created"); },
     onError: (e) => toast.error(e.message),
   });
+  const thermalPrint = trpc.thermalPrint.generateThermal.useMutation({
+    onSuccess: (data) => {
+      // Data میں base64 encoded receipt ہے
+      // یہ printer driver کو بھیج سکتے ہیں یا download کر سکتے ہیں
+      try {
+        const binary = atob(data.data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        // Browser print dialog
+        const blob = new Blob([bytes], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `receipt-${data.format}.bin`;
+        link.click();
+        toast.success(`Thermal receipt (${data.format}) ready to print`);
+      } catch (e) {
+        toast.error("Failed to process thermal data");
+      }
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<number>(0);
@@ -67,7 +96,9 @@ export default function InvoicesPage() {
 
   const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
+  const [editTargetId, setEditTargetId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
+  const [viewTab, setViewTab] = useState<"create" | "history">("create");
   const [invoiceTypeMode, setInvoiceTypeMode] = useState<"standard" | "zatca">("standard");
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [newProductName, setNewProductName] = useState("");
@@ -79,7 +110,7 @@ export default function InvoicesPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryImage, setNewCategoryImage] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
-  const invoiceDetail = trpc.sales.invoiceGet.useQuery({ id: viewInvoiceId! }, { enabled: !!viewInvoiceId });
+  const invoiceDetail = trpc.sales.invoiceGet.useQuery({ id: (viewInvoiceId ?? editTargetId)! }, { enabled: !!viewInvoiceId || !!editTargetId });
 
   const currency = settings?.defaultCurrency || "SAR";
   const taxPercent = Number(settings?.vatRate ?? 15);
@@ -206,14 +237,32 @@ export default function InvoicesPage() {
   };
 
   const handlePrint = () => {
-    // Allow print from cart OR from currently viewed invoice
-    const printItems = cart.length > 0
-      ? cart.map((item, i) => ({ no: i + 1, name: item.name, qty: item.qty, rate: item.price, total: item.price * item.qty }))
-      : [];
-    if (printItems.length === 0 && !viewInvoiceId) { toast.error("Add items to cart before printing"); return; }
+    const useDetail = !!viewInvoiceId && !!invoiceDetail.data;
+    const detailInvoice = useDetail ? invoiceDetail.data!.invoice : null;
+    const detailItems = useDetail ? (invoiceDetail.data!.items || []) : [];
+    const detailCustomer = useDetail ? invoiceDetail.data!.customer : null;
+
+    const printItems = useDetail
+      ? detailItems.map((it: any, i: number) => ({
+          no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
+          qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
+        }))
+      : cart.map((item, i) => ({ no: i + 1, name: item.name, qty: item.qty, rate: item.price, total: item.price * item.qty }));
+    if (printItems.length === 0) { toast.error("Add items to cart before printing"); return; }
+
+    const pSub = useDetail ? Number(detailInvoice?.subTotal || 0) : subtotal;
+    const pDisc = useDetail ? Number(detailInvoice?.discountAmount || 0) : discount;
+    const pVat = useDetail ? Number(detailInvoice?.taxAmount || 0) : vat;
+    const pTotal = useDetail ? Number(detailInvoice?.totalAmount || 0) : total;
+    const pCustName = useDetail ? (detailCustomer?.name || detailCustomer?.nameAr || "Walk-in Customer") : (customerName || "Walk-in Customer");
+    const pCustPhone = useDetail ? detailCustomer?.phone : customerPhone;
+    const pCustAddr = useDetail ? detailCustomer?.address : customerAddress;
+    const pCustVat = useDetail ? (detailCustomer?.vatNumber || detailCustomer?.taxNumber) : customerVat;
+    const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
+
     const qrData = btoa(JSON.stringify({
       seller: companyNameAr || companyName, vat: companyVat,
-      total: total.toFixed(2), tax: vat.toFixed(2), date: new Date().toISOString(),
+      total: pTotal.toFixed(2), tax: pVat.toFixed(2), date: new Date().toISOString(),
     }));
     const html = `<!DOCTYPE html>
 <html dir="rtl"><head><meta charset="UTF-8"><title>Bill - ${companyName}</title>
@@ -254,25 +303,25 @@ ${companyVat ? `<div class="info-line"><strong>VAT: ${companyVat}</strong></div>
 </div>
 <div class="qr-section" style="width:120px">
 <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" style="width:100px;height:100px">
-<p>${invoiceTypeMode === "zatca" ? "ZATCA QR" : "Invoice QR"}</p>
+<p>${pType === "zatca" ? "ZATCA QR" : "Invoice QR"}</p>
 </div>
 </div>
-<div class="title">TAX INVOICE / فاتورة ضريبية<span class="badge">${invoiceTypeMode === "zatca" ? "ZATCA" : "Standard"}</span></div>
+<div class="title">TAX INVOICE / فاتورة ضريبية<span class="badge">${pType === "zatca" ? "ZATCA" : "Standard"}</span></div>
 <div class="customer">
 <h3>Customer / العميل</h3>
-<p><strong>${customerName || "Walk-in Customer"}</strong></p>
-${customerPhone ? `<p>Phone: ${customerPhone}</p>` : ""}
-${customerAddress ? `<p>Address: ${customerAddress}</p>` : ""}
-${customerVat ? `<p>VAT: ${customerVat}</p>` : ""}
+<p><strong>${pCustName}</strong></p>
+${pCustPhone ? `<p>Phone: ${pCustPhone}</p>` : ""}
+${pCustAddr ? `<p>Address: ${pCustAddr}</p>` : ""}
+${pCustVat ? `<p>VAT: ${pCustVat}</p>` : ""}
 </div>
 <table><thead><tr><th>#</th><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
 ${printItems.map(i => `<tr><td>${i.no}</td><td>${i.name}</td><td>${i.qty}</td><td>${i.rate.toFixed(2)}</td><td>${i.total.toFixed(2)}</td></tr>`).join("")}
 </tbody></table>
 <div class="totals">
-<div class="total-row"><span>Subtotal:</span><span>${currency} ${subtotal.toFixed(2)}</span></div>
-${discount > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} ${discount.toFixed(2)}</span></div>` : ""}
-<div class="total-row"><span>VAT ${taxPercent}%:</span><span>${currency} ${vat.toFixed(2)}</span></div>
-<div class="total-row grand"><span>TOTAL:</span><span>${currency} ${total.toFixed(2)}</span></div>
+<div class="total-row"><span>Subtotal:</span><span>${currency} ${pSub.toFixed(2)}</span></div>
+${pDisc > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} ${pDisc.toFixed(2)}</span></div>` : ""}
+<div class="total-row"><span>VAT ${taxPercent}%:</span><span>${currency} ${pVat.toFixed(2)}</span></div>
+<div class="total-row grand"><span>TOTAL:</span><span>${currency} ${pTotal.toFixed(2)}</span></div>
 </div>
 ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-radius:5px;font-size:13px"><strong>Note:</strong> ${note}</div>` : ""}
 <div class="footer">شكراً لتعاملكم معنا / Thank You For Your Business!</div>
@@ -297,6 +346,59 @@ ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-rad
     const waPhone = companyPhone ? companyPhone.replace(/\D/g, "") : "";
     if (waPhone) window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`, "_blank");
     else toast("Add company phone number for WhatsApp");
+  };
+
+  const openViewInvoice = (id: number) => {
+    setViewInvoiceId(id);
+    setEditingInvoiceId(null);
+    setCart([]);
+    setCustomerId(0); setCustomerName(""); setCustomerPhone(""); setCustomerAddress(""); setCustomerVat("");
+    setDiscount(0); setNote("");
+  };
+
+  const loadInvoiceForEdit = (id: number) => {
+    setEditTargetId(id);
+    setViewInvoiceId(null);
+  };
+
+  useEffect(() => {
+    if (!editTargetId) return;
+    const d = invoiceDetail.data;
+    if (!d || !d.invoice || d.invoice.id !== editTargetId) return;
+    const inv = d.invoice;
+    setEditingInvoiceId(inv.id);
+    setEditTargetId(null);
+    setViewTab("create");
+    setCart((d.items || []).map((it: any, i: number) => ({
+      id: String(it.productId || `-${i}`),
+      name: (it.description || "Item").replace(/^\[\d+\]\s*/, ""),
+      price: Number(it.unitPrice || 0),
+      qty: Number(it.quantity || 1),
+      sku: it.sku,
+    })));
+    setCustomerId(d.customer?.id || 0);
+    setCustomerName(d.customer?.name || "");
+    setCustomerPhone(d.customer?.phone || "");
+    setCustomerAddress(d.customer?.address || "");
+    setCustomerVat(d.customer?.vatNumber || d.customer?.taxNumber || "");
+    setDiscount(Number(inv.discountAmount || 0));
+    setNote(inv.notes || "");
+  }, [editTargetId, invoiceDetail.data]);
+
+  const handlePrintInvoice = (invId: number, printType: "thermal" | "a4" = "a4") => {
+    if (printType === "thermal") {
+      // Thermal print
+      thermalPrint.mutate({ invoiceId: invId, format: "80mm" });
+    } else {
+      // A4 print - open view dialog
+      setViewInvoiceId(invId);
+    }
+  };
+
+  const handleDeleteInvoice = (id: number) => {
+    if (window.confirm("Delete this invoice? This cannot be undone.")) {
+      deleteInvoiceMut.mutate(id);
+    }
   };
 
   const statusColors: Record<string, string> = {
@@ -327,11 +429,22 @@ ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-rad
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={() => { clearCart(); setEditingInvoiceId(null); setViewInvoiceId(null); }}>New Bill</Button>
+            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+              <button type="button" onClick={() => { setViewTab("create"); setViewInvoiceId(null); setEditingInvoiceId(null); }}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewTab === "create" ? "bg-white shadow text-blue-700" : "text-slate-500 hover:text-slate-700"}`}>
+                Create Bill
+              </button>
+              <button type="button" onClick={() => setViewTab("history")}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewTab === "history" ? "bg-white shadow text-blue-700" : "text-slate-500 hover:text-slate-700"}`}>
+                Invoice History ({filtered.length})
+              </button>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => { clearCart(); setEditingInvoiceId(null); setViewInvoiceId(null); setViewTab("create"); }}>New Bill</Button>
           </div>
         </div>
       </div>
 
+      {viewTab === "create" && (
       <div className="flex-1 overflow-hidden flex">
         {/* Product Grid */}
         <div className="w-1/2 border-r p-4 overflow-y-auto">
@@ -558,12 +671,166 @@ ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-rad
             <Button className="flex-1" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending}>
               <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
             </Button>
-            <Button variant="outline" onClick={handlePrint} disabled={!cart.length}>
+            <Button variant="outline" onClick={handlePrint} disabled={!cart.length && !(viewInvoiceId && invoiceDetail.data)}>
               <Printer className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
+      )}
+      {viewTab === "history" && (
+      <div className="flex-1 overflow-y-auto p-4">
+        {filtered.length === 0 ? (
+          <div className="text-center py-16 text-slate-400">
+            No invoices found.
+            <br /><span className="text-blue-500 font-medium cursor-pointer" onClick={() => setViewTab("create")}>Click here to create a new bill</span>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filtered.map(inv => (
+              <div key={inv.id} className="border rounded-xl p-4 bg-white hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono text-sm font-bold text-blue-700">{inv.invoiceNumber}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[inv.status] || "bg-slate-100 text-slate-700"}`}>{inv.status}</span>
+                </div>
+                <div className="text-xs text-slate-500 mb-3">
+                  {new Date(inv.date).toLocaleDateString()} · {inv.invoiceType}
+                </div>
+                <div className="text-sm text-slate-700 mb-1">
+                  {inv.customerName || "Walk-in Customer"}
+                </div>
+                <div className="text-lg font-bold text-emerald-600 mb-3">
+                  {currency} {Number(inv.totalAmount || 0).toFixed(2)}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openViewInvoice(inv.id)}>
+                    <Eye className="h-3.5 w-3.5 mr-1" /> View
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => loadInvoiceForEdit(inv.id)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                  </Button>
+                  {/* Print Dropdown */}
+                  <div className="relative group flex-1">
+                    <Button size="sm" variant="outline" className="w-full" disabled={thermalPrint.isPending}>
+                      <Printer className="h-3.5 w-3.5 mr-1" /> {thermalPrint.isPending ? "..." : "Print"}
+                    </Button>
+                    <div className="absolute right-0 mt-1 w-32 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                      <button className="block w-full text-left px-3 py-2 text-xs hover:bg-blue-50 font-medium" onClick={() => handlePrintInvoice(inv.id, "a4")}>
+                        📄 A4 PDF
+                      </button>
+                      <button className="block w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 border-t font-medium" onClick={() => handlePrintInvoice(inv.id, "thermal")}>
+                        🖨️ 80mm Receipt
+                      </button>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="text-red-500 hover:text-red-600 hover:border-red-300" onClick={() => handleDeleteInvoice(inv.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* View Invoice Dialog */}
+      <Dialog open={!!viewInvoiceId} onOpenChange={(o) => { if (!o) { setViewInvoiceId(null); setEditTargetId(null); } }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Invoice {detail?.invoice?.invoiceNumber || "Loading..."}</span>
+              <div className="flex gap-2">
+                {/* Print Dropdown Menu */}
+                <div className="relative group">
+                  <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending}>
+                    <Printer className="h-4 w-4 mr-1" /> {thermalPrint.isPending ? "..." : "Print"}
+                  </Button>
+                  <div className="absolute right-0 mt-1 w-32 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <button className="block w-full text-left px-3 py-2 text-xs hover:bg-blue-50 font-medium" onClick={handlePrint}>
+                      📄 A4 PDF
+                    </button>
+                    <button className="block w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 border-t font-medium" disabled={!detail?.invoice} onClick={() => detail?.invoice && thermalPrint.mutate({ invoiceId: detail.invoice.id, format: "80mm" })}>
+                      🖨️ 80mm Receipt
+                    </button>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => detail?.invoice && loadInvoiceForEdit(detail.invoice.id)} disabled={invoiceDetail.isPending || !detail?.invoice}>
+                  <Pencil className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {/* Loading State */}
+          {invoiceDetail.isPending && (
+            <div className="py-12 text-center">
+              <div className="inline-block animate-spin">
+                <RefreshCw className="h-8 w-8 text-blue-500" />
+              </div>
+              <p className="mt-3 text-slate-600 font-medium">Loading invoice details...</p>
+            </div>
+          )}
+          
+          {/* Error State */}
+          {invoiceDetail.isError && (
+            <div className="py-8 px-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 font-medium">Error loading invoice</p>
+              <p className="text-red-600 text-sm mt-1">{invoiceDetail.error?.message || "Failed to fetch invoice details"}</p>
+              <Button size="sm" className="mt-3" onClick={() => invoiceDetail.refetch()}>
+                Retry
+              </Button>
+            </div>
+          )}
+          
+          {/* Invoice Display */}
+          {detail?.invoice && !invoiceDetail.isPending && (
+            <SaudiInvoicePrint
+              invoice={detail.invoice}
+              company={{
+                companyName,
+                companyNameAr,
+                address: companyAddress,
+                city: settings?.city,
+                country: companyCountry,
+                phone: companyPhone,
+                taxNumber: companyVat,
+                crNumber: settings?.crNumber,
+                logo: companyLogo,
+                defaultCurrency: currency,
+              }}
+              customer={{
+                name: detail.customer?.name || "Walk-in Customer",
+                nameAr: detail.customer?.nameAr,
+                address: detail.customer?.address,
+                city: detail.customer?.city,
+                phone: detail.customer?.phone,
+                email: detail.customer?.email,
+                taxNumber: detail.customer?.vatNumber || detail.customer?.taxNumber,
+                crNumber: detail.customer?.crNumber,
+              }}
+              items={(detail.items || []).map((it: any) => ({
+                id: it.id,
+                description: it.description || "",
+                quantity: Number(it.quantity || 1),
+                unitPrice: it.unitPrice,
+                taxPercent: it.taxPercent,
+                totalAmount: it.totalAmount,
+                unit: it.unit,
+                sku: it.sku,
+                discountPercent: it.discountPercent,
+              }))}
+            />
+          )}
+          
+          {/* Empty State */}
+          {!detail?.invoice && !invoiceDetail.isPending && !invoiceDetail.isError && (
+            <div className="py-8 text-center text-slate-500">
+              <p>No invoice data available</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

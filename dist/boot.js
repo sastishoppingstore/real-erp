@@ -731,9 +731,9 @@ function getCauseFromUnknown(cause) {
   return void 0;
 }
 function getTRPCErrorFromUnknown(cause) {
-  if (cause instanceof TRPCError2) return cause;
+  if (cause instanceof TRPCError) return cause;
   if (cause instanceof Error && cause.name === "TRPCError") return cause;
-  const trpcError = new TRPCError2({
+  const trpcError = new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
     cause
   });
@@ -864,7 +864,7 @@ function createCallerFactory() {
         const procedure = await getProcedureAtPath(router, fullPath);
         let ctx = void 0;
         try {
-          if (!procedure) throw new TRPCError2({
+          if (!procedure) throw new TRPCError({
             code: "NOT_FOUND",
             message: `No procedure found on path "${path2}"`
           });
@@ -923,7 +923,7 @@ function mergeRouters(...routerList) {
 function isTrackedEnvelope(value) {
   return Array.isArray(value) && value[2] === trackedSymbol;
 }
-var defaultFormatter, import_defineProperty, UnknownCauseError, TRPCError2, import_objectSpread2$1, defaultTransformer, import_objectSpread22, lazyMarker, emptyRouter, reservedWords, trackedSymbol;
+var defaultFormatter, import_defineProperty, UnknownCauseError, TRPCError, import_objectSpread2$1, defaultTransformer, import_objectSpread22, lazyMarker, emptyRouter, reservedWords, trackedSymbol;
 var init_tracked_DWInO6EQ = __esm({
   "node_modules/@trpc/server/dist/tracked-DWInO6EQ.mjs"() {
     init_getErrorShape_BPSzUA7W();
@@ -938,7 +938,7 @@ var init_tracked_DWInO6EQ = __esm({
         Object.assign(this, cause);
       }
     };
-    TRPCError2 = class extends Error {
+    TRPCError = class extends Error {
       constructor(opts) {
         var _ref, _opts$message, _this$cause;
         const cause = getCauseFromUnknown(opts.cause);
@@ -38216,7 +38216,7 @@ function createInputMiddleware(parse6) {
     try {
       parsedInput = await parse6(rawInput);
     } catch (cause) {
-      throw new TRPCError2({
+      throw new TRPCError({
         code: "BAD_REQUEST",
         cause
       });
@@ -38235,7 +38235,7 @@ function createOutputMiddleware(parse6) {
       const data = await parse6(result.data);
       return (0, import_objectSpread2$2.default)((0, import_objectSpread2$2.default)({}, result), {}, { data });
     } catch (cause) {
-      throw new TRPCError2({
+      throw new TRPCError({
         message: "Output validation failed",
         code: "INTERNAL_SERVER_ERROR",
         cause
@@ -38384,7 +38384,7 @@ function createProcedureCaller(_def) {
   async function procedure(opts) {
     if (!opts || !("getRawInput" in opts)) throw new Error(codeblock);
     const result = await callRecursive(0, _def, opts);
-    if (!result) throw new TRPCError2({
+    if (!result) throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "No result from middlewares - did you forget to `return next()`?"
     });
@@ -95195,7 +95195,7 @@ async function submitInvoice(params) {
     orderBy: desc(zatcaXmlDocuments.createdAt)
   });
   if (!xmlDoc?.signedXml) {
-    throw new TRPCError2({
+    throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Invoice must be signed before submission"
     });
@@ -98902,7 +98902,7 @@ function parseConnectionParamsFromUnknown(parsed) {
     if (nonStringValues.length > 0) throw new Error(`Expected connectionParams to be string values. Got ${nonStringValues.map(([key2, value]) => `${key2}: ${typeof value}`).join(", ")}`);
     return parsed;
   } catch (cause) {
-    throw new TRPCError2({
+    throw new TRPCError({
       code: "PARSE_ERROR",
       message: "Invalid connection params shape",
       cause
@@ -98914,7 +98914,7 @@ function parseConnectionParamsFromString(str) {
   try {
     parsed = JSON.parse(str);
   } catch (cause) {
-    throw new TRPCError2({
+    throw new TRPCError({
       code: "PARSE_ERROR",
       message: "Not JSON-parsable query params",
       cause
@@ -98936,8 +98936,8 @@ function memo(fn) {
       var _promise2;
       if (value !== sym) return value;
       (_promise2 = promise2) !== null && _promise2 !== void 0 || (promise2 = fn().catch((cause) => {
-        if (cause instanceof TRPCError2) throw cause;
-        throw new TRPCError2({
+        if (cause instanceof TRPCError) throw cause;
+        throw new TRPCError({
           code: "BAD_REQUEST",
           message: cause instanceof Error ? cause.message : "Invalid input",
           cause
@@ -98963,7 +98963,7 @@ var jsonContentTypeHandler = {
     const isBatchCall = opts.searchParams.get("batch") === "1";
     const maxBatchSize = opts.maxBatchSize;
     const paths = isBatchCall ? opts.path.split(",") : [opts.path];
-    if (isBatchCall && typeof maxBatchSize === "number" && paths.length > maxBatchSize) throw new TRPCError2({
+    if (isBatchCall && typeof maxBatchSize === "number" && paths.length > maxBatchSize) throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Batch call exceeds maximum size`
     });
@@ -98979,7 +98979,7 @@ var jsonContentTypeHandler = {
         result[0] = opts.router._def._config.transformer.input.deserialize(inputs);
         return result;
       }
-      if (!isObject(inputs)) throw new TRPCError2({
+      if (!isObject(inputs)) throw new TRPCError({
         code: "BAD_REQUEST",
         message: '"input" needs to be an object when doing a batch call'
       });
@@ -99020,7 +99020,7 @@ var jsonContentTypeHandler = {
       var _call$procedure;
       return (_call$procedure = call.procedure) === null || _call$procedure === void 0 ? void 0 : _call$procedure._def.type;
     }).filter(Boolean));
-    if (types.size > 1) throw new TRPCError2({
+    if (types.size > 1) throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Cannot mix procedure types in call: ${Array.from(types).join(", ")}`
     });
@@ -99045,7 +99045,7 @@ var formDataContentTypeHandler = {
   },
   async parse(opts) {
     const { req } = opts;
-    if (req.method !== "POST") throw new TRPCError2({
+    if (req.method !== "POST") throw new TRPCError({
       code: "METHOD_NOT_SUPPORTED",
       message: "Only POST requests are supported for multipart/form-data requests"
     });
@@ -99078,7 +99078,7 @@ var octetStreamContentTypeHandler = {
   },
   async parse(opts) {
     const { req } = opts;
-    if (req.method !== "POST") throw new TRPCError2({
+    if (req.method !== "POST") throw new TRPCError({
       code: "METHOD_NOT_SUPPORTED",
       message: "Only POST requests are supported for application/octet-stream requests"
     });
@@ -99111,7 +99111,7 @@ function getContentTypeHandler(req) {
   const handler = handlers.find((handler$1) => handler$1.isMatch(req));
   if (handler) return handler;
   if (!handler && req.method === "GET") return jsonContentTypeHandler;
-  throw new TRPCError2({
+  throw new TRPCError({
     code: "UNSUPPORTED_MEDIA_TYPE",
     message: req.headers.has("content-type") ? `Unsupported content-type "${req.headers.get("content-type")}` : "Missing content-type header"
   });
@@ -100260,11 +100260,11 @@ async function resolveResponse(opts) {
   try {
     const [infoError, info] = infoTuple;
     if (infoError) throw infoError;
-    if (info.isBatchCall && !allowBatching) throw new TRPCError2({
+    if (info.isBatchCall && !allowBatching) throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Batching is not enabled on the server`
     });
-    if (isStreamCall && !info.isBatchCall) throw new TRPCError2({
+    if (isStreamCall && !info.isBatchCall) throw new TRPCError({
       message: `Streaming requests must be batched (you can do a batch of 1)`,
       code: "BAD_REQUEST"
     });
@@ -100274,17 +100274,17 @@ async function resolveResponse(opts) {
       const combinedAbort = combinedAbortController(opts.req.signal);
       try {
         if (opts.error) throw opts.error;
-        if (!proc) throw new TRPCError2({
+        if (!proc) throw new TRPCError({
           code: "NOT_FOUND",
           message: `No procedure found on path "${call.path}"`
         });
-        if (!methodMapper[proc._def.type].includes(req.method)) throw new TRPCError2({
+        if (!methodMapper[proc._def.type].includes(req.method)) throw new TRPCError({
           code: "METHOD_NOT_SUPPORTED",
           message: `Unsupported ${req.method}-request to ${proc._def.type} procedure at path "${call.path}"`
         });
         if (proc._def.type === "subscription") {
           var _config$sse2;
-          if (info.isBatchCall) throw new TRPCError2({
+          if (info.isBatchCall) throw new TRPCError({
             code: "BAD_REQUEST",
             message: `Cannot batch subscription calls`
           });
@@ -100333,7 +100333,7 @@ async function resolveResponse(opts) {
         case "mutation":
         case "query": {
           headers.set("content-type", "application/json");
-          if (isDataStream(result === null || result === void 0 ? void 0 : result.data)) throw new TRPCError2({
+          if (isDataStream(result === null || result === void 0 ? void 0 : result.data)) throw new TRPCError({
             code: "UNSUPPORTED_MEDIA_TYPE",
             message: "Cannot use stream-like response in non-streaming request - use httpBatchStreamLink"
           });
@@ -100361,11 +100361,11 @@ async function resolveResponse(opts) {
         case "subscription": {
           const iterable = run(() => {
             if (error48) return errorToAsyncIterable(error48);
-            if (!experimentalSSE) return errorToAsyncIterable(new TRPCError2({
+            if (!experimentalSSE) return errorToAsyncIterable(new TRPCError({
               code: "METHOD_NOT_SUPPORTED",
               message: 'Missing experimental flag "sseSubscriptions"'
             }));
-            if (!isObservable(result.data) && !isAsyncIterable(result.data)) return errorToAsyncIterable(new TRPCError2({
+            if (!isObservable(result.data) && !isAsyncIterable(result.data)) return errorToAsyncIterable(new TRPCError({
               message: `Subscription ${call.path} did not return an observable or a AsyncGenerator`,
               code: "INTERNAL_SERVER_ERROR"
             }));
@@ -100506,7 +100506,7 @@ async function resolveResponse(opts) {
     const results = (await Promise.all(rpcCalls)).map((res) => {
       const [error48, result] = res;
       if (error48) return res;
-      if (isDataStream(result.data)) return [new TRPCError2({
+      if (isDataStream(result.data)) return [new TRPCError({
         code: "UNSUPPORTED_MEDIA_TYPE",
         message: "Cannot use stream-like response in non-streaming request - use httpBatchStreamLink"
       }), void 0];
@@ -115675,7 +115675,7 @@ var publicQuery = t.procedure;
 var requireAuth = t.middleware(async (opts) => {
   const { ctx, next } = opts;
   if (!ctx.user) {
-    throw new TRPCError2({
+    throw new TRPCError({
       code: "UNAUTHORIZED",
       message: ErrorMessages.unauthenticated
     });
@@ -115695,7 +115695,7 @@ function requireRole(role) {
     const allowed = roleHierarchy[role] || [role];
     const isAllowed = ctx.user && allowed.includes(ctx.user.role);
     if (!ctx.user || !isAllowed) {
-      throw new TRPCError2({
+      throw new TRPCError({
         code: "FORBIDDEN",
         message: ErrorMessages.insufficientRole
       });
@@ -116094,6 +116094,7 @@ var accountingRouter = createRouter({
 
 // api/inventoryRouter.ts
 init_connection();
+init_dist();
 init_schema2();
 init_drizzle_orm();
 var inventoryRouter = createRouter({
@@ -116106,6 +116107,28 @@ var inventoryRouter = createRouter({
     const db5 = getDb();
     const [{ id }] = await db5.insert(productCategories).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
+  }),
+  categoryUpdate: authedQuery.input(external_exports.object({
+    id: external_exports.number(),
+    name: external_exports.string().optional(),
+    nameAr: external_exports.string().optional(),
+    description: external_exports.string().optional(),
+    image: external_exports.string().optional(),
+    isActive: external_exports.boolean().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db5 = getDb();
+    const { id, ...data } = input;
+    const existing = await db5.query.productCategories.findFirst({
+      where: and(eq(productCategories.id, id), eq(productCategories.tenantId, ctx.user.tenantId))
+    });
+    if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
+    await db5.update(productCategories).set(data).where(and(eq(productCategories.id, id), eq(productCategories.tenantId, ctx.user.tenantId)));
+    return { success: true, id };
+  }),
+  categoryDelete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
+    const db5 = getDb();
+    await db5.delete(productCategories).where(and(eq(productCategories.id, input.id), eq(productCategories.tenantId, ctx.user.tenantId)));
+    return { success: true };
   }),
   // Brands
   brandList: authedQuery.query(async ({ ctx }) => {
@@ -116138,6 +116161,25 @@ var inventoryRouter = createRouter({
     const db5 = getDb();
     const [{ id }] = await db5.insert(warehouses).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
+  }),
+  warehouseUpdate: authedQuery.input(external_exports.object({
+    id: external_exports.number(),
+    code: external_exports.string().optional(),
+    name: external_exports.string().optional(),
+    address: external_exports.string().optional(),
+    managerName: external_exports.string().optional(),
+    phone: external_exports.string().optional(),
+    isPrimary: external_exports.boolean().optional(),
+    isActive: external_exports.boolean().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db5 = getDb();
+    const { id, ...data } = input;
+    const existing = await db5.query.warehouses.findFirst({
+      where: and(eq(warehouses.id, id), eq(warehouses.tenantId, ctx.user.tenantId))
+    });
+    if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Warehouse not found" });
+    await db5.update(warehouses).set(data).where(and(eq(warehouses.id, id), eq(warehouses.tenantId, ctx.user.tenantId)));
+    return { success: true, id };
   }),
   // Products
   productList: authedQuery.input(external_exports.object({
@@ -116269,6 +116311,18 @@ var inventoryRouter = createRouter({
         quantity: item.quantity,
         unitCost: item.unitCost
       });
+      const fromRows = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.fromWarehouseId)));
+      if (fromRows.length) {
+        const newFrom = Math.max(0, Number(fromRows[0].quantity || 0) - item.quantity);
+        await db5.update(inventoryBalances).set({ quantity: newFrom }).where(eq(inventoryBalances.id, fromRows[0].id));
+      }
+      const toRows = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.toWarehouseId)));
+      if (toRows.length) {
+        const newTo = Number(toRows[0].quantity || 0) + item.quantity;
+        await db5.update(inventoryBalances).set({ quantity: newTo }).where(eq(inventoryBalances.id, toRows[0].id));
+      } else {
+        await db5.insert(inventoryBalances).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.toWarehouseId, quantity: item.quantity });
+      }
     }
     return { id, success: true };
   }),
@@ -116276,6 +116330,52 @@ var inventoryRouter = createRouter({
   adjustmentList: authedQuery.query(async ({ ctx }) => {
     const db5 = getDb();
     return db5.select().from(stockAdjustments).where(eq(stockAdjustments.tenantId, ctx.user.tenantId));
+  }),
+  adjustmentCreate: authedQuery.input(external_exports.object({
+    adjustmentDate: external_exports.string(),
+    adjustmentType: external_exports.string(),
+    reason: external_exports.string().optional(),
+    warehouseId: external_exports.number(),
+    items: external_exports.array(external_exports.object({
+      productId: external_exports.number(),
+      productName: external_exports.string().optional(),
+      quantity: external_exports.number(),
+      unitCost: external_exports.string().optional(),
+      notes: external_exports.string().optional()
+    }))
+  })).mutation(async ({ input, ctx }) => {
+    const db5 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const num = `ADJ-${Date.now()}`;
+    let totalValue = 0;
+    const typeMap = { addition: "other", subtraction: "other", damage: "damage", expiry: "expiry", audit: "count", theft: "theft", other: "other", count: "count" };
+    const [{ id }] = await db5.insert(stockAdjustments).values({
+      tenantId,
+      adjustmentNumber: num,
+      warehouseId: input.warehouseId,
+      date: input.adjustmentDate,
+      adjustmentType: typeMap[input.adjustmentType] || "other",
+      totalValue: "0",
+      notes: input.reason,
+      createdBy: ctx.user.id
+    }).$returningId();
+    for (const item of input.items) {
+      const balRows = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId), eq(inventoryBalances.warehouseId, input.warehouseId)));
+      const currentQty = balRows.length ? Number(balRows[0].quantity || 0) : 0;
+      const adjustedQty = item.quantity;
+      const difference = adjustedQty - currentQty;
+      totalValue += Math.abs(difference) * Number(item.unitCost || 0);
+      await db5.insert(stockAdjustmentItems).values({ adjustmentId: id, productId: item.productId, currentQty, adjustedQty, difference, unitCost: item.unitCost, reason: item.notes });
+      const newQty = Math.max(0, adjustedQty);
+      if (balRows.length) {
+        await db5.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, balRows[0].id));
+      } else {
+        await db5.insert(inventoryBalances).values({ tenantId, productId: item.productId, warehouseId: input.warehouseId, quantity: newQty });
+      }
+      await db5.insert(inventoryMovements2).values({ tenantId, productId: item.productId, warehouseId: input.warehouseId, movementType: "adjustment", quantity: difference, reference: "adjustment", referenceId: id, createdBy: ctx.user.id });
+    }
+    await db5.update(stockAdjustments).set({ totalValue: totalValue.toFixed(4) }).where(eq(stockAdjustments.id, id));
+    return { id, success: true };
   })
 });
 
@@ -116966,22 +117066,103 @@ var salesRouter = createRouter({
   customerCreate: authedQuery.input(external_exports.object({
     code: external_exports.string().optional(),
     name: external_exports.string(),
+    nameAr: external_exports.string().optional(),
+    customerType: external_exports.enum(["b2b", "b2c", "government", "cash_customer"]).optional(),
+    crNumber: external_exports.string().optional(),
+    vatNumber: external_exports.string().optional(),
     email: external_exports.string().optional(),
     phone: external_exports.string().optional(),
     mobile: external_exports.string().optional(),
+    whatsapp: external_exports.string().optional(),
     address: external_exports.string().optional(),
+    buildingNumber: external_exports.string().optional(),
+    streetName: external_exports.string().optional(),
+    district: external_exports.string().optional(),
     city: external_exports.string().optional(),
+    postalCode: external_exports.string().optional(),
+    additionalNumber: external_exports.string().optional(),
     taxNumber: external_exports.string().optional(),
+    contactPerson: external_exports.string().optional(),
+    contactTitle: external_exports.string().optional(),
     creditLimit: external_exports.string().optional(),
-    paymentTerms: external_exports.number().optional()
+    paymentTerms: external_exports.number().optional(),
+    openingBalance: external_exports.string().optional(),
+    openingBalanceDate: external_exports.string().optional(),
+    notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db5 = getDb();
     const [{ id }] = await db5.insert(customers).values({
-      ...input,
       tenantId: ctx.user.tenantId,
-      code: input.code || `CUST-${Date.now()}`
+      code: input.code || `CUST-${Date.now()}`,
+      name: input.name,
+      nameAr: input.nameAr,
+      customerType: input.customerType || "b2b",
+      crNumber: input.crNumber,
+      vatNumber: input.vatNumber,
+      email: input.email,
+      phone: input.phone,
+      mobile: input.mobile,
+      whatsapp: input.whatsapp,
+      address: input.address,
+      buildingNumber: input.buildingNumber,
+      streetName: input.streetName,
+      district: input.district,
+      city: input.city,
+      postalCode: input.postalCode,
+      additionalNumber: input.additionalNumber,
+      taxNumber: input.taxNumber,
+      contactPerson: input.contactPerson,
+      contactTitle: input.contactTitle,
+      creditLimit: input.creditLimit || "0",
+      paymentTerms: input.paymentTerms ?? 30,
+      openingBalance: input.openingBalance || "0",
+      openingBalanceDate: input.openingBalanceDate,
+      notes: input.notes
     }).$returningId();
     return { id, success: true };
+  }),
+  customerUpdate: authedQuery.input(external_exports.object({
+    id: external_exports.number(),
+    code: external_exports.string().optional(),
+    name: external_exports.string().optional(),
+    nameAr: external_exports.string().optional(),
+    customerType: external_exports.enum(["b2b", "b2c", "government", "cash_customer"]).optional(),
+    crNumber: external_exports.string().optional(),
+    vatNumber: external_exports.string().optional(),
+    email: external_exports.string().optional(),
+    phone: external_exports.string().optional(),
+    mobile: external_exports.string().optional(),
+    whatsapp: external_exports.string().optional(),
+    address: external_exports.string().optional(),
+    buildingNumber: external_exports.string().optional(),
+    streetName: external_exports.string().optional(),
+    district: external_exports.string().optional(),
+    city: external_exports.string().optional(),
+    postalCode: external_exports.string().optional(),
+    additionalNumber: external_exports.string().optional(),
+    taxNumber: external_exports.string().optional(),
+    contactPerson: external_exports.string().optional(),
+    contactTitle: external_exports.string().optional(),
+    creditLimit: external_exports.string().optional(),
+    paymentTerms: external_exports.number().optional(),
+    openingBalance: external_exports.string().optional(),
+    openingBalanceDate: external_exports.string().optional(),
+    notes: external_exports.string().optional(),
+    isActive: external_exports.boolean().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db5 = getDb();
+    const { id, ...data } = input;
+    const updateData = { ...data };
+    if (updateData.creditLimit === "" || updateData.creditLimit === void 0) updateData.creditLimit = "0";
+    if (updateData.openingBalance === "" || updateData.openingBalance === void 0) updateData.openingBalance = "0";
+    if (updateData.openingBalanceDate === "") updateData.openingBalanceDate = null;
+    if (updateData.paymentTerms === void 0) delete updateData.paymentTerms;
+    const existing = await db5.query.customers.findFirst({
+      where: and(eq(customers.id, id), eq(customers.tenantId, ctx.user.tenantId))
+    });
+    if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+    await db5.update(customers).set(updateData).where(and(eq(customers.id, id), eq(customers.tenantId, ctx.user.tenantId)));
+    return { success: true, id };
   }),
   quotationList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), customerId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
     const db5 = getDb();
@@ -117060,7 +117241,32 @@ var salesRouter = createRouter({
     const conditions = [eq(invoices.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(invoices.status, input.status));
     if (input?.customerId) conditions.push(eq(invoices.customerId, input.customerId));
-    return db5.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
+    const rows = await db5.select({
+      id: invoices.id,
+      tenantId: invoices.tenantId,
+      invoiceNumber: invoices.invoiceNumber,
+      invoiceType: invoices.invoiceType,
+      customerId: invoices.customerId,
+      customerName: customers.name,
+      orderId: invoices.orderId,
+      date: invoices.date,
+      dueDate: invoices.dueDate,
+      subTotal: invoices.subTotal,
+      discountAmount: invoices.discountAmount,
+      taxAmount: invoices.taxAmount,
+      taxPercent: invoices.taxPercent,
+      shippingAmount: invoices.shippingAmount,
+      totalAmount: invoices.totalAmount,
+      paidAmount: invoices.paidAmount,
+      balanceDue: invoices.balanceDue,
+      zatcaQrCode: invoices.zatcaQrCode,
+      zatcaXml: invoices.zatcaXml,
+      zatcaStatus: invoices.zatcaStatus,
+      status: invoices.status,
+      notes: invoices.notes,
+      createdAt: invoices.createdAt
+    }).from(invoices).leftJoin(customers, eq(customers.id, invoices.customerId)).where(and(...conditions)).orderBy(desc(invoices.createdAt));
+    return rows;
   }),
   invoiceGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
     const db5 = getDb();
@@ -117119,7 +117325,7 @@ var salesRouter = createRouter({
     const isSimplified = saudiInvoice && !isZatcaEligible;
     const invoiceType = isZatcaEligible ? "zatca" : isSimplified ? "simplified" : invoiceData.invoiceType || "standard";
     if (!sellerName.trim()) {
-      throw new TRPCError2({
+      throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Please enter your company name in Settings \u2192 Company Profile before creating invoices."
       });
@@ -117173,7 +117379,7 @@ var salesRouter = createRouter({
       invoiceType,
       customerId: resolvedCustomerId,
       date: invoiceData.date,
-      dueDate: invoiceData.dueDate,
+      dueDate: invoiceData.dueDate || null,
       subTotal: invoiceData.subTotal,
       taxAmount,
       taxPercent,
@@ -117257,10 +117463,10 @@ var salesRouter = createRouter({
       where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
     });
     if (!existingInvoice) {
-      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     if (isIssuedOrZatcaLocked(existingInvoice)) {
-      throw new TRPCError2({
+      throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Issued, paid, reported, or cleared invoices are immutable. Use a credit/debit note instead."
       });
@@ -117280,13 +117486,13 @@ var salesRouter = createRouter({
     let zatcaStatus = existingInvoice.zatcaStatus;
     if (saudiInvoice) {
       if (!sellerName.trim()) {
-        throw new TRPCError2({
+        throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Saudi ZATCA invoices require company name in Settings before billing."
         });
       }
       if (!isValidSaudiVatNumber(vatNumber)) {
-        throw new TRPCError2({
+        throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Saudi ZATCA invoices require a valid 15-digit VAT number that starts and ends with 3."
         });
@@ -117306,8 +117512,10 @@ var salesRouter = createRouter({
       });
       zatcaStatus = "pending";
     }
+    const invoiceUpdateData = { ...invoiceData };
+    if (!invoiceUpdateData.dueDate) invoiceUpdateData.dueDate = null;
     await db5.update(invoices).set({
-      ...invoiceData,
+      ...invoiceUpdateData,
       invoiceType,
       taxPercent,
       taxAmount,
@@ -117347,10 +117555,10 @@ var salesRouter = createRouter({
       where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
     });
     if (!existingInvoice) {
-      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     if (isIssuedOrZatcaLocked(existingInvoice)) {
-      throw new TRPCError2({
+      throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Cannot delete issued, paid, reported, or cleared invoices. Create a credit/debit note instead."
       });
@@ -117531,6 +117739,14 @@ var purchaseRouter = createRouter({
     }).$returningId();
     for (const item of items) {
       await db5.insert(grnItems).values({ ...item, grnId: id });
+      const balRows = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.warehouseId)));
+      if (balRows.length) {
+        const newQty = Number(balRows[0].quantity || 0) + item.quantity;
+        await db5.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, balRows[0].id));
+      } else {
+        await db5.insert(inventoryBalances).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.warehouseId, quantity: item.quantity });
+      }
+      await db5.insert(inventoryMovements2).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.warehouseId, movementType: "purchase", quantity: item.quantity, reference: "GRN", referenceId: id, unitCost: item.unitPrice });
     }
     return { id, success: true };
   }),
@@ -118843,7 +119059,7 @@ var posRouter = createRouter({
       await db5.insert(invoiceItems).values({
         invoiceId,
         productId: item.productId,
-        description: item.description,
+        description: item.description && item.description.trim() ? item.description : item.productId ? `Item #${item.productId}` : "POS Sale",
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         discountPercent: item.discount,
@@ -119706,7 +119922,7 @@ var posWholesaleRouter = createRouter({
       await db5.insert(invoiceItems).values({
         invoiceId,
         productId: item.productId,
-        description: item.description,
+        description: item.description && item.description.trim() ? item.description : item.productId ? `Item #${item.productId}` : "WS Invoice",
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         discountPercent: item.discount,
@@ -121794,7 +122010,7 @@ function encodeZatcaTlv2(tag2, value) {
   const encoder2 = new TextEncoder();
   const valueBytes = encoder2.encode(value);
   if (valueBytes.length > 255) {
-    throw new TRPCError2({
+    throw new TRPCError({
       code: "BAD_REQUEST",
       message: `ZATCA QR tag ${tag2} is too long for TLV encoding.`
     });
@@ -122128,15 +122344,15 @@ var taxComplianceRouter = createRouter({
     const invoice = await db5.query.invoices.findFirst({
       where: and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, tenantId))
     });
-    if (!invoice) throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+    if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     const settings = await db5.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, tenantId)
     });
     if (!settings?.companyName && !settings?.companyNameAr) {
-      throw new TRPCError2({ code: "BAD_REQUEST", message: "Saudi ZATCA requires company name before issuing." });
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Saudi ZATCA requires company name before issuing." });
     }
     if (!validSaudiVat(settings?.taxNumber || "")) {
-      throw new TRPCError2({ code: "BAD_REQUEST", message: "Saudi VAT number must be 15 digits and start/end with 3." });
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Saudi VAT number must be 15 digits and start/end with 3." });
     }
     const items = await db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id));
     const xml = buildSimplifiedZatcaXml(invoice, items, {
@@ -122232,7 +122448,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const settings = await db5.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
@@ -122273,7 +122489,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const status = invoice.zatcaStatus || "pending";
     const statusMap = {
@@ -122300,7 +122516,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const settings = await db5.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
@@ -122333,7 +122549,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const items = await db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.invoiceId));
     const settings = await db5.query.companySettings.findFirst({
@@ -122416,7 +122632,7 @@ var taxComplianceRouter = createRouter({
       )
     });
     if (!invoice) {
-      throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
     const submissionNumber = `FBR-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const submittedAt = isoNow();
@@ -122456,7 +122672,7 @@ var taxComplianceRouter = createRouter({
       orderBy: desc(auditLogs.createdAt)
     });
     if (!log) {
-      throw new TRPCError2({ code: "NOT_FOUND", message: "Submission not found" });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Submission not found" });
     }
     return {
       submissionNumber: input.submissionNumber,
@@ -122925,7 +123141,7 @@ function validSaudiVat2(vatNumber) {
 function tlv(tag2, value) {
   const bytes = new TextEncoder().encode(value || "");
   if (bytes.length > 255) {
-    throw new TRPCError2({ code: "BAD_REQUEST", message: `ZATCA QR tag ${tag2} is longer than 255 bytes.` });
+    throw new TRPCError({ code: "BAD_REQUEST", message: `ZATCA QR tag ${tag2} is longer than 255 bytes.` });
   }
   const out = new Uint8Array(2 + bytes.length);
   out[0] = tag2;
@@ -123003,12 +123219,12 @@ async function buildInvoicePackage(invoiceId, tenantId, invoiceMode) {
     db5.query.invoices.findFirst({ where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)) }),
     getLegalOrSettings(tenantId)
   ]);
-  if (!invoice) throw new TRPCError2({ code: "NOT_FOUND", message: "Invoice not found" });
+  if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
   if (!validSaudiVat2(legal.vatNumber)) {
-    throw new TRPCError2({ code: "BAD_REQUEST", message: "Saudi VAT Number must be 15 digits, start with 3, and end with 3." });
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Saudi VAT Number must be 15 digits, start with 3, and end with 3." });
   }
   if (!legal.legalNameEn && !legal.legalNameAr) {
-    throw new TRPCError2({ code: "BAD_REQUEST", message: "Company legal name is required before generating ZATCA documents." });
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Company legal name is required before generating ZATCA documents." });
   }
   const [items, customer, existingStatus] = await Promise.all([
     db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id)),
@@ -123577,7 +123793,7 @@ var zatcaRouter = createRouter({
       where: and(eq(zatcaXmlDocuments.tenantId, tenantId), eq(zatcaXmlDocuments.invoiceId, input.invoiceId)),
       orderBy: desc(zatcaXmlDocuments.createdAt)
     });
-    if (!signed?.signedXml) throw new TRPCError2({ code: "BAD_REQUEST", message: "Sign invoice before clearance." });
+    if (!signed?.signedXml) throw new TRPCError({ code: "BAD_REQUEST", message: "Sign invoice before clearance." });
     const statusRow = await db5.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
     const credential = await db5.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)), orderBy: desc(zatcaCredentials.updatedAt) });
     const result = await callZatcaApi({
@@ -123600,7 +123816,7 @@ var zatcaRouter = createRouter({
       where: and(eq(zatcaXmlDocuments.tenantId, tenantId), eq(zatcaXmlDocuments.invoiceId, input.invoiceId)),
       orderBy: desc(zatcaXmlDocuments.createdAt)
     });
-    if (!signed?.signedXml) throw new TRPCError2({ code: "BAD_REQUEST", message: "Sign invoice before reporting." });
+    if (!signed?.signedXml) throw new TRPCError({ code: "BAD_REQUEST", message: "Sign invoice before reporting." });
     const statusRow = await db5.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
     const credential = await db5.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)), orderBy: desc(zatcaCredentials.updatedAt) });
     const result = await callZatcaApi({
@@ -125704,11 +125920,11 @@ var syncRouter = createRouter({
   })).mutation(async ({ input, ctx }) => {
     const db5 = getDb();
     const tbl = tableMap[input.entityType];
-    if (!tbl) throw new TRPCError2({ code: "BAD_REQUEST", message: "Unknown entity type" });
+    if (!tbl) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown entity type" });
     const existing = await db5.select().from(tbl).where(
       and(eq(tbl.tenantId, ctx.user.tenantId), eq(tbl.localUuid, input.localUuid))
     ).limit(1);
-    if (existing.length === 0) throw new TRPCError2({ code: "NOT_FOUND", message: "Record not found" });
+    if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Record not found" });
     if (input.resolution === "keep_local") {
       await db5.update(tbl).set({ version: sql`version + 1`, updatedAt: /* @__PURE__ */ new Date() }).where(eq(tbl.localUuid, input.localUuid));
     } else if (input.resolution === "keep_server") {
@@ -130950,10 +131166,10 @@ var portalAuthRouter = createRouter({
       `);
     const user = users2?.[0];
     if (!user || !verifyPassword(input.password, user.password_hash)) {
-      throw new TRPCError2({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
     }
     if (!user.is_active) {
-      throw new TRPCError2({ code: "FORBIDDEN", message: "Account is deactivated" });
+      throw new TRPCError({ code: "FORBIDDEN", message: "Account is deactivated" });
     }
     const token = generateToken();
     const refreshToken = generateToken();
@@ -130988,7 +131204,7 @@ var portalAuthRouter = createRouter({
       `);
     const session = sessions?.[0];
     if (!session || new Date(session.expires_at) < /* @__PURE__ */ new Date()) {
-      throw new TRPCError2({ code: "UNAUTHORIZED", message: "Session expired" });
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Session expired" });
     }
     const newToken = generateToken();
     const newRefreshToken = generateToken();
@@ -131008,7 +131224,7 @@ var portalAuthRouter = createRouter({
       `);
     const row = sessions?.[0];
     if (!row || new Date(row.expires_at) < /* @__PURE__ */ new Date()) {
-      throw new TRPCError2({ code: "UNAUTHORIZED", message: "Invalid or expired session" });
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired session" });
     }
     await db5.execute(sql`
         UPDATE portal_sessions SET last_activity_at = NOW() WHERE id = ${row.id}
@@ -131034,6 +131250,7 @@ var portalAuthRouter = createRouter({
 });
 
 // api/portalCustomerRouter.ts
+init_dist();
 init_connection();
 init_schema2();
 init_drizzle_orm();
@@ -131213,7 +131430,7 @@ async function getSession2(token) {
 var portalVendorRouter = createRouter({
   dashboard: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const supplierId = session.reference_id;
     const supplier = await db3.query.suppliers.findFirst({ where: eq(suppliers.id, supplierId) });
@@ -131230,26 +131447,26 @@ var portalVendorRouter = createRouter({
   }),
   poList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(purchaseOrders.tenantId, session.tenant_id), eq(purchaseOrders.supplierId, session.reference_id)];
     if (input.status) conditions.push(eq(purchaseOrders.status, input.status));
     return db3.select().from(purchaseOrders).where(and(...conditions)).orderBy(desc(purchaseOrders.createdAt));
   }),
   poGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const po = await db3.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.id) });
     const items = await db3.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.poId, input.id));
     return { po, items };
   }),
   invoiceList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db3.select().from(invoices).where(and(eq(invoices.tenantId, session.tenant_id), eq(invoices.customerId, session.reference_id))).orderBy(desc(invoices.createdAt));
   }),
   invoiceCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), poId: external_exports.number(), invoiceNumber: external_exports.string(), amount: external_exports.string(), taxAmount: external_exports.string().optional(), totalAmount: external_exports.string() })).mutation(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const po = await db3.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.poId) });
     if (!po) throw new Error("Purchase order not found");
     const [{ id }] = await db3.insert(invoices).values({
@@ -131270,18 +131487,18 @@ var portalVendorRouter = createRouter({
   }),
   paymentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db3.select().from(supplierPayments).where(and(eq(supplierPayments.tenantId, session.tenant_id), eq(supplierPayments.supplierId, session.reference_id))).orderBy(desc(supplierPayments.createdAt));
   }),
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const supplier = await db3.query.suppliers.findFirst({ where: eq(suppliers.id, session.reference_id) });
     return { portalUser: { id: session.id, name: session.name, email: session.email, portalType: session.portal_type }, supplier };
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string().optional(), phone: external_exports.string().optional(), email: external_exports.string().optional(), address: external_exports.string().optional(), city: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const updateData = {};
     if (input.name) updateData.name = input.name;
     if (input.phone) updateData.phone = input.phone;
@@ -131296,7 +131513,7 @@ var portalVendorRouter = createRouter({
   }),
   messages: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [rows] = await db3.execute(sql`
         SELECT * FROM portal_messages
         WHERE tenant_id = ${session.tenant_id} AND receiver_type = 'vendor' AND receiver_id = ${session.reference_id}
@@ -131325,7 +131542,7 @@ var db4 = getDb();
 var portalEmployeeRouter = createRouter({
   dashboard: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const employeeId = session.reference_id;
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
@@ -131352,14 +131569,14 @@ var portalEmployeeRouter = createRouter({
   }),
   payslipList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const slips = await db4.select().from(salarySlips).where(and(eq(salarySlips.tenantId, session.tenant_id), eq(salarySlips.employeeId, session.reference_id))).orderBy(desc(salarySlips.createdAt));
     const periods = await db4.select().from(payrollPeriods).where(eq(payrollPeriods.tenantId, session.tenant_id));
     return slips.map((slip) => ({ ...slip, period: periods.find((p) => p.id === slip.payrollPeriodId) }));
   }),
   payslipGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const slip = await db4.query.salarySlips.findFirst({ where: eq(salarySlips.id, input.id) });
     const period = slip ? await db4.query.payrollPeriods.findFirst({ where: eq(payrollPeriods.id, slip.payrollPeriodId) }) : null;
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, slip?.employeeId) });
@@ -131367,7 +131584,7 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(leaveRequests.tenantId, session.tenant_id), eq(leaveRequests.employeeId, session.reference_id)];
     if (input.status) conditions.push(eq(leaveRequests.status, input.status));
     const requests = await db4.select().from(leaveRequests).where(and(...conditions)).orderBy(desc(leaveRequests.createdAt));
@@ -131376,7 +131593,7 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), leaveTypeId: external_exports.number(), startDate: external_exports.string(), endDate: external_exports.string(), days: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [{ id }] = await db4.insert(leaveRequests).values({
       tenantId: session.tenant_id,
       employeeId: session.reference_id,
@@ -131391,18 +131608,18 @@ var portalEmployeeRouter = createRouter({
   }),
   leaveRequestCancel: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     await db4.update(leaveRequests).set({ status: "cancelled" }).where(and(eq(leaveRequests.id, input.id), eq(leaveRequests.employeeId, session.reference_id)));
     return { success: true };
   }),
   attendanceList: publicQuery.input(external_exports.object({ token: external_exports.string(), limit: external_exports.number().default(30) })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     return db4.select().from(attendance).where(and(eq(attendance.tenantId, session.tenant_id), eq(attendance.employeeId, session.reference_id))).orderBy(desc(attendance.date)).limit(input.limit);
   }),
   attendanceStats: publicQuery.input(external_exports.object({ token: external_exports.string(), month: external_exports.number().optional(), year: external_exports.number().optional() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const now = /* @__PURE__ */ new Date();
     const year3 = input.year || now.getFullYear();
     const month = input.month || now.getMonth() + 1;
@@ -131422,7 +131639,7 @@ var portalEmployeeRouter = createRouter({
   }),
   documentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [rows] = await db4.execute(sql`
         SELECT * FROM portal_documents
         WHERE tenant_id = ${session.tenant_id} AND portal_type = 'employee' AND reference_id = ${session.reference_id}
@@ -131432,7 +131649,7 @@ var portalEmployeeRouter = createRouter({
   }),
   documentUpload: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string(), category: external_exports.string(), fileUrl: external_exports.string(), fileSize: external_exports.number().optional(), mimeType: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const [result] = await db4.execute(sql`
         INSERT INTO portal_documents (tenant_id, portal_type, reference_id, document_type, file_name, file_path, file_size, mime_type, uploaded_by)
         VALUES (${session.tenant_id}, 'employee', ${session.reference_id}, ${input.category}, ${input.name}, ${input.fileUrl}, ${input.fileSize || 0}, ${input.mimeType || "application/octet-stream"}, ${session.id})
@@ -131441,7 +131658,7 @@ var portalEmployeeRouter = createRouter({
   }),
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const employee = await db4.query.employees.findFirst({ where: eq(employees.id, session.reference_id) });
     const department = employee ? await db4.query.departments.findFirst({ where: eq(departments.id, employee.departmentId) }) : null;
     const designation = employee ? await db4.query.designations.findFirst({ where: eq(designations.id, employee.designationId) }) : null;
@@ -131449,7 +131666,7 @@ var portalEmployeeRouter = createRouter({
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), phone: external_exports.string().optional(), mobile: external_exports.string().optional(), address: external_exports.string().optional(), emergencyContact: external_exports.string().optional(), emergencyPhone: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
-    if (!session) throw new TRPCError2({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const updateData = {};
     if (input.phone) updateData.phone = input.phone;
     if (input.mobile) updateData.mobile = input.mobile;
@@ -133020,7 +133237,13 @@ var aviationRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db5 = getDb();
-    const [{ id }] = await db5.insert(flights).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const { departureTime, arrivalTime, ...rest } = input;
+    const [{ id }] = await db5.insert(flights).values({
+      ...rest,
+      departureTime: new Date(departureTime),
+      arrivalTime: new Date(arrivalTime),
+      tenantId: ctx.user.tenantId
+    }).$returningId();
     return { id, success: true };
   }),
   flightUpdate: authedQuery.input(external_exports.object({

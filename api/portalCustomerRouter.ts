@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
+import { TRPCError } from "@trpc/server";
 import { getDb } from "./queries/connection";
 import {
   invoices, invoiceItems, customerPayments,

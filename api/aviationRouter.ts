@@ -25,7 +25,13 @@ export const aviationRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(flights).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const { departureTime, arrivalTime, ...rest } = input;
+      const [{ id }] = await db.insert(flights).values({
+        ...rest,
+        departureTime: new Date(departureTime),
+        arrivalTime: new Date(arrivalTime),
+        tenantId: ctx.user.tenantId!,
+      }).$returningId();
       return { id, success: true };
     }),
 

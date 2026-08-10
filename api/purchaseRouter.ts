@@ -3,7 +3,8 @@ import { createRouter, authedQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import {
   suppliers, purchaseOrders, purchaseOrderItems,
-  goodsReceivedNotes, grnItems, supplierPayments
+  goodsReceivedNotes, grnItems, supplierPayments,
+  inventoryBalances, inventoryMovements
 } from "@db/schema";
 import { eq, sql, and, like, desc } from "drizzle-orm";
 
@@ -128,6 +129,14 @@ export const purchaseRouter = createRouter({
       }).$returningId();
       for (const item of items) {
         await db.insert(grnItems).values({ ...item, grnId: id });
+        const balRows = await db.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId!), eq(inventoryBalances.warehouseId, input.warehouseId)));
+        if (balRows.length) {
+          const newQty = Number(balRows[0].quantity || 0) + item.quantity;
+          await db.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, balRows[0].id));
+        } else {
+          await db.insert(inventoryBalances).values({ tenantId: ctx.user.tenantId!, productId: item.productId, warehouseId: input.warehouseId, quantity: item.quantity });
+        }
+        await db.insert(inventoryMovements).values({ tenantId: ctx.user.tenantId!, productId: item.productId, warehouseId: input.warehouseId, movementType: "purchase", quantity: item.quantity, reference: "GRN", referenceId: id, unitCost: item.unitPrice });
       }
       return { id, success: true };
     }),

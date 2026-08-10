@@ -167,7 +167,7 @@ export const posWholesaleRouter = createRouter({
 
       for (const item of items) {
         await db.insert(invoiceItems).values({
-          invoiceId, productId: item.productId, description: item.description,
+          invoiceId, productId: item.productId, description: (item.description && item.description.trim()) ? item.description : (item.productId ? `Item #${item.productId}` : "WS Invoice"),
           quantity: item.quantity, unitPrice: item.unitPrice,
           discountPercent: item.discount, taxPercent: input.taxExempt ? "0" : item.taxRate,
           totalAmount: item.totalAmount,

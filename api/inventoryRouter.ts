@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createRouter, authedQuery } from "./middleware";
 import { getDb } from "./queries/connection";
+import { TRPCError } from "@trpc/server";
 import {
   products, productCategories, brands, units, warehouses,
   inventoryBalances, inventoryMovements, stockTransfers,
@@ -23,6 +24,36 @@ export const inventoryRouter = createRouter({
       const db = getDb();
       const [{ id }] = await db.insert(productCategories).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
+    }),
+
+  categoryUpdate: authedQuery
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      nameAr: z.string().optional(),
+      description: z.string().optional(),
+      image: z.string().optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const { id, ...data } = input;
+      const existing = await db.query.productCategories.findFirst({
+        where: and(eq(productCategories.id, id), eq(productCategories.tenantId, ctx.user.tenantId!)),
+      });
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
+      await db.update(productCategories).set(data)
+        .where(and(eq(productCategories.id, id), eq(productCategories.tenantId, ctx.user.tenantId!)));
+      return { success: true, id };
+    }),
+
+  categoryDelete: authedQuery
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      await db.delete(productCategories)
+        .where(and(eq(productCategories.id, input.id), eq(productCategories.tenantId, ctx.user.tenantId!)));
+      return { success: true };
     }),
 
   // Brands
@@ -67,6 +98,29 @@ export const inventoryRouter = createRouter({
       const db = getDb();
       const [{ id }] = await db.insert(warehouses).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
+    }),
+
+  warehouseUpdate: authedQuery
+    .input(z.object({
+      id: z.number(),
+      code: z.string().optional(),
+      name: z.string().optional(),
+      address: z.string().optional(),
+      managerName: z.string().optional(),
+      phone: z.string().optional(),
+      isPrimary: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const { id, ...data } = input;
+      const existing = await db.query.warehouses.findFirst({
+        where: and(eq(warehouses.id, id), eq(warehouses.tenantId, ctx.user.tenantId!)),
+      });
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Warehouse not found" });
+      await db.update(warehouses).set(data)
+        .where(and(eq(warehouses.id, id), eq(warehouses.tenantId, ctx.user.tenantId!)));
+      return { success: true, id };
     }),
 
   // Products
@@ -230,6 +284,20 @@ export const inventoryRouter = createRouter({
           quantity: item.quantity,
           unitCost: item.unitCost,
         });
+        // decrement from source warehouse
+        const fromRows = await db.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId!), eq(inventoryBalances.warehouseId, input.fromWarehouseId)));
+        if (fromRows.length) {
+          const newFrom = Math.max(0, Number(fromRows[0].quantity || 0) - item.quantity);
+          await db.update(inventoryBalances).set({ quantity: newFrom }).where(eq(inventoryBalances.id, fromRows[0].id));
+        }
+        // increment to destination warehouse
+        const toRows = await db.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId!), eq(inventoryBalances.warehouseId, input.toWarehouseId)));
+        if (toRows.length) {
+          const newTo = Number(toRows[0].quantity || 0) + item.quantity;
+          await db.update(inventoryBalances).set({ quantity: newTo }).where(eq(inventoryBalances.id, toRows[0].id));
+        } else {
+          await db.insert(inventoryBalances).values({ tenantId: ctx.user.tenantId!, productId: item.productId, warehouseId: input.toWarehouseId, quantity: item.quantity });
+        }
       }
       return { id, success: true };
     }),
@@ -239,5 +307,49 @@ export const inventoryRouter = createRouter({
     .query(async ({ ctx }) => {
       const db = getDb();
       return db.select().from(stockAdjustments).where(eq(stockAdjustments.tenantId, ctx.user.tenantId!));
+    }),
+
+  adjustmentCreate: authedQuery
+    .input(z.object({
+      adjustmentDate: z.string(),
+      adjustmentType: z.string(),
+      reason: z.string().optional(),
+      warehouseId: z.number(),
+      items: z.array(z.object({
+        productId: z.number(),
+        productName: z.string().optional(),
+        quantity: z.number(),
+        unitCost: z.string().optional(),
+        notes: z.string().optional(),
+      })),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const tenantId = ctx.user.tenantId!;
+      const num = `ADJ-${Date.now()}`;
+      let totalValue = 0;
+      const typeMap: Record<string,string> = { addition:"other", subtraction:"other", damage:"damage", expiry:"expiry", audit:"count", theft:"theft", other:"other", count:"count" };
+      const [{ id }] = await db.insert(stockAdjustments).values({
+        tenantId, adjustmentNumber: num, warehouseId: input.warehouseId,
+        date: input.adjustmentDate, adjustmentType: (typeMap[input.adjustmentType] || "other") as any,
+        totalValue: "0", notes: input.reason, createdBy: ctx.user.id,
+      }).$returningId();
+      for (const item of input.items) {
+        const balRows = await db.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId), eq(inventoryBalances.warehouseId, input.warehouseId)));
+        const currentQty = balRows.length ? Number(balRows[0].quantity || 0) : 0;
+        const adjustedQty = item.quantity;
+        const difference = adjustedQty - currentQty;
+        totalValue += Math.abs(difference) * Number(item.unitCost || 0);
+        await db.insert(stockAdjustmentItems).values({ adjustmentId: id, productId: item.productId, currentQty, adjustedQty, difference, unitCost: item.unitCost, reason: item.notes });
+        const newQty = Math.max(0, adjustedQty);
+        if (balRows.length) {
+          await db.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, balRows[0].id));
+        } else {
+          await db.insert(inventoryBalances).values({ tenantId, productId: item.productId, warehouseId: input.warehouseId, quantity: newQty });
+        }
+        await db.insert(inventoryMovements).values({ tenantId, productId: item.productId, warehouseId: input.warehouseId, movementType: "adjustment", quantity: difference, reference: "adjustment", referenceId: id, createdBy: ctx.user.id });
+      }
+      await db.update(stockAdjustments).set({ totalValue: totalValue.toFixed(4) }).where(eq(stockAdjustments.id, id));
+      return { id, success: true };
     }),
 });

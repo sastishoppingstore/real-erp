@@ -123,23 +123,108 @@ export const salesRouter = createRouter({
     .input(z.object({
       code: z.string().optional(),
       name: z.string(),
+      nameAr: z.string().optional(),
+      customerType: z.enum(["b2b", "b2c", "government", "cash_customer"]).optional(),
+      crNumber: z.string().optional(),
+      vatNumber: z.string().optional(),
       email: z.string().optional(),
       phone: z.string().optional(),
       mobile: z.string().optional(),
+      whatsapp: z.string().optional(),
       address: z.string().optional(),
+      buildingNumber: z.string().optional(),
+      streetName: z.string().optional(),
+      district: z.string().optional(),
       city: z.string().optional(),
+      postalCode: z.string().optional(),
+      additionalNumber: z.string().optional(),
       taxNumber: z.string().optional(),
+      contactPerson: z.string().optional(),
+      contactTitle: z.string().optional(),
       creditLimit: z.string().optional(),
       paymentTerms: z.number().optional(),
+      openingBalance: z.string().optional(),
+      openingBalanceDate: z.string().optional(),
+      notes: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const [{ id }] = await db.insert(customers).values({
-        ...input,
         tenantId: ctx.user.tenantId!,
         code: input.code || `CUST-${Date.now()}`,
+        name: input.name,
+        nameAr: input.nameAr,
+        customerType: input.customerType || "b2b",
+        crNumber: input.crNumber,
+        vatNumber: input.vatNumber,
+        email: input.email,
+        phone: input.phone,
+        mobile: input.mobile,
+        whatsapp: input.whatsapp,
+        address: input.address,
+        buildingNumber: input.buildingNumber,
+        streetName: input.streetName,
+        district: input.district,
+        city: input.city,
+        postalCode: input.postalCode,
+        additionalNumber: input.additionalNumber,
+        taxNumber: input.taxNumber,
+        contactPerson: input.contactPerson,
+        contactTitle: input.contactTitle,
+        creditLimit: input.creditLimit || "0",
+        paymentTerms: input.paymentTerms ?? 30,
+        openingBalance: input.openingBalance || "0",
+        openingBalanceDate: input.openingBalanceDate,
+        notes: input.notes,
       }).$returningId();
       return { id, success: true };
+    }),
+
+  customerUpdate: authedQuery
+    .input(z.object({
+      id: z.number(),
+      code: z.string().optional(),
+      name: z.string().optional(),
+      nameAr: z.string().optional(),
+      customerType: z.enum(["b2b", "b2c", "government", "cash_customer"]).optional(),
+      crNumber: z.string().optional(),
+      vatNumber: z.string().optional(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+      mobile: z.string().optional(),
+      whatsapp: z.string().optional(),
+      address: z.string().optional(),
+      buildingNumber: z.string().optional(),
+      streetName: z.string().optional(),
+      district: z.string().optional(),
+      city: z.string().optional(),
+      postalCode: z.string().optional(),
+      additionalNumber: z.string().optional(),
+      taxNumber: z.string().optional(),
+      contactPerson: z.string().optional(),
+      contactTitle: z.string().optional(),
+      creditLimit: z.string().optional(),
+      paymentTerms: z.number().optional(),
+      openingBalance: z.string().optional(),
+      openingBalanceDate: z.string().optional(),
+      notes: z.string().optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const { id, ...data } = input;
+      const updateData: any = { ...data };
+      if (updateData.creditLimit === "" || updateData.creditLimit === undefined) updateData.creditLimit = "0";
+      if (updateData.openingBalance === "" || updateData.openingBalance === undefined) updateData.openingBalance = "0";
+      if (updateData.openingBalanceDate === "") updateData.openingBalanceDate = null;
+      if (updateData.paymentTerms === undefined) delete updateData.paymentTerms;
+      const existing = await db.query.customers.findFirst({
+        where: and(eq(customers.id, id), eq(customers.tenantId, ctx.user.tenantId!)),
+      });
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+      await db.update(customers).set(updateData)
+        .where(and(eq(customers.id, id), eq(customers.tenantId, ctx.user.tenantId!)));
+      return { success: true, id };
     }),
 
   quotationList: authedQuery
@@ -233,7 +318,20 @@ export const salesRouter = createRouter({
       const conditions = [eq(invoices.tenantId, ctx.user.tenantId!)];
       if (input?.status) conditions.push(eq(invoices.status, input.status as any));
       if (input?.customerId) conditions.push(eq(invoices.customerId, input.customerId));
-      return db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
+      const rows = await db.select({
+        id: invoices.id, tenantId: invoices.tenantId, invoiceNumber: invoices.invoiceNumber,
+        invoiceType: invoices.invoiceType, customerId: invoices.customerId,
+        customerName: customers.name, orderId: invoices.orderId, date: invoices.date,
+        dueDate: invoices.dueDate, subTotal: invoices.subTotal, discountAmount: invoices.discountAmount,
+        taxAmount: invoices.taxAmount, taxPercent: invoices.taxPercent, shippingAmount: invoices.shippingAmount,
+        totalAmount: invoices.totalAmount, paidAmount: invoices.paidAmount, balanceDue: invoices.balanceDue,
+        zatcaQrCode: invoices.zatcaQrCode, zatcaXml: invoices.zatcaXml, zatcaStatus: invoices.zatcaStatus,
+        status: invoices.status, notes: invoices.notes,
+        createdAt: invoices.createdAt,
+      }).from(invoices)
+        .leftJoin(customers, eq(customers.id, invoices.customerId))
+        .where(and(...conditions)).orderBy(desc(invoices.createdAt));
+      return rows;
     }),
 
   invoiceGet: authedQuery
@@ -375,7 +473,7 @@ export const salesRouter = createRouter({
         invoiceType,
         customerId: resolvedCustomerId,
         date: invoiceData.date,
-        dueDate: invoiceData.dueDate,
+        dueDate: invoiceData.dueDate || null,
         subTotal: invoiceData.subTotal,
         taxAmount,
         taxPercent,
@@ -521,8 +619,10 @@ export const salesRouter = createRouter({
         zatcaStatus = "pending";
       }
 
+      const invoiceUpdateData = { ...invoiceData };
+      if (!invoiceUpdateData.dueDate) invoiceUpdateData.dueDate = null;
       await db.update(invoices).set({
-        ...invoiceData,
+        ...invoiceUpdateData,
         invoiceType,
         taxPercent,
         taxAmount,
