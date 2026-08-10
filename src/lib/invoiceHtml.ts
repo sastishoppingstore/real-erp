@@ -1,0 +1,100 @@
+// Shared invoice HTML generator for both View (WYSIWYG) and Print
+// This is a .ts file (not .tsx) to avoid JSX parsing of CSS braces
+
+export function generateInvoiceHtml(params: {
+  companyName: string;
+  companyNameAr?: string;
+  companyLogo?: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  companyVat?: string;
+  currency: string;
+  taxPercent: string;
+  note?: string;
+  pSub: number;
+  pDisc: number;
+  pVat: number;
+  pTotal: number;
+  pCustName: string;
+  pCustPhone: string;
+  pCustAddr: string;
+  pCustVat: string;
+  pType: string;
+  printItems: Array<{ no: number; name: string; qty: number; rate: number; total: number }>;
+}) {
+  const {
+    companyName, companyNameAr, companyLogo, companyAddress, companyPhone, companyVat,
+    currency, taxPercent, note, pSub, pDisc, pVat, pTotal,
+    pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems
+  } = params;
+
+  const qrPayload = JSON.stringify({
+    seller: companyNameAr || companyName, vat: companyVat,
+    total: pTotal.toFixed(2), tax: pVat.toFixed(2), date: new Date().toISOString(),
+  });
+  const qrData = btoa(unescape(encodeURIComponent(qrPayload)));
+
+  return `<!DOCTYPE html>
+<html dir="rtl"><head><meta charset="UTF-8"><title>Bill - ${companyName}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f5f5f5;padding:10mm}
+.invoice{max-width:800px;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 0 10px rgba(0,0,0,.1)}
+.header{display:flex;justify-content:space-between;border-bottom:3px solid #1e3a8a;padding-bottom:15px;margin-bottom:20px;gap:20px}
+.qr-code{width:80px;height:80px;border:2px solid #000;padding:3px}
+.company-info h1{font-size:20px;color:#1e3a8a;font-weight:900}
+.company-info h2{font-size:16px;color:#1d4ed8;font-weight:700}
+.info-line{font-size:12px;color:#333;margin:2px 0}
+.title{text-align:center;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;padding:12px;margin:15px 0;font-size:18px;font-weight:700;border-radius:5px}
+.badge{display:inline-block;background:#1d4ed8;color:#fff;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;margin-left:8px}
+.customer{border:1px solid #ddd;padding:15px;margin:15px 0;border-radius:5px}
+.customer h3{color:#1e3a8a;margin-bottom:8px}
+.customer p{margin:3px 0;font-size:13px}
+table{width:100%;border-collapse:collapse;margin:20px 0}
+thead{background:#1e3a8a;color:#fff}
+th{padding:10px;text-align:center;border:1px solid #fff;font-size:12px}
+td{padding:8px;text-align:center;border:1px solid #ddd;font-size:12px}
+tr:nth-child(even){background:#f9f9ff}
+.totals{margin-top:20px;padding:15px;background:#f5f5ff;border-radius:5px}
+.total-row{display:flex;justify-content:space-between;padding:8px 15px;font-size:14px}
+.total-row.grand{background:linear-gradient(135deg,#1d4ed8,#1e3a8a);color:#fff;font-weight:900;font-size:18px;border-radius:5px;margin-top:10px}
+.qr-section{text-align:center;margin:15px 0;padding:15px;border:1px dashed #ccc;border-radius:5px}
+.qr-section p{font-size:11px;color:#666;margin-top:5px}
+.footer{margin-top:20px;text-align:center;padding:15px;border-top:2px solid #ddd;font-size:16px;font-weight:700;color:#1e3a8a}
+@media print{body{background:#fff;padding:0}.invoice{box-shadow:none;margin:0}}
+</style></head><body>
+<div class="invoice">
+<div class="header">
+<div class="company-info">
+<h1>${companyName}</h1>${companyNameAr ? `<h2>${companyNameAr}</h2>` : ''}
+${companyLogo ? `<img src="${companyLogo}" style="max-width:60px;max-height:40px">` : ''}
+${companyAddress ? `<div class="info-line">${companyAddress}</div>` : ''}
+${companyPhone ? `<div class="info-line">${companyPhone}</div>` : ''}
+${companyVat ? `<div class="info-line"><strong>VAT: ${companyVat}</strong></div>` : ''}
+</div>
+<div class="qr-section" style="width:120px">
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" style="width:100px;height:100px">
+<p>${pType === 'zatca' ? 'ZATCA QR' : 'Invoice QR'}</p>
+</div>
+</div>
+<div class="title">TAX INVOICE / فاتورة ضريبية<span class="badge">${pType === 'zatca' ? 'ZATCA' : 'Standard'}</span></div>
+<div class="customer">
+<h3>Customer / العميل</h3>
+<p><strong>${pCustName}</strong></p>
+${pCustPhone ? `<p>Phone: ${pCustPhone}</p>` : ''}
+${pCustAddr ? `<p>Address: ${pCustAddr}</p>` : ''}
+${pCustVat ? `<p>VAT: ${pCustVat}</p>` : ''}
+</div>
+<table><thead><tr><th>#</th><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
+${printItems.map(i => `<tr><td>${i.no}</td><td>${i.name}</td><td>${i.qty}</td><td>${i.rate.toFixed(2)}</td><td>${i.total.toFixed(2)}</td></tr>`).join('')}
+</tbody></table>
+<div class="totals">
+<div class="total-row"><span>Subtotal:</span><span>${currency} ${pSub.toFixed(2)}</span></div>
+${pDisc > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} ${pDisc.toFixed(2)}</span></div>` : ''}
+<div class="total-row"><span>VAT ${taxPercent}%:</span><span>${currency} ${pVat.toFixed(2)}</span></div>
+<div class="total-row grand"><span>TOTAL:</span><span>${currency} ${pTotal.toFixed(2)}</span></div>
+</div>
+${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9ff;border-radius:5px;font-size:13px"><strong>Note:</strong> ${note}</div>` : ''}
+<div class="footer">شكراً لتعاملكم معنا / Thank You For Your Business!</div>
+</div>
+<script>window.onload=function(){window.print();}</script></body></html>`;
+}

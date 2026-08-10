@@ -399,7 +399,29 @@ export const salesRouter = createRouter({
       // - If standard → standard (simple JSON QR, no XML)
       const isZatcaEligible = saudiInvoice && isValidSaudiVatNumber(vatNumber) && sellerName.trim();
       const isSimplified = saudiInvoice && !isZatcaEligible;
-      const invoiceType = isZatcaEligible ? "zatca" : (isSimplified ? "simplified" : (invoiceData.invoiceType || "standard"));
+
+      // ZATCA threshold: if total sales > 700,000 (7 lac), ZATCA is mandatory
+      const ZATCA_THRESHOLD = 700000;
+      const salesAgg = await db.select({ total: sql<number>`COALESCE(SUM(CAST(${invoices.totalAmount} AS DECIMAL(15,2))), 0)` }).from(invoices).where(eq(invoices.tenantId, tenantId));
+      const totalSales = Number(salesAgg[0]?.total || 0) + Number(invoiceData.totalAmount || 0);
+      const isAboveThreshold = totalSales > ZATCA_THRESHOLD;
+
+      // If above threshold, force ZATCA even if not Saudi company
+      let invoiceType: string;
+      if (isAboveThreshold) {
+        // ZATCA mandatory above threshold
+        if (isValidSaudiVatNumber(vatNumber) && sellerName.trim()) {
+          invoiceType = "zatca";
+        } else {
+          // Block invoice creation without valid VAT when above threshold
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `ZATCA mandatory: Total sales (SAR ${totalSales.toLocaleString()}) exceeded SAR ${ZATCA_THRESHOLD.toLocaleString()}. Please add a valid 15-digit VAT number in Settings → Company Legal Information before creating invoices.`,
+          });
+        }
+      } else {
+        invoiceType = isZatcaEligible ? "zatca" : (isSimplified ? "simplified" : (invoiceData.invoiceType || "standard"));
+      }
 
       // Block if company name missing for any invoice
       if (!sellerName.trim()) {
@@ -480,9 +502,9 @@ export const salesRouter = createRouter({
         totalAmount: invoiceData.totalAmount,
         notes: invoiceData.notes,
         tenantId,
-        zatcaQrCode,
-        zatcaXml,
-        zatcaStatus: isZatcaEligible ? "pending" : undefined,
+        zatcaQrCode: isAboveThreshold ? zatcaQrCode : undefined,
+        zatcaXml: isAboveThreshold ? zatcaXml : undefined,
+        zatcaStatus: isAboveThreshold && isZatcaEligible ? "pending" : undefined,
         terms: settings?.invoiceTerms,
         balanceDue: invoiceData.totalAmount,
         status: "draft",

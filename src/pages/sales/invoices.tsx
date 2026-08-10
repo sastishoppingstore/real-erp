@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Eye, Printer, Send, Trash2, Pencil, MessageCircle, Plus, Minus, Search,
 import QRCode from "qrcode";
 import ActionButton3D from "@/components/ui/ActionButton3D";
 import SaudiInvoicePrint from "./SaudiInvoicePrint";
+import { generateInvoiceHtml } from "@/lib/invoiceHtml";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImageUpload } from "@/components/ui/ImageUpload";
@@ -16,7 +18,47 @@ import { ImageUpload } from "@/components/ui/ImageUpload";
 type CartItem = { id: string; name: string; price: number; qty: number; sku?: string; discountPercent?: number };
 type InvoiceMode = "product" | "service" | "construction";
 
+// Sub-component to render invoice as iframe (WYSIWYG - same HTML as print)
+function InvoiceIframe({ detail }: { detail: any }) {
+  if (!detail?.invoice) return null;
+  const dInv = detail.invoice;
+  const dItems = (detail.items || []).map((it: any, i: number) => ({
+    no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
+    qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
+  }));
+  const dCust = detail.customer;
+  const pSub = Number(dInv.subTotal || 0);
+  const pDisc = Number(dInv.discountAmount || 0);
+  const pVat = Number(dInv.taxAmount || 0);
+  const pTotal = Number(dInv.totalAmount || 0);
+  const pCustName = dCust?.name || dCust?.nameAr || "Walk-in Customer";
+  const pCustPhone = dCust?.phone || "";
+  const pCustAddr = dCust?.address || "";
+  const pCustVat = dCust?.vatNumber || dCust?.taxNumber || "";
+  const pType = dInv.invoiceType === "zatca" ? "zatca" : "standard";
+  const html = generateInvoiceHtml({
+    companyName: dInv.companyName || "", companyNameAr: dInv.companyNameAr,
+    companyLogo: dInv.companyLogo, companyAddress: dInv.companyAddress,
+    companyPhone: dInv.companyPhone, companyVat: dInv.companyVat,
+    currency: dInv.currency || "SAR", taxPercent: dInv.taxPercent || "15",
+    note: dInv.notes || "", pSub, pDisc, pVat, pTotal,
+    pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems: dItems
+  });
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  return (
+    <iframe
+      src={url}
+      className="w-full h-full border-0 bg-white rounded-lg shadow-lg"
+      style={{ minHeight: "85vh" }}
+      title="Invoice Preview"
+      onLoad={() => setTimeout(() => URL.revokeObjectURL(url), 10000)}
+    />
+  );
+}
+
 export default function InvoicesPage() {
+  const queryClient = useQueryClient();
   const { data: invoices, refetch } = trpc.sales.invoiceList.useQuery(undefined);
   const { data: customers } = trpc.sales.customerList.useQuery(undefined);
   const { data: products, refetch: refetchProducts } = trpc.inventory.productList.useQuery(undefined);
@@ -24,20 +66,38 @@ export default function InvoicesPage() {
   const { data: settings } = trpc.settings.companySettingsGet.useQuery();
 
   const createInvoice = trpc.sales.invoiceCreate.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate all sales queries to refresh list
+      queryClient.invalidateQueries();
       toast.success("Bill created");
       clearCart();
-      // Force immediate refetch so list updates instantly
-      refetch();
+      // Auto-send invoice via email if customer email provided
+      const newId = data?.id;
+      if (newId && customerEmail.trim()) {
+        emailSend.mutate({ invoiceId: newId, to: customerEmail.trim() });
+      }
+      // Auto-open the newly created invoice for viewing/printing
+      if (newId) {
+        setTimeout(() => openViewInvoice(newId), 400);
+      }
     },
     onError: (error) => toast.error(error.message),
   });
   const updateInvoice = trpc.sales.invoiceUpdate.useMutation({
-    onSuccess: () => { refetch(); toast.success("Invoice updated"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [['sales', 'invoiceList']] });
+      queryClient.invalidateQueries({ queryKey: [['sales', 'invoiceGet']] });
+      toast.success("Invoice updated");
+    },
     onError: (error) => toast.error(error.message),
   });
   const deleteInvoiceMut = trpc.sales.invoiceDelete.useMutation({
-    onSuccess: () => { refetch(); toast.success("Invoice deleted"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [['sales', 'invoiceList']] });
+      queryClient.invalidateQueries({ queryKey: [['sales', 'invoiceGet']] });
+      toast.success("Invoice deleted");
+      setViewInvoiceId(null);
+    },
     onError: (e) => toast.error(e.message),
   });
   const updateStatus = trpc.sales.invoiceUpdateStatus.useMutation({ onSuccess: () => refetch() });
@@ -48,6 +108,7 @@ export default function InvoicesPage() {
   const reportInvoice = trpc.zatca.reportInvoice.useMutation({ onSuccess: () => toast.success("ZATCA reporting logged"), onError: (e) => toast.error(e.message) });
   const syncZatcaStatus = trpc.zatca.syncStatus.useMutation({ onSuccess: () => toast.success("ZATCA status synced"), onError: (e) => toast.error(e.message) });
   const sendWhatsAppInvoice = trpc.whatsapp.sendInvoiceCreated.useMutation({ onSuccess: () => toast.success("Invoice sent on WhatsApp"), onError: (e) => toast.error(e.message) });
+  const emailSend = trpc.email.sendInvoice.useMutation({ onSuccess: () => toast.success("Invoice sent via email"), onError: (e) => toast.error("Email failed: " + e.message) });
   const createQuickProduct = trpc.inventory.productCreate.useMutation({
     onSuccess: () => { refetchProducts(); toast.success("Product added"); },
     onError: (e) => toast.error(e.message),
@@ -58,15 +119,12 @@ export default function InvoicesPage() {
   });
   const thermalPrint = trpc.thermalPrint.generateThermal.useMutation({
     onSuccess: (data) => {
-      // Data میں base64 encoded receipt ہے
-      // یہ printer driver کو بھیج سکتے ہیں یا download کر سکتے ہیں
       try {
         const binary = atob(data.data);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) {
           bytes[i] = binary.charCodeAt(i);
         }
-        // Browser print dialog
         const blob = new Blob([bytes], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -87,6 +145,7 @@ export default function InvoicesPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerVat, setCustomerVat] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [discount, setDiscount] = useState(0);
   const [note, setNote] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -143,6 +202,32 @@ export default function InvoicesPage() {
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
+
+  // Load invoice for editing
+  useEffect(() => {
+    if (!editTargetId) return;
+    const d = invoiceDetail.data;
+    if (!d || !d.invoice || d.invoice.id !== editTargetId) return;
+    const inv = d.invoice;
+    setEditingInvoiceId(inv.id);
+    setEditTargetId(null);
+    setViewTab("create");
+    setCart((d.items || []).map((it: any, i: number) => ({
+      id: String(it.productId || `-${i}`),
+      name: (it.description || "Item").replace(/^\[\d+\]\s*/, ""),
+      price: Number(it.unitPrice || 0),
+      qty: Number(it.quantity || 1),
+      sku: it.sku,
+    })));
+    setCustomerId(d.customer?.id || 0);
+    setCustomerName(d.customer?.name || "");
+    setCustomerPhone(d.customer?.phone || "");
+    setCustomerAddress(d.customer?.address || "");
+    setCustomerVat(d.customer?.vatNumber || d.customer?.taxNumber || "");
+    setCustomerEmail(d.customer?.email || "");
+    setDiscount(Number(inv.discountAmount || 0));
+    setNote(inv.notes || "");
+  }, [editTargetId, invoiceDetail.data]);
 
   const addToCart = (product: { id: string; name: string; price: number; sku?: string }) => {
     setCart(prev => {
@@ -236,6 +321,7 @@ export default function InvoicesPage() {
     }
   };
 
+  // A4 Print handler - uses shared HTML generator
   const handlePrint = () => {
     const useDetail = !!viewInvoiceId && !!invoiceDetail.data;
     const detailInvoice = useDetail ? invoiceDetail.data!.invoice : null;
@@ -260,144 +346,82 @@ export default function InvoicesPage() {
     const pCustVat = useDetail ? (detailCustomer?.vatNumber || detailCustomer?.taxNumber) : customerVat;
     const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
 
-    const qrData = btoa(JSON.stringify({
-      seller: companyNameAr || companyName, vat: companyVat,
-      total: pTotal.toFixed(2), tax: pVat.toFixed(2), date: new Date().toISOString(),
-    }));
-    const html = `<!DOCTYPE html>
-<html dir="rtl"><head><meta charset="UTF-8"><title>Bill - ${companyName}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;background:#f5f5f5;padding:10mm}
-.invoice{max-width:800px;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 0 10px rgba(0,0,0,.1)}
-.header{display:flex;justify-content:space-between;border-bottom:3px solid #1e3c72;padding-bottom:15px;margin-bottom:20px;gap:20px}
-.qr-code{width:80px;height:80px;border:2px solid #000;padding:3px}
-.company-info h1{font-size:20px;color:#1e3c72;font-weight:900}
-.company-info h2{font-size:16px;color:#d4af37;font-weight:700}
-.info-line{font-size:12px;color:#333;margin:2px 0}
-.title{text-align:center;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;padding:12px;margin:15px 0;font-size:18px;font-weight:700;border-radius:5px}
-.badge{display:inline-block;background:#d4af37;color:#1e3c72;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;margin-left:8px}
-.customer{border:1px solid #ddd;padding:15px;margin:15px 0;border-radius:5px}
-.customer h3{color:#1e3c72;margin-bottom:8px}
-.customer p{margin:3px 0;font-size:13px}
-table{width:100%;border-collapse:collapse;margin:20px 0}
-thead{background:#1e3c72;color:#fff}
-th{padding:10px;text-align:center;border:1px solid #fff;font-size:12px}
-td{padding:8px;text-align:center;border:1px solid #ddd;font-size:12px}
-tr:nth-child(even){background:#f9f9f9}
-.totals{margin-top:20px;padding:15px;background:#f5f5f5;border-radius:5px}
-.total-row{display:flex;justify-content:space-between;padding:8px 15px;font-size:14px}
-.total-row.grand{background:linear-gradient(135deg,#d4af37,#f9d423);color:#1e3c72;font-weight:900;font-size:18px;border-radius:5px;margin-top:10px}
-.qr-section{text-align:center;margin:15px 0;padding:15px;border:1px dashed #ccc;border-radius:5px}
-.qr-section p{font-size:11px;color:#666;margin-top:5px}
-.footer{margin-top:20px;text-align:center;padding:15px;border-top:2px solid #ddd;font-size:16px;font-weight:700;color:#1e3c72}
-@media print{body{background:#fff;padding:0}.invoice{box-shadow:none;margin:0}}
-</style></head><body>
-<div class="invoice">
-<div class="header">
-<div class="company-info">
-<h1>${companyName}</h1>${companyNameAr ? `<h2>${companyNameAr}</h2>` : ""}
-${companyLogo ? `<img src="${companyLogo}" style="max-width:60px;max-height:40px">` : ""}
-${companyAddress ? `<div class="info-line">${companyAddress}</div>` : ""}
-${companyPhone ? `<div class="info-line">${companyPhone}</div>` : ""}
-${companyVat ? `<div class="info-line"><strong>VAT: ${companyVat}</strong></div>` : ""}
-</div>
-<div class="qr-section" style="width:120px">
-<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" style="width:100px;height:100px">
-<p>${pType === "zatca" ? "ZATCA QR" : "Invoice QR"}</p>
-</div>
-</div>
-<div class="title">TAX INVOICE / فاتورة ضريبية<span class="badge">${pType === "zatca" ? "ZATCA" : "Standard"}</span></div>
-<div class="customer">
-<h3>Customer / العميل</h3>
-<p><strong>${pCustName}</strong></p>
-${pCustPhone ? `<p>Phone: ${pCustPhone}</p>` : ""}
-${pCustAddr ? `<p>Address: ${pCustAddr}</p>` : ""}
-${pCustVat ? `<p>VAT: ${pCustVat}</p>` : ""}
-</div>
-<table><thead><tr><th>#</th><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
-${printItems.map(i => `<tr><td>${i.no}</td><td>${i.name}</td><td>${i.qty}</td><td>${i.rate.toFixed(2)}</td><td>${i.total.toFixed(2)}</td></tr>`).join("")}
-</tbody></table>
-<div class="totals">
-<div class="total-row"><span>Subtotal:</span><span>${currency} ${pSub.toFixed(2)}</span></div>
-${pDisc > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} ${pDisc.toFixed(2)}</span></div>` : ""}
-<div class="total-row"><span>VAT ${taxPercent}%:</span><span>${currency} ${pVat.toFixed(2)}</span></div>
-<div class="total-row grand"><span>TOTAL:</span><span>${currency} ${pTotal.toFixed(2)}</span></div>
-</div>
-${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-radius:5px;font-size:13px"><strong>Note:</strong> ${note}</div>` : ""}
-<div class="footer">شكراً لتعاملكم معنا / Thank You For Your Business!</div>
-</div>
-<script>window.onload=function(){window.print();}<\/script></body></html>`;
-    const w = window.open("", "_blank");
-    if (!w) {
-      // Popup blocked — open as data URL instead
-      const blob = new Blob([html], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
+    const html = generateInvoiceHtml({
+      companyName, companyNameAr, companyLogo, companyAddress, companyPhone, companyVat,
+      currency, taxPercent, note, pSub, pDisc, pVat, pTotal,
+      pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems
+    });
+
+    // Open print window via Blob URL (most reliable cross-browser)
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (!win) {
+      // Fallback
       const a = document.createElement("a");
-      a.href = url; a.target = "_blank"; a.click();
-      URL.revokeObjectURL(url);
+      a.href = url;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
+
+  // WhatsApp handler for view dialog
+  const handleWhatsAppFromView = () => {
+    if (!detail?.invoice) return;
+    const inv = detail.invoice;
+    const custName = detail.customer?.name || "Walk-in Customer";
+    const total = Number(inv.totalAmount || 0).toFixed(2);
+    const msg = `*${companyName}*\n*Invoice: ${inv.invoiceNumber}*\nCustomer: ${custName}\nTotal: ${currency} ${total}\nDate: ${inv.date}`;
+    const phone = detail.customer?.phone || companyPhone;
+    if (phone) {
+      window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    }
+    sendWhatsAppInvoice.mutate({ invoiceId: inv.id });
+  };
+
+  const handleEmailFromView = () => {
+    if (!detail?.invoice) return;
+    const inv = detail.invoice;
+    const to = detail.customer?.email || "";
+    if (!to) {
+      toast.error("No customer email. Add email to customer record first.");
       return;
     }
-    w.document.write(html); w.document.close();
+    emailSend.mutate({ invoiceId: inv.id, to });
   };
 
-  const handleWhatsAppSend = () => {
-    if (!customerName || !total) return;
-    const waMsg = `*${companyName}*\n*Bill: BILL-${Date.now().toString().slice(-6)}*\nCustomer: ${customerName}\nTotal: ${currency} ${total.toFixed(2)}`;
-    const waPhone = companyPhone ? companyPhone.replace(/\D/g, "") : "";
-    if (waPhone) window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`, "_blank");
-    else toast("Add company phone number for WhatsApp");
-  };
-
+  // View invoice handler
   const openViewInvoice = (id: number) => {
     setViewInvoiceId(id);
     setEditingInvoiceId(null);
     setCart([]);
-    setCustomerId(0); setCustomerName(""); setCustomerPhone(""); setCustomerAddress(""); setCustomerVat("");
-    setDiscount(0); setNote("");
+    setCustomerId(0);
+    setCustomerName("");
+    setCustomerPhone("");
+    setCustomerAddress("");
+    setCustomerVat("");
+    setCustomerEmail("");
+    setDiscount(0);
+    setNote("");
   };
 
+  // Load invoice for editing
   const loadInvoiceForEdit = (id: number) => {
     setEditTargetId(id);
     setViewInvoiceId(null);
   };
 
-  useEffect(() => {
-    if (!editTargetId) return;
-    const d = invoiceDetail.data;
-    if (!d || !d.invoice || d.invoice.id !== editTargetId) return;
-    const inv = d.invoice;
-    setEditingInvoiceId(inv.id);
-    setEditTargetId(null);
-    setViewTab("create");
-    setCart((d.items || []).map((it: any, i: number) => ({
-      id: String(it.productId || `-${i}`),
-      name: (it.description || "Item").replace(/^\[\d+\]\s*/, ""),
-      price: Number(it.unitPrice || 0),
-      qty: Number(it.quantity || 1),
-      sku: it.sku,
-    })));
-    setCustomerId(d.customer?.id || 0);
-    setCustomerName(d.customer?.name || "");
-    setCustomerPhone(d.customer?.phone || "");
-    setCustomerAddress(d.customer?.address || "");
-    setCustomerVat(d.customer?.vatNumber || d.customer?.taxNumber || "");
-    setDiscount(Number(inv.discountAmount || 0));
-    setNote(inv.notes || "");
-  }, [editTargetId, invoiceDetail.data]);
-
+  // Print invoice handler
   const handlePrintInvoice = (invId: number, printType: "thermal" | "a4" = "a4") => {
     if (printType === "thermal") {
-      // Thermal print
       thermalPrint.mutate({ invoiceId: invId, format: "80mm" });
     } else {
-      // A4 print - open view dialog
       setViewInvoiceId(invId);
-    }
-  };
-
-  const handleDeleteInvoice = (id: number) => {
-    if (window.confirm("Delete this invoice? This cannot be undone.")) {
-      deleteInvoiceMut.mutate(id);
     }
   };
 
@@ -418,18 +442,8 @@ ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-rad
             <h2 className="text-2xl font-bold">Invoices / فواتير</h2>
             <p className="text-slate-500 text-sm">{filtered.length} invoices</p>
           </div>
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Filter by status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+          <div className="flex gap-2 items-center">
+            <div className="flex bg-slate-100 rounded-lg p-1">
               <button type="button" onClick={() => { setViewTab("create"); setViewInvoiceId(null); setEditingInvoiceId(null); }}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewTab === "create" ? "bg-white shadow text-blue-700" : "text-slate-500 hover:text-slate-700"}`}>
                 Create Bill
@@ -444,391 +458,163 @@ ${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9fa;border-rad
         </div>
       </div>
 
-      {viewTab === "create" && (
-      <div className="flex-1 overflow-hidden flex">
-        {/* Product Grid */}
-        <div className="w-1/2 border-r p-4 overflow-y-auto">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input className="pl-9" placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+      <div className="flex-1 flex overflow-hidden">
+        {viewTab === "create" && (
+        <div className="flex-1 flex">
+          {/* Left: Cart & Customer */}
+          <div className="w-80 border-r bg-white p-4 space-y-4 overflow-y-auto">
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer / العميل</Label>
+              <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Type customer name..." className="h-8 text-xs" />
             </div>
-            <Button variant="outline" size="sm" onClick={() => setProductDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Add Product
-            </Button>
-          </div>
-          <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Add Product</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs">Product Name</Label>
-                  <Input value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="e.g. Office Chair" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Buying Price ({currency})</Label>
-                    <Input type="number" value={newProductPurchasePrice} onChange={e => setNewProductPurchasePrice(e.target.value)} placeholder="0.00" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Sale Price ({currency})</Label>
-                    <Input type="number" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="0.00" />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Cover Image</Label>
-                  <ImageUpload value={newProductImage} onChange={setNewProductImage} />
-                </div>
-                <div>
-                  <Label className="text-xs">Category</Label>
-                  <Select
-                    value={newProductCategoryId ? String(newProductCategoryId) : undefined}
-                    onValueChange={v => {
-                      if (v === "__new") { setNewCategoryMode(true); return; }
-                      setNewProductCategoryId(Number(v)); setNewCategoryMode(false);
-                    }}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                    <SelectContent>
-                      {categories?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-                      <SelectItem value="__new">+ New Category</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {newCategoryMode && (
-                    <div className="mt-2 space-y-2">
-                      <div className="flex gap-2">
-                        <Input value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Category name" className="h-8 text-xs" />
-                        <Button size="sm" onClick={handleAddQuickCategory} disabled={!newCategoryName.trim() || createQuickCategory.isPending}>Add</Button>
-                      </div>
-                      <ImageUpload value={newCategoryImage} onChange={setNewCategoryImage} />
-                    </div>
-                  )}
-                </div>
-                <Button className="w-full" onClick={handleAddQuickProduct} disabled={!newProductName.trim() || createQuickProduct.isPending}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Product
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-3">
-            {!products?.length && (
-              <div className="col-span-full text-center py-10 text-slate-400">
-                No products yet.<br />
-                <span className="text-blue-500 font-medium">Click "Add Product" to create one.</span>
-              </div>
-            )}
-            {filteredProducts.map(p => (
-              <button
-                key={p.id}
-                onClick={() => addToCart({ id: String(p.id), name: p.name || "", price: Number(p.salePrice || p.price || 0), sku: p.sku })}
-                className="border-2 border-slate-200 rounded-lg p-3 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors active:scale-95"
-              >
-                {p.image ? (
-                  <img src={p.image} alt={p.name} className="w-full h-20 object-cover rounded-md mb-1.5" />
-                ) : (
-                  <div className="w-full h-20 rounded-md mb-1.5 bg-slate-100 flex items-center justify-center text-slate-300">
-                    <Package className="h-8 w-8" />
-                  </div>
-                )}
-                {p.category && <div className="text-[10px] text-slate-400 mb-1">{p.category}</div>}
-                <div className="text-xs font-semibold text-slate-700 line-clamp-2 min-h-[32px]">{p.name}</div>
-                <div className="text-sm font-bold text-emerald-600 mt-2">{currency} {Number(p.salePrice || p.price || 0).toFixed(2)}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Customer + Cart */}
-        <div className="w-1/2 p-4 overflow-y-auto">
-          <h3 className="font-semibold text-slate-800 mb-3">Create Bill</h3>
-
-          {/* Customer */}
-          <div className="mb-3 relative" ref={custRef}>
-            <Label className="text-xs">Customer Name</Label>
-            <Input
-              placeholder="Type customer name..."
-              value={customerName}
-              onChange={e => { setCustomerName(e.target.value); setCustDropdownOpen(e.target.value.length >= 2); }}
-              onKeyDown={e => {
-                if (!custDropdownOpen || !filteredCustomers.length) return;
-                if (e.key === "ArrowDown") { e.preventDefault(); setCustFocus(prev => Math.min(prev + 1, filteredCustomers.length - 1)); }
-                else if (e.key === "ArrowUp") { e.preventDefault(); setCustFocus(prev => Math.max(prev - 1, 0)); }
-                else if (e.key === "Enter" && custFocus >= 0) { e.preventDefault(); selectCustomer(filteredCustomers[custFocus]); }
-                else if (e.key === "Escape") setCustDropdownOpen(false);
-              }}
-            />
-            {custDropdownOpen && filteredCustomers.length > 0 && (
-              <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-b-lg max-h-40 overflow-y-auto z-50 shadow-lg">
-                {filteredCustomers.map((c, i) => (
-                  <div key={c.id}
-                    className={`px-3 py-2 cursor-pointer text-sm hover:bg-blue-50 ${i === custFocus ? "bg-blue-50" : ""}`}
-                    onClick={() => selectCustomer({ id: c.id, name: c.name, address: c.address, vatNumber: c.vatNumber, phone: c.phone })}>
-                    <div className="font-medium">{c.name}</div>
-                    <div className="text-[11px] text-slate-400">
-                      {c.vatNumber ? `VAT: ${c.vatNumber}` : ""} {c.address ? `· ${c.address}` : ""}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-2">Phone (optional)</Label>
+              <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Optional" className="h-8 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-2">Address (optional)</Label>
+              <Input value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Optional" className="h-8 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer VAT (optional)</Label>
+              <Input value={customerVat} onChange={e => setCustomerVat(e.target.value)} placeholder="e.g. 311777758600003" className="h-8 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer Email (for auto-send bill)</Label>
+              <Input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@email.com" className="h-8 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-2">Discount</Label>
+              <Input type="number" className="w-20 h-7 text-xs text-right" value={discount} onChange={e => setDiscount(parseFloat(value) || 0)} />
+            </div>
           </div>
 
-          <div className="space-y-1 mb-3">
-            <Label className="text-xs">Phone</Label>
-            <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Optional" />
-          </div>
-          <div className="space-y-1 mb-3">
-            <Label className="text-xs">Address</Label>
-            <Input value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Optional" />
-          </div>
-          <div className="space-y-1 mb-3">
-            <Label className="text-xs">Customer VAT Reg. No. (رقم ضريبي)</Label>
-            <Input value={customerVat} onChange={e => setCustomerVat(e.target.value)} placeholder="e.g. 311777758600003" />
-          </div>
-
-          {/* Cart Items */}
-          <div className="border-t pt-3 max-h-[300px] overflow-y-auto space-y-2">
-            {cart.length === 0 && (
-              <div className="text-center py-8 text-slate-400 text-sm">Cart is empty.<br />Select products or add custom item.</div>
-            )}
-            {cart.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 border-b pb-2">
-                <input className="flex-1 min-w-0 border rounded px-2 py-1 text-xs font-medium"
-                  value={item.name} onChange={e => updateItemName(i, e.target.value)} />
-                <input type="number" className="w-16 text-center border rounded px-1 py-1 text-xs"
-                  value={item.price} onChange={e => updatePrice(i, e.target.value)} />
-                <button onClick={() => updateQty(i, -1)} className="w-6 h-6 border rounded flex items-center justify-center hover:bg-slate-100">
-                  <Minus className="h-3 w-3" />
+          {/* Center: Products */}
+          <div className="flex-1 p-4 overflow-y-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {products?.map(p => (
+                <button key={p.id} onClick={() => addToCart(p as any)}
+                  className="border-2 border-slate-200 rounded-lg p-3 text-left hover:border-blue-400 hover:shadow-md transition-all">
+                  <div className="text-xs font-bold text-slate-700 truncate">{p.name}</div>
+                  <div className="text-xs text-slate-500">{p.sku}</div>
+                  <div className="text-sm font-bold text-blue-600">{currency} {Number(p.salePrice).toFixed(2)}</div>
                 </button>
-                <input type="number" className="w-10 text-center border rounded px-1 py-1 text-xs"
-                  value={item.qty} onChange={e => { const v = Math.max(1, parseInt(e.target.value) || 1); setCart(prev => prev.map((it, idx) => idx === i ? { ...it, qty: v } : it)); }} />
-                <button onClick={() => updateQty(i, 1)} className="w-6 h-6 border rounded flex items-center justify-center hover:bg-slate-100">
-                  <Plus className="h-3 w-3" />
-                </button>
-                <div className="text-xs font-semibold text-slate-700 w-16 text-right">
-                  {(item.price * item.qty).toFixed(2)}
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Cart Summary */}
+          <div className="w-80 border-l bg-white p-4 flex flex-col">
+            <h3 className="font-semibold text-slate-800 mb-3">Cart</h3>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {cart.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-8">No items in cart</p>
+              ) : cart.map((item, i) => (
+                <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs">
+                  <span className="flex-1 truncate">{item.name}</span>
+                  <span className="font-bold">{item.price.toFixed(2)}</span>
                 </div>
-                <button onClick={() => removeItem(i)} className="text-red-500 hover:text-red-700">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Totals */}
-          <div className="border-t pt-3 space-y-1 text-sm">
-            <div className="flex justify-between"><span>Subtotal:</span><span>{currency} {subtotal.toFixed(2)}</span></div>
-            <div className="flex justify-between items-center">
-              <span>Discount:</span>
-              <Input type="number" className="w-20 h-7 text-xs text-right" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} />
+              ))}
             </div>
-            <div className="flex justify-between"><span>VAT ({taxPercent}%):</span><span>{currency} {vat.toFixed(2)}</span></div>
-            <div className="flex justify-between font-bold text-base border-t pt-2">
-              <span>Total:</span><span className="text-emerald-600">{currency} {total.toFixed(2)}</span>
+            <div className="border-t pt-3 space-y-1 text-xs">
+              <div className="flex justify-between"><span>Subtotal:</span><span>{currency} {subtotal.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span>VAT ({taxPercent}%):</span><span>{currency} {vat.toFixed(2)}</span></div>
+              <div className="flex justify-between font-bold text-sm"><span>TOTAL:</span><span>{currency} {total.toFixed(2)}</span></div>
             </div>
-          </div>
-
-          <div className="mt-3">
-            <Label className="text-xs">Note</Label>
-            <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional" className="h-8 text-xs" />
-          </div>
-
-          {/* Invoice Type Toggle */}
-          <div className="mt-3 p-3 rounded-lg border bg-slate-50">
-            <Label className="text-xs font-semibold text-slate-600 block mb-2">Invoice Type / نوع الفاتورة</Label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setInvoiceTypeMode("standard")}
-                className={`flex-1 py-1.5 px-3 rounded text-xs font-semibold border transition-all ${
-                  invoiceTypeMode === "standard"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-600 border-slate-300 hover:bg-slate-100"
-                }`}
-              >
-                📄 Standard
-              </button>
-              <button
-                type="button"
-                onClick={() => setInvoiceTypeMode("zatca")}
-                className={`flex-1 py-1.5 px-3 rounded text-xs font-semibold border transition-all ${
-                  invoiceTypeMode === "zatca"
-                    ? "bg-emerald-600 text-white border-emerald-600"
-                    : "bg-white text-slate-600 border-slate-300 hover:bg-slate-100"
-                }`}
-              >
-                🇸🇦 ZATCA
-              </button>
-            </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              {invoiceTypeMode === "zatca"
-                ? "ZATCA compliant (TLV QR + XML). Requires valid VAT number in Settings."
-                : "Standard invoice with QR code. Works without ZATCA setup."}
-            </p>
-          </div>
-
-          <div className="flex gap-2 mt-4">
-            <Button className="flex-1" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending}>
+            <Button className="w-full mt-3" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0}>
               <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
             </Button>
-            <Button variant="outline" onClick={handlePrint} disabled={!cart.length && !(viewInvoiceId && invoiceDetail.data)}>
-              <Printer className="h-4 w-4" />
-            </Button>
           </div>
         </div>
-      </div>
-      )}
-      {viewTab === "history" && (
-      <div className="flex-1 overflow-y-auto p-4">
-        {filtered.length === 0 ? (
-          <div className="text-center py-16 text-slate-400">
-            No invoices found.
-            <br /><span className="text-blue-500 font-medium cursor-pointer" onClick={() => setViewTab("create")}>Click here to create a new bill</span>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map(inv => (
-              <div key={inv.id} className="border rounded-xl p-4 bg-white hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-sm font-bold text-blue-700">{inv.invoiceNumber}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[inv.status] || "bg-slate-100 text-slate-700"}`}>{inv.status}</span>
-                </div>
-                <div className="text-xs text-slate-500 mb-3">
-                  {new Date(inv.date).toLocaleDateString()} · {inv.invoiceType}
-                </div>
-                <div className="text-sm text-slate-700 mb-1">
-                  {inv.customerName || "Walk-in Customer"}
-                </div>
-                <div className="text-lg font-bold text-emerald-600 mb-3">
-                  {currency} {Number(inv.totalAmount || 0).toFixed(2)}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openViewInvoice(inv.id)}>
-                    <Eye className="h-3.5 w-3.5 mr-1" /> View
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => loadInvoiceForEdit(inv.id)}>
-                    <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-                  </Button>
-                  {/* Print Dropdown */}
-                  <div className="relative group flex-1">
-                    <Button size="sm" variant="outline" className="w-full" disabled={thermalPrint.isPending}>
-                      <Printer className="h-3.5 w-3.5 mr-1" /> {thermalPrint.isPending ? "..." : "Print"}
-                    </Button>
-                    <div className="absolute right-0 mt-1 w-32 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                      <button className="block w-full text-left px-3 py-2 text-xs hover:bg-blue-50 font-medium" onClick={() => handlePrintInvoice(inv.id, "a4")}>
-                        📄 A4 PDF
-                      </button>
-                      <button className="block w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 border-t font-medium" onClick={() => handlePrintInvoice(inv.id, "thermal")}>
-                        🖨️ 80mm Receipt
-                      </button>
-                    </div>
+        )}
+
+        {viewTab === "history" && (
+        <div className="flex-1 overflow-y-auto p-4">
+          {filtered.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">No invoices found.</div>
+          ) : (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filtered.map(inv => (
+                <div key={inv.id} className="border rounded-xl p-4 bg-white hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-mono text-sm font-bold text-blue-700">{inv.invoiceNumber}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[inv.status] || "bg-slate-100 text-slate-700"}`}>{inv.status}</span>
                   </div>
-                  <Button size="sm" variant="outline" className="text-red-500 hover:text-red-600 hover:border-red-300" onClick={() => handleDeleteInvoice(inv.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="text-xs text-slate-500 mb-3">{new Date(inv.date).toLocaleDateString()} · {inv.invoiceType}</div>
+                  <div className="text-sm text-slate-700 mb-1">{inv.customerName || "Walk-in Customer"}</div>
+                  <div className="text-lg font-bold text-emerald-600 mb-3">{currency} {Number(inv.totalAmount || 0).toFixed(2)}</div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => openViewInvoice(inv.id)}>
+                      <Eye className="h-3.5 w-3.5 mr-1" /> View
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => loadInvoiceForEdit(inv.id)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handlePrintInvoice(inv.id, "a4")} title="A4 PDF">
+                      📄 A4
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handlePrintInvoice(inv.id, "thermal")} disabled={thermalPrint.isPending} title="80mm Receipt">
+                      🖨️ 80mm
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-red-500 hover:text-red-600 hover:border-red-300" onClick={() => handleDeleteInvoice(inv.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+        </div>
         )}
       </div>
-      )}
 
-      {/* View Invoice Dialog */}
+      {/* View Invoice Dialog — FULL SCREEN with WYSIWYG (same HTML as print) */}
       <Dialog open={!!viewInvoiceId} onOpenChange={(o) => { if (!o) { setViewInvoiceId(null); setEditTargetId(null); } }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Invoice {detail?.invoice?.invoiceNumber || "Loading..."}</span>
-              <div className="flex gap-2">
-                {/* Print Dropdown Menu */}
-                <div className="relative group">
-                  <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending}>
-                    <Printer className="h-4 w-4 mr-1" /> {thermalPrint.isPending ? "..." : "Print"}
-                  </Button>
-                  <div className="absolute right-0 mt-1 w-32 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                    <button className="block w-full text-left px-3 py-2 text-xs hover:bg-blue-50 font-medium" onClick={handlePrint}>
-                      📄 A4 PDF
-                    </button>
-                    <button className="block w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 border-t font-medium" disabled={!detail?.invoice} onClick={() => detail?.invoice && thermalPrint.mutate({ invoiceId: detail.invoice.id, format: "80mm" })}>
-                      🖨️ 80mm Receipt
-                    </button>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => detail?.invoice && loadInvoiceForEdit(detail.invoice.id)} disabled={invoiceDetail.isPending || !detail?.invoice}>
-                  <Pencil className="h-4 w-4 mr-1" /> Edit
-                </Button>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-          
-          {/* Loading State */}
-          {invoiceDetail.isPending && (
-            <div className="py-12 text-center">
-              <div className="inline-block animate-spin">
-                <RefreshCw className="h-8 w-8 text-blue-500" />
-              </div>
-              <p className="mt-3 text-slate-600 font-medium">Loading invoice details...</p>
-            </div>
-          )}
-          
-          {/* Error State */}
-          {invoiceDetail.isError && (
-            <div className="py-8 px-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 font-medium">Error loading invoice</p>
-              <p className="text-red-600 text-sm mt-1">{invoiceDetail.error?.message || "Failed to fetch invoice details"}</p>
-              <Button size="sm" className="mt-3" onClick={() => invoiceDetail.refetch()}>
-                Retry
+        <DialogContent data-invoice-view="true" className="overflow-hidden flex flex-col p-0" aria-describedby="invoice-view-desc">
+          <DialogTitle className="sr-only">Invoice View</DialogTitle>
+          <p id="invoice-view-desc" className="sr-only">Invoice details with actions: edit, print, delete, send via WhatsApp</p>
+
+          {/* Sticky Action Bar */}
+          <div className="flex items-center justify-between p-4 border-b bg-white shrink-0 shadow-sm">
+            <h2 className="text-lg font-bold">Invoice {detail?.invoice?.invoiceNumber || "Loading..."}</h2>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" variant="default" onClick={handlePrint} disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} title="Print A4 PDF">
+                📄 A4 Print
+              </Button>
+              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} onClick={() => detail?.invoice && thermalPrint.mutate({ invoiceId: detail.invoice.id, format: "80mm" })} title="Print 80mm Thermal Receipt">
+                🖨️ Thermal
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => detail?.invoice && loadInvoiceForEdit(detail.invoice.id)} disabled={invoiceDetail.isPending || !detail?.invoice}>
+                <Pencil className="h-4 w-4 mr-1" /> Edit
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleWhatsAppFromView} disabled={!detail?.invoice}>
+                <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleEmailFromView} disabled={!detail?.invoice || emailSend.isPending} title="Send invoice via email">
+                ✉️ {emailSend.isPending ? "..." : "Email"}
+              </Button>
+              <Button size="sm" variant="outline" className="text-red-500 hover:text-red-600 hover:border-red-300" onClick={() => detail?.invoice && handleDeleteFromView(detail.invoice.id)} disabled={!detail?.invoice}>
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setViewInvoiceId(null); setEditTargetId(null); }}>
+                ✕ Close
               </Button>
             </div>
-          )}
-          
-          {/* Invoice Display */}
-          {detail?.invoice && !invoiceDetail.isPending && (
-            <SaudiInvoicePrint
-              invoice={detail.invoice}
-              company={{
-                companyName,
-                companyNameAr,
-                address: companyAddress,
-                city: settings?.city,
-                country: companyCountry,
-                phone: companyPhone,
-                taxNumber: companyVat,
-                crNumber: settings?.crNumber,
-                logo: companyLogo,
-                defaultCurrency: currency,
-              }}
-              customer={{
-                name: detail.customer?.name || "Walk-in Customer",
-                nameAr: detail.customer?.nameAr,
-                address: detail.customer?.address,
-                city: detail.customer?.city,
-                phone: detail.customer?.phone,
-                email: detail.customer?.email,
-                taxNumber: detail.customer?.vatNumber || detail.customer?.taxNumber,
-                crNumber: detail.customer?.crNumber,
-              }}
-              items={(detail.items || []).map((it: any) => ({
-                id: it.id,
-                description: it.description || "",
-                quantity: Number(it.quantity || 1),
-                unitPrice: it.unitPrice,
-                taxPercent: it.taxPercent,
-                totalAmount: it.totalAmount,
-                unit: it.unit,
-                sku: it.sku,
-                discountPercent: it.discountPercent,
-              }))}
-            />
-          )}
-          
-          {/* Empty State */}
-          {!detail?.invoice && !invoiceDetail.isPending && !invoiceDetail.isError && (
-            <div className="py-8 text-center text-slate-500">
-              <p>No invoice data available</p>
-            </div>
-          )}
+          </div>
+
+          {/* Scrollable Invoice Content — WYSIWYG iframe with same HTML as print */}
+          <div className="flex-1 overflow-y-auto bg-slate-100 p-4">
+            <InvoiceIframe detail={detail} />
+            {!detail?.invoice && !invoiceDetail.isPending && (
+              <div className="py-16 text-center text-slate-400">Loading invoice...</div>
+            )}
+            {invoiceDetail.isPending && (
+              <div className="py-16 text-center text-slate-400">
+                <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3 text-blue-500" />
+                Loading invoice details...
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

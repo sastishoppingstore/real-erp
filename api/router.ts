@@ -82,13 +82,6 @@ import { workshopCompleteRouter } from "./workshopCompleteRouter";
 import { nphiesRouter } from "./nphiesRouter";
 import { chatRouter } from "./chatRouter";
 import { zatcaCompleteRouter } from "./zatcaCompleteRouter";
-import { aiAssistantRouter } from "./aiAssistantRouter";
-import { aiAutomationRouter } from "./aiAutomationRouter";
-import { aiChatbotRouter } from "./aiChatbotRouter";
-import { aiConstructionRouter } from "./aiConstructionRouter";
-import { aiForecastingRouter } from "./aiForecastingRouter";
-import { aiReportsRouter } from "./aiReportsRouter";
-import { aiVoiceRouter } from "./aiVoiceRouter";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -174,13 +167,6 @@ export const appRouter = createRouter({
   chat: chatRouter,
   healthcareComplete: healthcareCompleteRouter,
   workshopComplete: workshopCompleteRouter,
-  aiAssistant: aiAssistantRouter,
-  aiAutomation: aiAutomationRouter,
-  aiChatbot: aiChatbotRouter,
-  aiConstruction: aiConstructionRouter,
-  aiForecasting: aiForecastingRouter,
-  aiReports: aiReportsRouter,
-  aiVoice: aiVoiceRouter,
   thermalPrint: thermalPrintRouter,
 });
 

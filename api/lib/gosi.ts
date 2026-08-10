@@ -207,6 +207,7 @@ export async function calculateGosiForSlip(
   basicSalary: number,
   housingAllowance: number,
 ): Promise<GosiCalculationResult> {
+  const db = getDb();
   const rates = await getActiveGosiRateTable(tenantId);
   const reg = await db.query.gosiRegistrations.findFirst({
     where: and(eq(gosiRegistrations.tenantId, tenantId), eq(gosiRegistrations.employeeId, employeeId)),

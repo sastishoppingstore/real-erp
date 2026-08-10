@@ -32,7 +32,8 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.965.0",
+    "@anthropic-ai/sdk": "^0.116.0",
+    "@aws-sdk/client-s3": "^3.1106.0",
     "@aws-sdk/s3-request-presigner": "^3.965.0",
     "@google/generative-ai": "^0.24.1",
     "@hono/node-server": "^1.14.3",
@@ -101,6 +102,7 @@
     "mysql2": "^3.14.1",
     "nanoid": "^5.1.6",
     "next-themes": "^0.4.6",
+    "openai": "^7.4.0",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",

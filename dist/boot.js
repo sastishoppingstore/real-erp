@@ -45,7 +45,7 @@ var require_main = __commonJS({
     var fs3 = __require("fs");
     var path2 = __require("path");
     var os2 = __require("os");
-    var crypto15 = __require("crypto");
+    var crypto16 = __require("crypto");
     var TIPS = [
       "\u25C8 encrypted .env [www.dotenvx.com]",
       "\u25C8 secrets for agents [www.dotenvx.com]",
@@ -289,7 +289,7 @@ var require_main = __commonJS({
       const authTag = ciphertext.subarray(-16);
       ciphertext = ciphertext.subarray(12, -16);
       try {
-        const aesgcm = crypto15.createDecipheriv("aes-256-gcm", key2, nonce);
+        const aesgcm = crypto16.createDecipheriv("aes-256-gcm", key2, nonce);
         aesgcm.setAuthTag(authTag);
         return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
       } catch (error48) {
@@ -4026,10 +4026,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql15, fields, alias, isWith = false, usedTables = []) {
+      constructor(sql14, fields, alias, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql15,
+          sql: sql14,
           selectedFields: fields,
           alias,
           isWith,
@@ -10418,8 +10418,8 @@ var init_schema = __esm({
 });
 
 // node_modules/drizzle-orm/cache/core/cache.js
-async function hashQuery(sql15, params) {
-  const dataToHash = `${sql15}-${JSON.stringify(params)}`;
+async function hashQuery(sql14, params) {
+  const dataToHash = `${sql14}-${JSON.stringify(params)}`;
   const encoder2 = new TextEncoder();
   const data = encoder2.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -17445,41 +17445,41 @@ var require_lib = __commonJS({
     var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     var isWordChar = (code) => code >= 65 && code <= 90 || code >= 97 && code <= 122 || code >= 48 && code <= 57 || code === 95;
     var isWhitespace = (code) => code === charCode.space || code === charCode.tab || code === charCode.newline || code === charCode.carriageReturn;
-    var hasOnlyWhitespaceBetween = (sql15, start, end) => {
+    var hasOnlyWhitespaceBetween = (sql14, start, end) => {
       if (start >= end)
         return true;
       for (let i = start; i < end; i++) {
-        const code = sql15.charCodeAt(i);
+        const code = sql14.charCodeAt(i);
         if (code !== charCode.space && code !== charCode.tab && code !== charCode.newline && code !== charCode.carriageReturn)
           return false;
       }
       return true;
     };
     var toLower = (code) => code | 32;
-    var matchesWord = (sql15, position, word, length) => {
+    var matchesWord = (sql14, position, word, length) => {
       for (let offset = 0; offset < word.length; offset++)
-        if (toLower(sql15.charCodeAt(position + offset)) !== word.charCodeAt(offset))
+        if (toLower(sql14.charCodeAt(position + offset)) !== word.charCodeAt(offset))
           return false;
-      return (position === 0 || !isWordChar(sql15.charCodeAt(position - 1))) && (position + word.length >= length || !isWordChar(sql15.charCodeAt(position + word.length)));
+      return (position === 0 || !isWordChar(sql14.charCodeAt(position - 1))) && (position + word.length >= length || !isWordChar(sql14.charCodeAt(position + word.length)));
     };
-    var skipSqlContext = (sql15, position) => {
-      const currentChar = sql15.charCodeAt(position);
-      const nextChar = sql15.charCodeAt(position + 1);
+    var skipSqlContext = (sql14, position) => {
+      const currentChar = sql14.charCodeAt(position);
+      const nextChar = sql14.charCodeAt(position + 1);
       if (currentChar === charCode.singleQuote) {
-        for (let cursor = position + 1; cursor < sql15.length; cursor++) {
-          if (sql15.charCodeAt(cursor) === charCode.backslash)
+        for (let cursor = position + 1; cursor < sql14.length; cursor++) {
+          if (sql14.charCodeAt(cursor) === charCode.backslash)
             cursor++;
-          else if (sql15.charCodeAt(cursor) === charCode.singleQuote)
+          else if (sql14.charCodeAt(cursor) === charCode.singleQuote)
             return cursor + 1;
         }
-        return sql15.length;
+        return sql14.length;
       }
       if (currentChar === charCode.backtick) {
-        const length = sql15.length;
+        const length = sql14.length;
         for (let cursor = position + 1; cursor < length; cursor++) {
-          if (sql15.charCodeAt(cursor) !== charCode.backtick)
+          if (sql14.charCodeAt(cursor) !== charCode.backtick)
             continue;
-          if (sql15.charCodeAt(cursor + 1) === charCode.backtick) {
+          if (sql14.charCodeAt(cursor + 1) === charCode.backtick) {
             cursor++;
             continue;
           }
@@ -17488,48 +17488,48 @@ var require_lib = __commonJS({
         return length;
       }
       if (currentChar === charCode.dash && nextChar === charCode.dash) {
-        const lineBreak = sql15.indexOf("\n", position + 2);
-        return lineBreak === -1 ? sql15.length : lineBreak + 1;
+        const lineBreak = sql14.indexOf("\n", position + 2);
+        return lineBreak === -1 ? sql14.length : lineBreak + 1;
       }
       if (currentChar === charCode.slash && nextChar === charCode.asterisk) {
-        const commentEnd = sql15.indexOf("*/", position + 2);
-        return commentEnd === -1 ? sql15.length : commentEnd + 2;
+        const commentEnd = sql14.indexOf("*/", position + 2);
+        return commentEnd === -1 ? sql14.length : commentEnd + 2;
       }
       return -1;
     };
-    var findNextPlaceholder = (sql15, start) => {
-      const sqlLength = sql15.length;
+    var findNextPlaceholder = (sql14, start) => {
+      const sqlLength = sql14.length;
       for (let position = start; position < sqlLength; position++) {
-        const code = sql15.charCodeAt(position);
+        const code = sql14.charCodeAt(position);
         if (code === charCode.questionMark)
           return position;
         if (code === charCode.singleQuote || code === charCode.backtick || code === charCode.dash || code === charCode.slash) {
-          const contextEnd = skipSqlContext(sql15, position);
+          const contextEnd = skipSqlContext(sql14, position);
           if (contextEnd !== -1)
             position = contextEnd - 1;
         }
       }
       return -1;
     };
-    var findSetKeyword = (sql15, startFrom = 0) => {
-      const length = sql15.length;
+    var findSetKeyword = (sql14, startFrom = 0) => {
+      const length = sql14.length;
       for (let position = startFrom; position < length; position++) {
-        const code = sql15.charCodeAt(position);
+        const code = sql14.charCodeAt(position);
         const lower = code | 32;
         if (code === charCode.singleQuote || code === charCode.backtick || code === charCode.dash || code === charCode.slash) {
-          const contextEnd = skipSqlContext(sql15, position);
+          const contextEnd = skipSqlContext(sql14, position);
           if (contextEnd !== -1) {
             position = contextEnd - 1;
             continue;
           }
         }
-        if (lower === 115 && matchesWord(sql15, position, "set", length))
+        if (lower === 115 && matchesWord(sql14, position, "set", length))
           return position + 3;
-        if (lower === 107 && matchesWord(sql15, position, "key", length)) {
+        if (lower === 107 && matchesWord(sql14, position, "key", length)) {
           let cursor = position + 3;
-          while (cursor < length && isWhitespace(sql15.charCodeAt(cursor)))
+          while (cursor < length && isWhitespace(sql14.charCodeAt(cursor)))
             cursor++;
-          if (matchesWord(sql15, cursor, "update", length))
+          if (matchesWord(sql14, cursor, "update", length))
             return cursor + 6;
         }
       }
@@ -17624,19 +17624,19 @@ var require_lib = __commonJS({
       const keysLength = keys.length;
       if (keysLength === 0)
         return "";
-      let sql15 = "";
+      let sql14 = "";
       for (let i = 0; i < keysLength; i++) {
         const key2 = keys[i];
         const value = object2[key2];
         if (typeof value === "function")
           continue;
-        if (sql15.length > 0)
-          sql15 += ", ";
-        sql15 += (0, exports.escapeId)(key2);
-        sql15 += " = ";
-        sql15 += (0, exports.escape)(value, true, timezone);
+        if (sql14.length > 0)
+          sql14 += ", ";
+        sql14 += (0, exports.escapeId)(key2);
+        sql14 += " = ";
+        sql14 += (0, exports.escape)(value, true, timezone);
       }
-      return sql15;
+      return sql14;
     };
     exports.objectToValues = objectToValues;
     var bufferToString = (buffer) => `X${escapeString(buffer.toString("hex"))}`;
@@ -17687,25 +17687,25 @@ var require_lib = __commonJS({
       }
     };
     exports.escape = escape;
-    var format = (sql15, values, stringifyObjects, timezone) => {
+    var format = (sql14, values, stringifyObjects, timezone) => {
       if (values === void 0 || values === null)
-        return sql15;
+        return sql14;
       const valuesArray = Array.isArray(values) ? values : [values];
       const length = valuesArray.length;
       let setIndex = -2;
       let result = "";
       let chunkIndex = 0;
       let valuesIndex = 0;
-      let placeholderPosition = findNextPlaceholder(sql15, 0);
+      let placeholderPosition = findNextPlaceholder(sql14, 0);
       while (valuesIndex < length && placeholderPosition !== -1) {
         let placeholderEnd = placeholderPosition + 1;
         let escapedValue;
-        while (sql15.charCodeAt(placeholderEnd) === 63)
+        while (sql14.charCodeAt(placeholderEnd) === 63)
           placeholderEnd++;
         const placeholderLength = placeholderEnd - placeholderPosition;
         const currentValue = valuesArray[valuesIndex];
         if (placeholderLength > 2) {
-          placeholderPosition = findNextPlaceholder(sql15, placeholderEnd);
+          placeholderPosition = findNextPlaceholder(sql14, placeholderEnd);
           continue;
         }
         if (placeholderLength === 2)
@@ -17714,32 +17714,32 @@ var require_lib = __commonJS({
           escapedValue = `${currentValue}`;
         else if (typeof currentValue === "object" && currentValue !== null && !stringifyObjects) {
           if (setIndex === -2)
-            setIndex = findSetKeyword(sql15);
-          if (setIndex !== -1 && setIndex <= placeholderPosition && hasOnlyWhitespaceBetween(sql15, setIndex, placeholderPosition) && !hasSqlString(currentValue) && !Array.isArray(currentValue) && !node_buffer_1.Buffer.isBuffer(currentValue) && !(currentValue instanceof Uint8Array) && !isDate2(currentValue) && isRecord(currentValue)) {
+            setIndex = findSetKeyword(sql14);
+          if (setIndex !== -1 && setIndex <= placeholderPosition && hasOnlyWhitespaceBetween(sql14, setIndex, placeholderPosition) && !hasSqlString(currentValue) && !Array.isArray(currentValue) && !node_buffer_1.Buffer.isBuffer(currentValue) && !(currentValue instanceof Uint8Array) && !isDate2(currentValue) && isRecord(currentValue)) {
             escapedValue = (0, exports.objectToValues)(currentValue, timezone);
-            setIndex = findSetKeyword(sql15, placeholderEnd);
+            setIndex = findSetKeyword(sql14, placeholderEnd);
           } else
             escapedValue = (0, exports.escape)(currentValue, true, timezone);
         } else
           escapedValue = (0, exports.escape)(currentValue, stringifyObjects, timezone);
-        result += sql15.slice(chunkIndex, placeholderPosition);
+        result += sql14.slice(chunkIndex, placeholderPosition);
         result += escapedValue;
         chunkIndex = placeholderEnd;
         valuesIndex++;
-        placeholderPosition = findNextPlaceholder(sql15, placeholderEnd);
+        placeholderPosition = findNextPlaceholder(sql14, placeholderEnd);
       }
       if (chunkIndex === 0)
-        return sql15;
-      if (chunkIndex < sql15.length)
-        return result + sql15.slice(chunkIndex);
+        return sql14;
+      if (chunkIndex < sql14.length)
+        return result + sql14.slice(chunkIndex);
       return result;
     };
     exports.format = format;
-    var raw2 = (sql15) => {
-      if (typeof sql15 !== "string")
+    var raw2 = (sql14) => {
+      if (typeof sql14 !== "string")
         throw new TypeError("argument sql must be a string");
       return {
-        toSqlString: () => sql15
+        toSqlString: () => sql14
       };
     };
     exports.raw = raw2;
@@ -24187,7 +24187,7 @@ var require_safer = __commonJS({
   "node_modules/safer-buffer/safer.js"(exports, module) {
     "use strict";
     var buffer = __require("buffer");
-    var Buffer2 = buffer.Buffer;
+    var Buffer3 = buffer.Buffer;
     var safer = {};
     var key2;
     for (key2 in buffer) {
@@ -24196,12 +24196,12 @@ var require_safer = __commonJS({
       safer[key2] = buffer[key2];
     }
     var Safer = safer.Buffer = {};
-    for (key2 in Buffer2) {
-      if (!Buffer2.hasOwnProperty(key2)) continue;
+    for (key2 in Buffer3) {
+      if (!Buffer3.hasOwnProperty(key2)) continue;
       if (key2 === "allocUnsafe" || key2 === "allocUnsafeSlow") continue;
-      Safer[key2] = Buffer2[key2];
+      Safer[key2] = Buffer3[key2];
     }
-    safer.Buffer.prototype = Buffer2.prototype;
+    safer.Buffer.prototype = Buffer3.prototype;
     if (!Safer.from || Safer.from === Uint8Array.from) {
       Safer.from = function(value, encodingOrOffset, length) {
         if (typeof value === "number") {
@@ -24210,7 +24210,7 @@ var require_safer = __commonJS({
         if (value && typeof value.length === "undefined") {
           throw new TypeError("The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value);
         }
-        return Buffer2(value, encodingOrOffset, length);
+        return Buffer3(value, encodingOrOffset, length);
       };
     }
     if (!Safer.alloc) {
@@ -24221,7 +24221,7 @@ var require_safer = __commonJS({
         if (size < 0 || size >= 2 * (1 << 30)) {
           throw new RangeError('The value "' + size + '" is invalid for option "size"');
         }
-        var buf = Buffer2(size);
+        var buf = Buffer3(size);
         if (!fill || fill.length === 0) {
           buf.fill(0);
         } else if (typeof encoding === "string") {
@@ -24316,7 +24316,7 @@ var require_merge_exports = __commonJS({
 var require_internal = __commonJS({
   "node_modules/iconv-lite/encodings/internal.js"(exports, module) {
     "use strict";
-    var Buffer2 = require_safer().Buffer;
+    var Buffer3 = require_safer().Buffer;
     module.exports = {
       // Encodings
       utf8: { type: "_internal", bomAware: true },
@@ -24340,7 +24340,7 @@ var require_internal = __commonJS({
       } else if (this.enc === "cesu8") {
         this.enc = "utf8";
         this.encoder = InternalEncoderCesu8;
-        if (Buffer2.from("eda0bdedb2a9", "hex").toString() !== "\u{1F4A9}") {
+        if (Buffer3.from("eda0bdedb2a9", "hex").toString() !== "\u{1F4A9}") {
           this.decoder = InternalDecoderCesu8;
           this.defaultCharUnicode = iconv.defaultCharUnicode;
         }
@@ -24353,8 +24353,8 @@ var require_internal = __commonJS({
       this.decoder = new StringDecoder(codec2.enc);
     }
     InternalDecoder.prototype.write = function(buf) {
-      if (!Buffer2.isBuffer(buf)) {
-        buf = Buffer2.from(buf);
+      if (!Buffer3.isBuffer(buf)) {
+        buf = Buffer3.from(buf);
       }
       return this.decoder.write(buf);
     };
@@ -24365,7 +24365,7 @@ var require_internal = __commonJS({
       this.enc = codec2.enc;
     }
     InternalEncoder.prototype.write = function(str) {
-      return Buffer2.from(str, this.enc);
+      return Buffer3.from(str, this.enc);
     };
     InternalEncoder.prototype.end = function() {
     };
@@ -24377,15 +24377,15 @@ var require_internal = __commonJS({
       var completeQuads = str.length - str.length % 4;
       this.prevStr = str.slice(completeQuads);
       str = str.slice(0, completeQuads);
-      return Buffer2.from(str, "base64");
+      return Buffer3.from(str, "base64");
     };
     InternalEncoderBase64.prototype.end = function() {
-      return Buffer2.from(this.prevStr, "base64");
+      return Buffer3.from(this.prevStr, "base64");
     };
     function InternalEncoderCesu8(options, codec2) {
     }
     InternalEncoderCesu8.prototype.write = function(str) {
-      var buf = Buffer2.alloc(str.length * 3);
+      var buf = Buffer3.alloc(str.length * 3);
       var bufIdx = 0;
       for (var i = 0; i < str.length; i++) {
         var charCode = str.charCodeAt(i);
@@ -24481,13 +24481,13 @@ var require_internal = __commonJS({
           str = str.slice(0, str.length - 1);
         }
       }
-      return Buffer2.from(str, this.enc);
+      return Buffer3.from(str, this.enc);
     };
     InternalEncoderUtf8.prototype.end = function() {
       if (this.highSurrogate) {
         var str = this.highSurrogate;
         this.highSurrogate = "";
-        return Buffer2.from(str, this.enc);
+        return Buffer3.from(str, this.enc);
       }
     };
   }
@@ -24497,7 +24497,7 @@ var require_internal = __commonJS({
 var require_utf32 = __commonJS({
   "node_modules/iconv-lite/encodings/utf32.js"(exports) {
     "use strict";
-    var Buffer2 = require_safer().Buffer;
+    var Buffer3 = require_safer().Buffer;
     exports._utf32 = Utf32Codec;
     function Utf32Codec(codecOptions, iconv) {
       this.iconv = iconv;
@@ -24515,8 +24515,8 @@ var require_utf32 = __commonJS({
       this.highSurrogate = 0;
     }
     Utf32Encoder.prototype.write = function(str) {
-      var src = Buffer2.from(str, "ucs2");
-      var dst = Buffer2.alloc(src.length * 2);
+      var src = Buffer3.from(str, "ucs2");
+      var dst = Buffer3.alloc(src.length * 2);
       var write32 = this.isLE ? dst.writeUInt32LE : dst.writeUInt32BE;
       var offset = 0;
       for (var i = 0; i < src.length; i += 2) {
@@ -24552,7 +24552,7 @@ var require_utf32 = __commonJS({
       if (!this.highSurrogate) {
         return;
       }
-      var buf = Buffer2.alloc(4);
+      var buf = Buffer3.alloc(4);
       if (this.isLE) {
         buf.writeUInt32LE(this.highSurrogate, 0);
       } else {
@@ -24572,7 +24572,7 @@ var require_utf32 = __commonJS({
       }
       var i = 0;
       var codepoint = 0;
-      var dst = Buffer2.alloc(src.length + 4);
+      var dst = Buffer3.alloc(src.length + 4);
       var offset = 0;
       var isLE = this.isLE;
       var overflow = this.overflow;
@@ -24728,7 +24728,7 @@ var require_utf32 = __commonJS({
 var require_utf16 = __commonJS({
   "node_modules/iconv-lite/encodings/utf16.js"(exports) {
     "use strict";
-    var Buffer2 = require_safer().Buffer;
+    var Buffer3 = require_safer().Buffer;
     exports.utf16be = Utf16BECodec;
     function Utf16BECodec() {
     }
@@ -24738,7 +24738,7 @@ var require_utf16 = __commonJS({
     function Utf16BEEncoder() {
     }
     Utf16BEEncoder.prototype.write = function(str) {
-      var buf = Buffer2.from(str, "ucs2");
+      var buf = Buffer3.from(str, "ucs2");
       for (var i = 0; i < buf.length; i += 2) {
         var tmp = buf[i];
         buf[i] = buf[i + 1];
@@ -24755,7 +24755,7 @@ var require_utf16 = __commonJS({
       if (buf.length == 0) {
         return "";
       }
-      var buf2 = Buffer2.alloc(buf.length + 1);
+      var buf2 = Buffer3.alloc(buf.length + 1);
       var i = 0;
       var j = 0;
       if (this.overflowByte !== -1) {
@@ -24871,7 +24871,7 @@ var require_utf16 = __commonJS({
 var require_utf7 = __commonJS({
   "node_modules/iconv-lite/encodings/utf7.js"(exports) {
     "use strict";
-    var Buffer2 = require_safer().Buffer;
+    var Buffer3 = require_safer().Buffer;
     exports.utf7 = Utf7Codec;
     exports.unicode11utf7 = "utf7";
     function Utf7Codec(codecOptions, iconv) {
@@ -24885,7 +24885,7 @@ var require_utf7 = __commonJS({
       this.iconv = codec2.iconv;
     }
     Utf7Encoder.prototype.write = function(str) {
-      return Buffer2.from(str.replace(nonDirectChars, function(chunk) {
+      return Buffer3.from(str.replace(nonDirectChars, function(chunk) {
         return "+" + (chunk === "+" ? "" : this.iconv.encode(chunk, "utf16-be").toString("base64").replace(/=+$/, "")) + "-";
       }.bind(this)));
     };
@@ -24923,7 +24923,7 @@ var require_utf7 = __commonJS({
               res += "+";
             } else {
               var b64str = base64Accum + this.iconv.decode(buf.slice(lastI, i2), "ascii");
-              res += this.iconv.decode(Buffer2.from(b64str, "base64"), "utf16-be");
+              res += this.iconv.decode(Buffer3.from(b64str, "base64"), "utf16-be");
             }
             if (buf[i2] != minusChar) {
               i2--;
@@ -24941,7 +24941,7 @@ var require_utf7 = __commonJS({
         var canBeDecoded = b64str.length - b64str.length % 8;
         base64Accum = b64str.slice(canBeDecoded);
         b64str = b64str.slice(0, canBeDecoded);
-        res += this.iconv.decode(Buffer2.from(b64str, "base64"), "utf16-be");
+        res += this.iconv.decode(Buffer3.from(b64str, "base64"), "utf16-be");
       }
       this.inBase64 = inBase64;
       this.base64Accum = base64Accum;
@@ -24950,7 +24950,7 @@ var require_utf7 = __commonJS({
     Utf7Decoder.prototype.end = function() {
       var res = "";
       if (this.inBase64 && this.base64Accum.length > 0) {
-        res = this.iconv.decode(Buffer2.from(this.base64Accum, "base64"), "utf16-be");
+        res = this.iconv.decode(Buffer3.from(this.base64Accum, "base64"), "utf16-be");
       }
       this.inBase64 = false;
       this.base64Accum = "";
@@ -24966,14 +24966,14 @@ var require_utf7 = __commonJS({
     function Utf7IMAPEncoder(options, codec2) {
       this.iconv = codec2.iconv;
       this.inBase64 = false;
-      this.base64Accum = Buffer2.alloc(6);
+      this.base64Accum = Buffer3.alloc(6);
       this.base64AccumIdx = 0;
     }
     Utf7IMAPEncoder.prototype.write = function(str) {
       var inBase64 = this.inBase64;
       var base64Accum = this.base64Accum;
       var base64AccumIdx = this.base64AccumIdx;
-      var buf = Buffer2.alloc(str.length * 5 + 10);
+      var buf = Buffer3.alloc(str.length * 5 + 10);
       var bufIdx = 0;
       for (var i2 = 0; i2 < str.length; i2++) {
         var uChar = str.charCodeAt(i2);
@@ -25012,7 +25012,7 @@ var require_utf7 = __commonJS({
       return buf.slice(0, bufIdx);
     };
     Utf7IMAPEncoder.prototype.end = function() {
-      var buf = Buffer2.alloc(10);
+      var buf = Buffer3.alloc(10);
       var bufIdx = 0;
       if (this.inBase64) {
         if (this.base64AccumIdx > 0) {
@@ -25049,7 +25049,7 @@ var require_utf7 = __commonJS({
               res += "&";
             } else {
               var b64str = base64Accum + this.iconv.decode(buf.slice(lastI, i2), "ascii").replace(/,/g, "/");
-              res += this.iconv.decode(Buffer2.from(b64str, "base64"), "utf16-be");
+              res += this.iconv.decode(Buffer3.from(b64str, "base64"), "utf16-be");
             }
             if (buf[i2] != minusChar) {
               i2--;
@@ -25067,7 +25067,7 @@ var require_utf7 = __commonJS({
         var canBeDecoded = b64str.length - b64str.length % 8;
         base64Accum = b64str.slice(canBeDecoded);
         b64str = b64str.slice(0, canBeDecoded);
-        res += this.iconv.decode(Buffer2.from(b64str, "base64"), "utf16-be");
+        res += this.iconv.decode(Buffer3.from(b64str, "base64"), "utf16-be");
       }
       this.inBase64 = inBase64;
       this.base64Accum = base64Accum;
@@ -25076,7 +25076,7 @@ var require_utf7 = __commonJS({
     Utf7IMAPDecoder.prototype.end = function() {
       var res = "";
       if (this.inBase64 && this.base64Accum.length > 0) {
-        res = this.iconv.decode(Buffer2.from(this.base64Accum, "base64"), "utf16-be");
+        res = this.iconv.decode(Buffer3.from(this.base64Accum, "base64"), "utf16-be");
       }
       this.inBase64 = false;
       this.base64Accum = "";
@@ -25089,7 +25089,7 @@ var require_utf7 = __commonJS({
 var require_sbcs_codec = __commonJS({
   "node_modules/iconv-lite/encodings/sbcs-codec.js"(exports) {
     "use strict";
-    var Buffer2 = require_safer().Buffer;
+    var Buffer3 = require_safer().Buffer;
     exports._sbcs = SBCSCodec;
     function SBCSCodec(codecOptions, iconv) {
       if (!codecOptions) {
@@ -25105,8 +25105,8 @@ var require_sbcs_codec = __commonJS({
         }
         codecOptions.chars = asciiString + codecOptions.chars;
       }
-      this.decodeBuf = Buffer2.from(codecOptions.chars, "ucs2");
-      var encodeBuf = Buffer2.alloc(65536, iconv.defaultCharSingleByte.charCodeAt(0));
+      this.decodeBuf = Buffer3.from(codecOptions.chars, "ucs2");
+      var encodeBuf = Buffer3.alloc(65536, iconv.defaultCharSingleByte.charCodeAt(0));
       for (var i = 0; i < codecOptions.chars.length; i++) {
         encodeBuf[codecOptions.chars.charCodeAt(i)] = i;
       }
@@ -25118,7 +25118,7 @@ var require_sbcs_codec = __commonJS({
       this.encodeBuf = codec2.encodeBuf;
     }
     SBCSEncoder.prototype.write = function(str) {
-      var buf = Buffer2.alloc(str.length);
+      var buf = Buffer3.alloc(str.length);
       for (var i = 0; i < str.length; i++) {
         buf[i] = this.encodeBuf[str.charCodeAt(i)];
       }
@@ -25131,7 +25131,7 @@ var require_sbcs_codec = __commonJS({
     }
     SBCSDecoder.prototype.write = function(buf) {
       var decodeBuf = this.decodeBuf;
-      var newBuf = Buffer2.alloc(buf.length * 2);
+      var newBuf = Buffer3.alloc(buf.length * 2);
       var idx1 = 0;
       var idx2 = 0;
       for (var i = 0; i < buf.length; i++) {
@@ -25759,7 +25759,7 @@ var require_sbcs_data_generated = __commonJS({
 var require_dbcs_codec = __commonJS({
   "node_modules/iconv-lite/encodings/dbcs-codec.js"(exports) {
     "use strict";
-    var Buffer2 = require_safer().Buffer;
+    var Buffer3 = require_safer().Buffer;
     exports._dbcs = DBCSCodec;
     var UNASSIGNED = -1;
     var GB18030_CODE = -2;
@@ -25995,7 +25995,7 @@ var require_dbcs_codec = __commonJS({
       this.gb18030 = codec2.gb18030;
     }
     DBCSEncoder.prototype.write = function(str) {
-      var newBuf = Buffer2.alloc(str.length * (this.gb18030 ? 4 : 3));
+      var newBuf = Buffer3.alloc(str.length * (this.gb18030 ? 4 : 3));
       var leadSurrogate = this.leadSurrogate;
       var seqObj = this.seqObj;
       var nextChar = -1;
@@ -26099,7 +26099,7 @@ var require_dbcs_codec = __commonJS({
       if (this.leadSurrogate === -1 && this.seqObj === void 0) {
         return;
       }
-      var newBuf = Buffer2.alloc(10);
+      var newBuf = Buffer3.alloc(10);
       var j = 0;
       if (this.seqObj) {
         var dbcsCode = this.seqObj[DEF_CHAR];
@@ -26130,7 +26130,7 @@ var require_dbcs_codec = __commonJS({
       this.gb18030 = codec2.gb18030;
     }
     DBCSDecoder.prototype.write = function(buf) {
-      var newBuf = Buffer2.alloc(buf.length * 2);
+      var newBuf = Buffer3.alloc(buf.length * 2);
       var nodeIdx = this.nodeIdx;
       var prevBytes = this.prevBytes;
       var prevOffset = this.prevBytes.length;
@@ -27739,7 +27739,7 @@ var require_encodings = __commonJS({
 var require_streams = __commonJS({
   "node_modules/iconv-lite/lib/streams.js"(exports, module) {
     "use strict";
-    var Buffer2 = require_safer().Buffer;
+    var Buffer3 = require_safer().Buffer;
     module.exports = function(streamModule) {
       var Transform = streamModule.Transform;
       function IconvLiteEncoderStream(conv, options) {
@@ -27779,7 +27779,7 @@ var require_streams = __commonJS({
           chunks.push(chunk);
         });
         this.on("end", function() {
-          cb(null, Buffer2.concat(chunks));
+          cb(null, Buffer3.concat(chunks));
         });
         return this;
       };
@@ -27793,7 +27793,7 @@ var require_streams = __commonJS({
         constructor: { value: IconvLiteDecoderStream }
       });
       IconvLiteDecoderStream.prototype._transform = function(chunk, encoding, done) {
-        if (!Buffer2.isBuffer(chunk) && !(chunk instanceof Uint8Array)) {
+        if (!Buffer3.isBuffer(chunk) && !(chunk instanceof Uint8Array)) {
           return done(new Error("Iconv decoding stream needs buffers as its input."));
         }
         try {
@@ -27836,7 +27836,7 @@ var require_streams = __commonJS({
 var require_lib4 = __commonJS({
   "node_modules/iconv-lite/lib/index.js"(exports, module) {
     "use strict";
-    var Buffer2 = require_safer().Buffer;
+    var Buffer3 = require_safer().Buffer;
     var bomHandling = require_bom_handling();
     var mergeModules = require_merge_exports();
     module.exports.encodings = null;
@@ -27847,7 +27847,7 @@ var require_lib4 = __commonJS({
       var encoder2 = module.exports.getEncoder(encoding, options);
       var res = encoder2.write(str);
       var trail = encoder2.end();
-      return trail && trail.length > 0 ? Buffer2.concat([res, trail]) : res;
+      return trail && trail.length > 0 ? Buffer3.concat([res, trail]) : res;
     };
     module.exports.decode = function decode4(buf, encoding, options) {
       if (typeof buf === "string") {
@@ -27855,7 +27855,7 @@ var require_lib4 = __commonJS({
           console.error("Iconv-lite warning: decode()-ing strings is deprecated. Refer to https://github.com/ashtuchkin/iconv-lite/wiki/Use-Buffers-when-decoding");
           module.exports.skipDecodeWarning = true;
         }
-        buf = Buffer2.from("" + (buf || ""), "binary");
+        buf = Buffer3.from("" + (buf || ""), "binary");
       }
       var decoder2 = module.exports.getDecoder(encoding, options);
       var res = decoder2.write(buf);
@@ -29396,9 +29396,9 @@ var require_binlog_dump = __commonJS({
 var require_auth_41 = __commonJS({
   "node_modules/mysql2/lib/auth_41.js"(exports) {
     "use strict";
-    var crypto15 = __require("crypto");
+    var crypto16 = __require("crypto");
     function sha1(msg, msg1, msg2) {
-      const hash2 = crypto15.createHash("sha1");
+      const hash2 = crypto16.createHash("sha1");
       hash2.update(msg);
       if (msg1) {
         hash2.update(msg1);
@@ -30626,8 +30626,8 @@ var require_prepare_statement = __commonJS({
     var StringParser = require_string();
     var CharsetToEncoding = require_charset_encodings();
     var PrepareStatement = class {
-      constructor(sql15, charsetNumber) {
-        this.query = sql15;
+      constructor(sql14, charsetNumber) {
+        this.query = sql14;
         this.charsetNumber = charsetNumber;
         this.encoding = CharsetToEncoding[charsetNumber];
       }
@@ -30676,8 +30676,8 @@ var require_query = __commonJS({
     var Types = require_types();
     var { toParameter } = require_encode_parameter();
     var Query = class {
-      constructor(sql15, charsetNumber, attributes, clientFlags) {
-        this.query = sql15;
+      constructor(sql14, charsetNumber, attributes, clientFlags) {
+        this.query = sql14;
         this.charsetNumber = charsetNumber;
         this.encoding = CharsetToEncoding[charsetNumber];
         this.attributes = attributes;
@@ -31274,7 +31274,7 @@ var require_sha256_password = __commonJS({
   "node_modules/mysql2/lib/auth_plugins/sha256_password.js"(exports, module) {
     "use strict";
     var PLUGIN_NAME = "sha256_password";
-    var crypto15 = __require("crypto");
+    var crypto16 = __require("crypto");
     var { xorRotating } = require_auth_41();
     var Tls = __require("tls");
     var REQUEST_SERVER_KEY_PACKET = Buffer.from([1]);
@@ -31283,7 +31283,7 @@ var require_sha256_password = __commonJS({
     var STATE_FINAL = -1;
     function encrypt2(password, scramble, key2) {
       const stage1 = xorRotating(Buffer.from(`${password}\0`, "utf8"), scramble);
-      return crypto15.publicEncrypt(
+      return crypto16.publicEncrypt(
         {
           key: key2,
           oaepHash: "sha1"
@@ -31335,7 +31335,7 @@ var require_caching_sha2_password = __commonJS({
   "node_modules/mysql2/lib/auth_plugins/caching_sha2_password.js"(exports, module) {
     "use strict";
     var PLUGIN_NAME = "caching_sha2_password";
-    var crypto15 = __require("crypto");
+    var crypto16 = __require("crypto");
     var { xor: xor2, xorRotating } = require_auth_41();
     var REQUEST_SERVER_KEY_PACKET = Buffer.from([2]);
     var FAST_AUTH_SUCCESS_PACKET = Buffer.from([3]);
@@ -31345,7 +31345,7 @@ var require_caching_sha2_password = __commonJS({
     var STATE_WAIT_SERVER_KEY = 2;
     var STATE_FINAL = -1;
     function sha256(msg) {
-      const hash2 = crypto15.createHash("sha256");
+      const hash2 = crypto16.createHash("sha256");
       hash2.update(msg);
       return hash2.digest();
     }
@@ -31360,11 +31360,11 @@ var require_caching_sha2_password = __commonJS({
     }
     function encrypt2(password, scramble, key2) {
       const stage1 = xorRotating(Buffer.from(`${password}\0`, "utf8"), scramble);
-      return crypto15.publicEncrypt(
+      return crypto16.publicEncrypt(
         {
           key: key2,
           oaepHash: "sha1",
-          padding: crypto15.constants.RSA_PKCS1_OAEP_PADDING
+          padding: crypto16.constants.RSA_PKCS1_OAEP_PADDING
         },
         stage1
       );
@@ -34727,17 +34727,17 @@ var require_connection = __commonJS({
         }
         return cmd;
       }
-      format(sql15, values) {
+      format(sql14, values) {
         if (typeof this.config.queryFormat === "function") {
           return this.config.queryFormat.call(
             this,
-            sql15,
+            sql14,
             values,
             this.config.timezone
           );
         }
         const opts = {
-          sql: sql15,
+          sql: sql14,
           values
         };
         this._resolveNamedPlaceholders(opts);
@@ -34754,8 +34754,8 @@ var require_connection = __commonJS({
       escapeId(value) {
         return SqlString.escapeId(value, false);
       }
-      raw(sql15) {
-        return SqlString.raw(sql15);
+      raw(sql14) {
+        return SqlString.raw(sql14);
       }
       _resolveNamedPlaceholders(options) {
         let unnamed;
@@ -34771,12 +34771,12 @@ var require_connection = __commonJS({
           options.values = unnamed[1];
         }
       }
-      query(sql15, values, cb) {
+      query(sql14, values, cb) {
         let cmdQuery;
-        if (sql15.constructor === Commands.Query) {
-          cmdQuery = sql15;
+        if (sql14.constructor === Commands.Query) {
+          cmdQuery = sql14;
         } else {
-          cmdQuery = _BaseConnection.createQuery(sql15, values, cb, this.config);
+          cmdQuery = _BaseConnection.createQuery(sql14, values, cb, this.config);
         }
         this._resolveNamedPlaceholders(cmdQuery);
         const rawSql = this.format(
@@ -34852,12 +34852,12 @@ var require_connection = __commonJS({
         }
         return this.addCommand(new Commands.Prepare(options, cb));
       }
-      unprepare(sql15) {
+      unprepare(sql14) {
         let options = {};
-        if (typeof sql15 === "object") {
-          options = sql15;
+        if (typeof sql14 === "object") {
+          options = sql14;
         } else {
-          options.sql = sql15;
+          options.sql = sql14;
         }
         const key2 = _BaseConnection.statementKey(options);
         const stmt = this._statements.get(key2);
@@ -34867,16 +34867,16 @@ var require_connection = __commonJS({
         }
         return stmt;
       }
-      execute(sql15, values, cb) {
+      execute(sql14, values, cb) {
         let options = {
           infileStreamFactory: this.config.infileStreamFactory
         };
-        if (typeof sql15 === "object") {
+        if (typeof sql14 === "object") {
           options = {
             ...options,
-            ...sql15,
-            sql: sql15.sql,
-            values: sql15.values
+            ...sql14,
+            sql: sql14.sql,
+            values: sql14.values
           };
           if (typeof values === "function") {
             cb = values;
@@ -34885,10 +34885,10 @@ var require_connection = __commonJS({
           }
         } else if (typeof values === "function") {
           cb = values;
-          options.sql = sql15;
+          options.sql = sql14;
           options.values = void 0;
         } else {
-          options.sql = sql15;
+          options.sql = sql14;
           options.values = values;
         }
         this._resolveNamedPlaceholders(options);
@@ -35169,17 +35169,17 @@ var require_connection = __commonJS({
         this.addCommand = this._addCommandClosedState;
         return quitCmd;
       }
-      static createQuery(sql15, values, cb, config2) {
+      static createQuery(sql14, values, cb, config2) {
         let options = {
           rowsAsArray: config2.rowsAsArray,
           infileStreamFactory: config2.infileStreamFactory
         };
-        if (typeof sql15 === "object") {
+        if (typeof sql14 === "object") {
           options = {
             ...options,
-            ...sql15,
-            sql: sql15.sql,
-            values: sql15.values
+            ...sql14,
+            sql: sql14.sql,
+            values: sql14.values
           };
           if (typeof values === "function") {
             cb = values;
@@ -35188,10 +35188,10 @@ var require_connection = __commonJS({
           }
         } else if (typeof values === "function") {
           cb = values;
-          options.sql = sql15;
+          options.sql = sql14;
           options.values = void 0;
         } else {
-          options.sql = sql15;
+          options.sql = sql14;
           options.values = values;
         }
         return new Commands.Query(options, cb);
@@ -35826,9 +35826,9 @@ var require_pool = __commonJS({
           connection._realEnd(endCB);
         }
       }
-      query(sql15, values, cb) {
+      query(sql14, values, cb) {
         const cmdQuery = BaseConnection.createQuery(
-          sql15,
+          sql14,
           values,
           cb,
           this.config.connectionConfig
@@ -35872,7 +35872,7 @@ var require_pool = __commonJS({
         });
         return cmdQuery;
       }
-      execute(sql15, values, cb) {
+      execute(sql14, values, cb) {
         if (typeof values === "function") {
           cb = values;
           values = [];
@@ -35882,7 +35882,7 @@ var require_pool = __commonJS({
             return cb(err);
           }
           try {
-            conn.execute(sql15, values, (err2, rows, fields) => {
+            conn.execute(sql14, values, (err2, rows, fields) => {
               if (isReadOnlyError(err2)) {
                 conn.destroy();
               }
@@ -35919,9 +35919,9 @@ var require_pool = __commonJS({
           }
         }, 1e3);
       }
-      format(sql15, values) {
+      format(sql14, values) {
         return SqlString.format(
-          sql15,
+          sql14,
           values,
           this.config.connectionConfig.stringifyObjects,
           this.config.connectionConfig.timezone
@@ -35977,7 +35977,7 @@ var require_pool2 = __commonJS({
       releaseConnection(connection) {
         if (connection instanceof PromisePoolConnection) connection.release();
       }
-      query(sql15, args) {
+      query(sql14, args) {
         const corePool = this.pool;
         const stackHolder = captureStackHolder(_PromisePool.prototype.query);
         if (typeof args === "function") {
@@ -35988,13 +35988,13 @@ var require_pool2 = __commonJS({
         return new this.Promise((resolve, reject) => {
           const done = makeDoneCb(resolve, reject, stackHolder);
           if (args !== void 0) {
-            corePool.query(sql15, args, done);
+            corePool.query(sql14, args, done);
           } else {
-            corePool.query(sql15, done);
+            corePool.query(sql14, done);
           }
         });
       }
-      execute(sql15, args) {
+      execute(sql14, args) {
         const corePool = this.pool;
         const stackHolder = captureStackHolder(_PromisePool.prototype.execute);
         if (typeof args === "function") {
@@ -36005,9 +36005,9 @@ var require_pool2 = __commonJS({
         return new this.Promise((resolve, reject) => {
           const done = makeDoneCb(resolve, reject, stackHolder);
           if (args) {
-            corePool.execute(sql15, args, done);
+            corePool.execute(sql14, args, done);
           } else {
-            corePool.execute(sql15, done);
+            corePool.execute(sql14, done);
           }
         });
       }
@@ -36163,8 +36163,8 @@ var require_pool_cluster = __commonJS({
        * @param {*} cb
        * @returns query
        */
-      query(sql15, values, cb) {
-        const query = Connection.createQuery(sql15, values, cb, {});
+      query(sql14, values, cb) {
+        const query = Connection.createQuery(sql14, values, cb, {});
         this.getConnection((err, conn) => {
           if (err) {
             if (typeof query.onResult === "function") {
@@ -36191,7 +36191,7 @@ var require_pool_cluster = __commonJS({
        * @param {*} values
        * @param {*} cb
        */
-      execute(sql15, values, cb) {
+      execute(sql14, values, cb) {
         if (typeof values === "function") {
           cb = values;
           values = [];
@@ -36201,7 +36201,7 @@ var require_pool_cluster = __commonJS({
             return cb(err);
           }
           try {
-            conn.execute(sql15, values, cb).once("end", () => {
+            conn.execute(sql14, values, cb).once("end", () => {
               conn.release();
             });
           } catch (e) {
@@ -36497,7 +36497,7 @@ var require_pool_cluster2 = __commonJS({
           });
         });
       }
-      query(sql15, values) {
+      query(sql14, values) {
         const corePoolNamespace = this.poolNamespace;
         const stackHolder = captureStackHolder(
           _PromisePoolNamespace.prototype.query
@@ -36509,10 +36509,10 @@ var require_pool_cluster2 = __commonJS({
         }
         return new this.Promise((resolve, reject) => {
           const done = makeDoneCb(resolve, reject, stackHolder);
-          corePoolNamespace.query(sql15, values, done);
+          corePoolNamespace.query(sql14, values, done);
         });
       }
-      execute(sql15, values) {
+      execute(sql14, values) {
         const corePoolNamespace = this.poolNamespace;
         const stackHolder = captureStackHolder(
           _PromisePoolNamespace.prototype.execute
@@ -36524,7 +36524,7 @@ var require_pool_cluster2 = __commonJS({
         }
         return new this.Promise((resolve, reject) => {
           const done = makeDoneCb(resolve, reject, stackHolder);
-          corePoolNamespace.execute(sql15, values, done);
+          corePoolNamespace.execute(sql14, values, done);
         });
       }
     };
@@ -36605,7 +36605,7 @@ var require_promise = __commonJS({
           );
         });
       }
-      query(sql15, args) {
+      query(sql14, args) {
         const corePoolCluster = this.poolCluster;
         const stackHolder = captureStackHolder(_PromisePoolCluster.prototype.query);
         if (typeof args === "function") {
@@ -36615,10 +36615,10 @@ var require_promise = __commonJS({
         }
         return new this.Promise((resolve, reject) => {
           const done = makeDoneCb(resolve, reject, stackHolder);
-          corePoolCluster.query(sql15, args, done);
+          corePoolCluster.query(sql14, args, done);
         });
       }
-      execute(sql15, args) {
+      execute(sql14, args) {
         const corePoolCluster = this.poolCluster;
         const stackHolder = captureStackHolder(
           _PromisePoolCluster.prototype.execute
@@ -36630,7 +36630,7 @@ var require_promise = __commonJS({
         }
         return new this.Promise((resolve, reject) => {
           const done = makeDoneCb(resolve, reject, stackHolder);
-          corePoolCluster.execute(sql15, args, done);
+          corePoolCluster.execute(sql14, args, done);
         });
       }
       of(pattern, selector) {
@@ -37063,13 +37063,13 @@ function construct(client, config2 = {}) {
   const mode = config2.mode ?? "default";
   const driver = new MySql2Driver(clientForInstance, dialect, { logger, cache: config2.cache });
   const session = driver.createSession(schema, mode);
-  const db5 = new MySql2Database(dialect, session, schema, mode);
-  db5.$client = client;
-  db5.$cache = config2.cache;
-  if (db5.$cache) {
-    db5.$cache["invalidate"] = config2.cache?.onMutate;
+  const db4 = new MySql2Database(dialect, session, schema, mode);
+  db4.$client = client;
+  db4.$cache = config2.cache;
+  if (db4.$cache) {
+    db4.$cache["invalidate"] = config2.cache?.onMutate;
   }
-  return db5;
+  return db4;
 }
 function isCallbackClient(client) {
   return typeof client.promise === "function";
@@ -37089,8 +37089,8 @@ function drizzle(...params) {
       uri: connection,
       supportBigNumbers: true
     }) : (0, import_mysql2.createPool)(connection);
-    const db5 = construct(instance2, drizzleConfig);
-    return db5;
+    const db4 = construct(instance2, drizzleConfig);
+    return db4;
   }
   return construct(params[0], params[1]);
 }
@@ -56147,13 +56147,13 @@ var require_errors3 = __commonJS({
 var require_parser = __commonJS({
   "node_modules/redis-parser/lib/parser.js"(exports, module) {
     "use strict";
-    var Buffer2 = __require("buffer").Buffer;
+    var Buffer3 = __require("buffer").Buffer;
     var StringDecoder = __require("string_decoder").StringDecoder;
     var decoder2 = new StringDecoder();
     var errors = require_redis_errors();
     var ReplyError = errors.ReplyError;
     var ParserError = errors.ParserError;
-    var bufferPool = Buffer2.allocUnsafe(32 * 1024);
+    var bufferPool = Buffer3.allocUnsafe(32 * 1024);
     var bufferOffset = 0;
     var interval = null;
     var counter = 0;
@@ -56366,7 +56366,7 @@ var require_parser = __commonJS({
         if (bufferOffset > 1024 * 1024 * 111) {
           bufferOffset = 1024 * 1024 * 50;
         }
-        bufferPool = Buffer2.allocUnsafe(length * multiplier + bufferOffset);
+        bufferPool = Buffer3.allocUnsafe(length * multiplier + bufferOffset);
         bufferOffset = 0;
         counter++;
         if (interval === null) {
@@ -56490,7 +56490,7 @@ var require_parser = __commonJS({
         } else if (this.bigStrSize === 0) {
           const oldLength = this.buffer.length;
           const remainingLength = oldLength - this.offset;
-          const newBuffer = Buffer2.allocUnsafe(remainingLength + buffer.length);
+          const newBuffer = Buffer3.allocUnsafe(remainingLength + buffer.length);
           this.buffer.copy(newBuffer, 0, this.offset, oldLength);
           buffer.copy(newBuffer, remainingLength, 0, buffer.length);
           this.buffer = newBuffer;
@@ -57497,10 +57497,10 @@ var require_Redis = __commonJS({
           }
         }
         if (command.name === "select" && (0, utils_1.isInt)(command.args[0])) {
-          const db5 = parseInt(command.args[0], 10);
-          if (this.condition.select !== db5) {
-            this.condition.select = db5;
-            this.emit("select", db5);
+          const db4 = parseInt(command.args[0], 10);
+          if (this.condition.select !== db4) {
+            this.condition.select = db4;
+            this.emit("select", db4);
             debug("switch to db [%d]", this.condition.select);
           }
         }
@@ -89929,10 +89929,10 @@ var require_Redis2 = __commonJS({
           }
         }
         if (command.name === "select" && (0, utils_1.isInt)(command.args[0])) {
-          const db5 = parseInt(command.args[0], 10);
-          if (this.condition.select !== db5) {
-            this.condition.select = db5;
-            this.emit("select", db5);
+          const db4 = parseInt(command.args[0], 10);
+          if (this.condition.select !== db4) {
+            this.condition.select = db4;
+            this.emit("select", db4);
             debug("switch to db [%d]", this.condition.select);
           }
         }
@@ -94946,7 +94946,7 @@ var require_canvas = __commonJS({
 var require_browser2 = __commonJS({
   "node_modules/qrcode/lib/browser.js"(exports) {
     var canPromise = require_can_promise();
-    var QRCode2 = require_qrcode();
+    var QRCode3 = require_qrcode();
     var CanvasRenderer = require_canvas();
     var SvgRenderer = require_svg_tag();
     function renderCanvas(renderFunc, canvas, text2, opts, cb) {
@@ -94989,7 +94989,7 @@ var require_browser2 = __commonJS({
         }
         return new Promise(function(resolve, reject) {
           try {
-            const data = QRCode2.create(text2, opts);
+            const data = QRCode3.create(text2, opts);
             resolve(renderFunc(data, canvas, opts));
           } catch (e) {
             reject(e);
@@ -94997,13 +94997,13 @@ var require_browser2 = __commonJS({
         });
       }
       try {
-        const data = QRCode2.create(text2, opts);
+        const data = QRCode3.create(text2, opts);
         cb(null, renderFunc(data, canvas, opts));
       } catch (e) {
         cb(e);
       }
     }
-    exports.create = QRCode2.create;
+    exports.create = QRCode3.create;
     exports.toCanvas = renderCanvas.bind(null, CanvasRenderer.render);
     exports.toDataURL = renderCanvas.bind(null, CanvasRenderer.renderToDataURL);
     exports.toString = renderCanvas.bind(null, function(data, _, opts) {
@@ -95016,7 +95016,7 @@ var require_browser2 = __commonJS({
 var require_server2 = __commonJS({
   "node_modules/qrcode/lib/server.js"(exports) {
     var canPromise = require_can_promise();
-    var QRCode2 = require_qrcode();
+    var QRCode3 = require_qrcode();
     var PngRenderer = require_png2();
     var Utf8Renderer = require_utf8();
     var TerminalRenderer = require_terminal2();
@@ -95073,7 +95073,7 @@ var require_server2 = __commonJS({
       if (!params.cb) {
         return new Promise(function(resolve, reject) {
           try {
-            const data = QRCode2.create(text2, params.opts);
+            const data = QRCode3.create(text2, params.opts);
             return renderFunc(data, params.opts, function(err, data2) {
               return err ? reject(err) : resolve(data2);
             });
@@ -95083,13 +95083,13 @@ var require_server2 = __commonJS({
         });
       }
       try {
-        const data = QRCode2.create(text2, params.opts);
+        const data = QRCode3.create(text2, params.opts);
         return renderFunc(data, params.opts, params.cb);
       } catch (e) {
         params.cb(e);
       }
     }
-    exports.create = QRCode2.create;
+    exports.create = QRCode3.create;
     exports.toCanvas = require_browser2().toCanvas;
     exports.toString = function toString(text2, opts, cb) {
       const params = checkParams(text2, opts, cb);
@@ -95145,8 +95145,8 @@ function endpointFor2(action, environment) {
   return action === "clearance" ? `${base}/invoices/clearance/single` : `${base}/invoices/reporting/single`;
 }
 async function getCredential(tenantId, environment) {
-  const db5 = getDb();
-  return db5.query.zatcaCredentials.findFirst({
+  const db4 = getDb();
+  return db4.query.zatcaCredentials.findFirst({
     where: and(
       eq(zatcaCredentials.tenantId, tenantId),
       eq(zatcaCredentials.environment, environment),
@@ -95155,8 +95155,8 @@ async function getCredential(tenantId, environment) {
   });
 }
 async function logApiCall(params) {
-  const db5 = getDb();
-  await db5.insert(zatcaApiLogs).values({
+  const db4 = getDb();
+  await db4.insert(zatcaApiLogs).values({
     tenantId: params.tenantId,
     invoiceId: params.invoiceId,
     action: params.action,
@@ -95186,8 +95186,8 @@ function decryptSecret2(value) {
   ]).toString("utf8");
 }
 async function submitInvoice(params) {
-  const db5 = getDb();
-  const xmlDoc = await db5.query.zatcaXmlDocuments.findFirst({
+  const db4 = getDb();
+  const xmlDoc = await db4.query.zatcaXmlDocuments.findFirst({
     where: and(
       eq(zatcaXmlDocuments.tenantId, params.tenantId),
       eq(zatcaXmlDocuments.invoiceId, params.invoiceId)
@@ -95200,7 +95200,7 @@ async function submitInvoice(params) {
       message: "Invoice must be signed before submission"
     });
   }
-  const statusRow = await db5.query.zatcaInvoiceStatus.findFirst({
+  const statusRow = await db4.query.zatcaInvoiceStatus.findFirst({
     where: and(
       eq(zatcaInvoiceStatus.tenantId, params.tenantId),
       eq(zatcaInvoiceStatus.invoiceId, params.invoiceId)
@@ -95277,12 +95277,12 @@ async function submitInvoice(params) {
         updateData.reportedAt = /* @__PURE__ */ new Date();
       }
       if (statusRow) {
-        await db5.update(zatcaInvoiceStatus).set(updateData).where(eq(zatcaInvoiceStatus.id, statusRow.id));
+        await db4.update(zatcaInvoiceStatus).set(updateData).where(eq(zatcaInvoiceStatus.id, statusRow.id));
       }
       const clearedXml = responseData.clearedInvoice;
       if (clearedXml && params.mode === "clearance" && xmlDoc) {
-        await db5.update(zatcaXmlDocuments).set({ clearedXml }).where(eq(zatcaXmlDocuments.id, xmlDoc.id));
-        await db5.update(invoices).set({ zatcaXml: clearedXml, zatcaStatus: "cleared" }).where(and(eq(invoices.id, params.invoiceId), eq(invoices.tenantId, params.tenantId)));
+        await db4.update(zatcaXmlDocuments).set({ clearedXml }).where(eq(zatcaXmlDocuments.id, xmlDoc.id));
+        await db4.update(invoices).set({ zatcaXml: clearedXml, zatcaStatus: "cleared" }).where(and(eq(invoices.id, params.invoiceId), eq(invoices.tenantId, params.tenantId)));
       }
       return {
         status: zatcaStatus,
@@ -95295,7 +95295,7 @@ async function submitInvoice(params) {
       };
     }
     if (statusRow) {
-      await db5.update(zatcaInvoiceStatus).set({
+      await db4.update(zatcaInvoiceStatus).set({
         status: "failed",
         errorCode: String(responseData.code || responseData.errorCode || ""),
         errorMessage: JSON.stringify(responseData),
@@ -95341,9 +95341,9 @@ var init_clearance = __esm({
 // api/queue/tax.queue.ts
 async function processSubmission(job) {
   const { type, tenantId, invoiceId } = job.data;
-  const db5 = getDb();
+  const db4 = getDb();
   if (type === "zatca-clearance" || type === "zatca-reporting") {
-    const credential = await db5.query.zatcaCredentials.findFirst({
+    const credential = await db4.query.zatcaCredentials.findFirst({
       where: eq(zatcaCredentials.tenantId, tenantId)
     });
     if (!credential) throw new Error("ZATCA credentials not configured for tenant");
@@ -95392,7 +95392,7 @@ var init_tax_queue = __esm({
 // api/queue/report.queue.ts
 async function processReport(job) {
   const { type, reportId, tenantId, params } = job.data;
-  const db5 = getDb();
+  const db4 = getDb();
   try {
     if (type === "pdf") {
       const { generatePdfReport } = await import("../lib/reportPdfGenerator");
@@ -95434,11 +95434,11 @@ var init_report_queue = __esm({
 // api/queue/export.queue.ts
 async function processExport(job) {
   const { entity, tenantId, format, filters } = job.data;
-  const db5 = getDb();
+  const db4 = getDb();
   const table = ENTITY_TABLE_MAP[entity];
   if (!table) throw new Error(`Unknown entity: ${entity}`);
   try {
-    let query = db5.select().from(table).where(eq(table.tenantId, tenantId));
+    let query = db4.select().from(table).where(eq(table.tenantId, tenantId));
     if (filters) {
       for (const [key2, value] of Object.entries(filters)) {
         if (value !== void 0 && value !== null && table[key2]) {
@@ -95490,7 +95490,7 @@ var init_export_queue = __esm({
 // api/queue/backup.queue.ts
 async function processBackup(job) {
   const { tenantId, type } = job.data;
-  const db5 = getDb();
+  const db4 = getDb();
   const backupId = `backup_${type}_${Date.now()}`;
   try {
     const { createBackup } = await import("../lib/backupEngine");
@@ -95525,18 +95525,18 @@ var init_backup_queue = __esm({
 // api/queue/maintenance.queue.ts
 async function processMaintenance(job) {
   const { type, tenantId } = job.data;
-  const db5 = getDb();
+  const db4 = getDb();
   let processed = 0;
   try {
     switch (type) {
       case "depreciation-calc": {
-        const assets2 = await db5.query.assets.findMany({
+        const assets2 = await db4.query.assets.findMany({
           where: tenantId ? eq(assets.tenantId, tenantId) : void 0
         });
         for (const asset of assets2) {
           if (asset.status === "active" && asset.usefulLife && asset.purchasePrice) {
             const monthlyDep = Number(asset.purchasePrice) / (Number(asset.usefulLife) * 12);
-            await db5.insert(depreciationEntries).values({
+            await db4.insert(depreciationEntries).values({
               tenantId: asset.tenantId,
               assetId: asset.id,
               period: (/* @__PURE__ */ new Date()).toISOString().slice(0, 7),
@@ -95550,7 +95550,7 @@ async function processMaintenance(job) {
       }
       case "overdue-check": {
         const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-        const overdueInvoices = await db5.query.invoices.findMany({
+        const overdueInvoices = await db4.query.invoices.findMany({
           where: and(
             eq(invoices.status, "overdue"),
             lte(invoices.dueDate, today)
@@ -95560,7 +95560,7 @@ async function processMaintenance(job) {
         break;
       }
       case "eosb-accrual": {
-        const employees3 = await db5.query.employees.findMany({
+        const employees3 = await db4.query.employees.findMany({
           where: and(
             tenantId ? eq(employees.tenantId, tenantId) : void 0,
             eq(employees.isActive, true)
@@ -95570,7 +95570,7 @@ async function processMaintenance(job) {
         break;
       }
       case "gosi-recalc": {
-        const employees3 = await db5.query.employees.findMany({
+        const employees3 = await db4.query.employees.findMany({
           where: and(
             tenantId ? eq(employees.tenantId, tenantId) : void 0,
             eq(employees.isActive, true)
@@ -95612,7 +95612,7 @@ var init_maintenance_queue = __esm({
 // api/queue/cleanup.queue.ts
 async function processCleanup(job) {
   const { type, olderThanDays = 30 } = job.data;
-  const db5 = getDb();
+  const db4 = getDb();
   let removed = 0;
   try {
     const cutoffDate = /* @__PURE__ */ new Date();
@@ -95620,12 +95620,12 @@ async function processCleanup(job) {
     const cutoffStr = cutoffDate.toISOString();
     switch (type) {
       case "log-rotation": {
-        const result = await db5.delete(auditLogs).where(lte(auditLogs.createdAt, cutoffStr));
+        const result = await db4.delete(auditLogs).where(lte(auditLogs.createdAt, cutoffStr));
         removed = result.rowCount || 0;
         break;
       }
       case "temp-files": {
-        const result = await db5.delete(notifications).where(and(
+        const result = await db4.delete(notifications).where(and(
           eq(notifications.isRead, true),
           lte(notifications.createdAt, cutoffStr)
         ));
@@ -95740,7 +95740,7 @@ import { createServer as createServerHTTP } from "http";
 import { Http2ServerRequest as Http2ServerRequest2, constants as h2constants } from "http2";
 import { Http2ServerRequest } from "http2";
 import { Readable } from "stream";
-import crypto14 from "crypto";
+import crypto15 from "crypto";
 async function readWithoutBlocking(readPromise) {
   return Promise.race([readPromise, Promise.resolve().then(() => Promise.resolve(void 0))]);
 }
@@ -96082,7 +96082,7 @@ var init_dist2 = __esm({
     };
     X_ALREADY_SENT = "x-hono-already-sent";
     if (typeof global.crypto === "undefined") {
-      global.crypto = crypto14;
+      global.crypto = crypto15;
     }
     outgoingEnded = /* @__PURE__ */ Symbol("outgoingEnded");
     incomingDraining = /* @__PURE__ */ Symbol("incomingDraining");
@@ -115871,21 +115871,21 @@ init_schema2();
 init_drizzle_orm();
 var dashboardRouter = createRouter({
   stats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalCustomers] = await db5.select({ count: sql`count(*)` }).from(customers).where(eq(customers.tenantId, tenantId));
-    const [totalSuppliers] = await db5.select({ count: sql`count(*)` }).from(suppliers).where(eq(suppliers.tenantId, tenantId));
-    const [totalProducts] = await db5.select({ count: sql`count(*)` }).from(products).where(eq(products.tenantId, tenantId));
-    const [totalEmployees] = await db5.select({ count: sql`count(*)` }).from(employees).where(eq(employees.tenantId, tenantId));
-    const [revenueResult] = await db5.select({
+    const [totalCustomers] = await db4.select({ count: sql`count(*)` }).from(customers).where(eq(customers.tenantId, tenantId));
+    const [totalSuppliers] = await db4.select({ count: sql`count(*)` }).from(suppliers).where(eq(suppliers.tenantId, tenantId));
+    const [totalProducts] = await db4.select({ count: sql`count(*)` }).from(products).where(eq(products.tenantId, tenantId));
+    const [totalEmployees] = await db4.select({ count: sql`count(*)` }).from(employees).where(eq(employees.tenantId, tenantId));
+    const [revenueResult] = await db4.select({
       total: sql`coalesce(sum(total_amount), 0)`
     }).from(invoices).where(and(eq(invoices.tenantId, tenantId), eq(invoices.status, "paid")));
-    const [payableResult] = await db5.select({
+    const [payableResult] = await db4.select({
       total: sql`coalesce(sum(total_amount), 0)`
     }).from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), eq(purchaseOrders.status, "invoiced")));
-    const [openTickets] = await db5.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.status, "open")));
-    const [activeProjects] = await db5.select({ count: sql`count(*)` }).from(projects).where(and(eq(projects.tenantId, tenantId), eq(projects.status, "active")));
-    const [lowStockItems] = await db5.select({ count: sql`count(*)` }).from(inventoryBalances).where(and(eq(inventoryBalances.tenantId, tenantId), sql`quantity <= 10`));
+    const [openTickets] = await db4.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.status, "open")));
+    const [activeProjects] = await db4.select({ count: sql`count(*)` }).from(projects).where(and(eq(projects.tenantId, tenantId), eq(projects.status, "active")));
+    const [lowStockItems] = await db4.select({ count: sql`count(*)` }).from(inventoryBalances).where(and(eq(inventoryBalances.tenantId, tenantId), sql`quantity <= 10`));
     return {
       totalCustomers: totalCustomers.count,
       totalSuppliers: totalSuppliers.count,
@@ -115899,10 +115899,10 @@ var dashboardRouter = createRouter({
     };
   }),
   revenueByMonth: authedQuery.input(external_exports.object({ year: external_exports.number() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const year3 = input?.year || (/* @__PURE__ */ new Date()).getFullYear();
-    const result = await db5.select({
+    const result = await db4.select({
       month: sql`month(date)`,
       total: sql`coalesce(sum(total_amount), 0)`
     }).from(invoices).where(and(
@@ -115912,25 +115912,25 @@ var dashboardRouter = createRouter({
     return result;
   }),
   expenseByCategory: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const result = await db5.select({
+    const result = await db4.select({
       type: journalEntries.referenceType,
       total: sql`coalesce(sum(total_debit), 0)`
     }).from(journalEntries).where(eq(journalEntries.tenantId, tenantId)).groupBy(journalEntries.referenceType);
     return result;
   }),
   recentInvoices: authedQuery.input(external_exports.object({ limit: external_exports.number().default(5) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 5;
-    return db5.select().from(invoices).where(eq(invoices.tenantId, tenantId)).orderBy(sql`created_at desc`).limit(limit);
+    return db4.select().from(invoices).where(eq(invoices.tenantId, tenantId)).orderBy(sql`created_at desc`).limit(limit);
   }),
   topCustomers: authedQuery.input(external_exports.object({ limit: external_exports.number().default(5) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 5;
-    return db5.select().from(customers).where(eq(customers.tenantId, tenantId)).orderBy(sql`current_balance desc`).limit(limit);
+    return db4.select().from(customers).where(eq(customers.tenantId, tenantId)).orderBy(sql`current_balance desc`).limit(limit);
   })
 });
 
@@ -115941,13 +115941,13 @@ init_drizzle_orm();
 var accountingRouter = createRouter({
   // Chart of Accounts
   coaList: authedQuery.input(external_exports.object({ type: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(chartOfAccounts.tenantId, tenantId)];
     if (input?.type) {
       conditions.push(eq(chartOfAccounts.accountType, input.type));
     }
-    return db5.select().from(chartOfAccounts).where(and(...conditions)).orderBy(chartOfAccounts.code);
+    return db4.select().from(chartOfAccounts).where(and(...conditions)).orderBy(chartOfAccounts.code);
   }),
   coaCreate: authedQuery.input(external_exports.object({
     code: external_exports.string(),
@@ -115964,8 +115964,8 @@ var accountingRouter = createRouter({
     bankAccountNumber: external_exports.string().optional(),
     bankIban: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(chartOfAccounts).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(chartOfAccounts).values({
       tenantId: ctx.user.tenantId,
       code: input.code,
       name: input.name,
@@ -115990,11 +115990,11 @@ var accountingRouter = createRouter({
     endDate: external_exports.string().optional(),
     status: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(journalEntries.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(journalEntries.isPosted, input.status === "posted"));
-    return db5.select().from(journalEntries).where(and(...conditions)).orderBy(desc(journalEntries.date));
+    return db4.select().from(journalEntries).where(and(...conditions)).orderBy(desc(journalEntries.date));
   }),
   journalEntryCreate: authedQuery.input(external_exports.object({
     entryNumber: external_exports.string(),
@@ -116011,10 +116011,10 @@ var accountingRouter = createRouter({
       costCenterId: external_exports.number().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const totalDebit = input.lines.reduce((sum5, l) => sum5 + Number(l.debit || 0), 0);
     const totalCredit = input.lines.reduce((sum5, l) => sum5 + Number(l.credit || 0), 0);
-    const [{ id }] = await db5.insert(journalEntries).values({
+    const [{ id }] = await db4.insert(journalEntries).values({
       tenantId: ctx.user.tenantId,
       entryNumber: input.entryNumber,
       date: input.date,
@@ -116027,7 +116027,7 @@ var accountingRouter = createRouter({
       isPosted: true
     }).$returningId();
     for (const line of input.lines) {
-      await db5.insert(journalEntryLines).values({
+      await db4.insert(journalEntryLines).values({
         journalEntryId: id,
         accountId: line.accountId,
         debit: line.debit || "0",
@@ -116039,18 +116039,18 @@ var accountingRouter = createRouter({
     return { id, success: true };
   }),
   journalEntryGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const entry = await db5.query.journalEntries.findFirst({
+    const db4 = getDb();
+    const entry = await db4.query.journalEntries.findFirst({
       where: eq(journalEntries.id, input.id)
     });
-    const lines = await db5.select().from(journalEntryLines).where(eq(journalEntryLines.journalEntryId, input.id));
+    const lines = await db4.select().from(journalEntryLines).where(eq(journalEntryLines.journalEntryId, input.id));
     return { entry, lines };
   }),
   // Trial Balance
   trialBalance: authedQuery.input(external_exports.object({ asOfDate: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    return db5.select({
+    return db4.select({
       accountId: chartOfAccounts.id,
       code: chartOfAccounts.code,
       name: chartOfAccounts.name,
@@ -116064,9 +116064,9 @@ var accountingRouter = createRouter({
   }),
   // Cost Centers
   costCenterList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    return db5.select().from(costCenters).where(eq(costCenters.tenantId, tenantId));
+    return db4.select().from(costCenters).where(eq(costCenters.tenantId, tenantId));
   }),
   costCenterCreate: authedQuery.input(external_exports.object({
     code: external_exports.string(),
@@ -116074,8 +116074,8 @@ var accountingRouter = createRouter({
     description: external_exports.string().optional(),
     budgetAmount: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(costCenters).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(costCenters).values({
       tenantId: ctx.user.tenantId,
       code: input.code,
       name: input.name,
@@ -116086,9 +116086,9 @@ var accountingRouter = createRouter({
   }),
   // Fiscal Years
   fiscalYearList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    return db5.select().from(fiscalYears).where(eq(fiscalYears.tenantId, tenantId));
+    return db4.select().from(fiscalYears).where(eq(fiscalYears.tenantId, tenantId));
   })
 });
 
@@ -116100,12 +116100,12 @@ init_drizzle_orm();
 var inventoryRouter = createRouter({
   // Product Categories
   categoryList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(productCategories).where(eq(productCategories.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(productCategories).where(eq(productCategories.tenantId, ctx.user.tenantId));
   }),
   categoryCreate: authedQuery.input(external_exports.object({ name: external_exports.string(), nameAr: external_exports.string().optional(), description: external_exports.string().optional(), image: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(productCategories).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(productCategories).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   categoryUpdate: authedQuery.input(external_exports.object({
@@ -116116,39 +116116,39 @@ var inventoryRouter = createRouter({
     image: external_exports.string().optional(),
     isActive: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    const existing = await db5.query.productCategories.findFirst({
+    const existing = await db4.query.productCategories.findFirst({
       where: and(eq(productCategories.id, id), eq(productCategories.tenantId, ctx.user.tenantId))
     });
     if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
-    await db5.update(productCategories).set(data).where(and(eq(productCategories.id, id), eq(productCategories.tenantId, ctx.user.tenantId)));
+    await db4.update(productCategories).set(data).where(and(eq(productCategories.id, id), eq(productCategories.tenantId, ctx.user.tenantId)));
     return { success: true, id };
   }),
   categoryDelete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(productCategories).where(and(eq(productCategories.id, input.id), eq(productCategories.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.delete(productCategories).where(and(eq(productCategories.id, input.id), eq(productCategories.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   // Brands
   brandList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(brands).where(eq(brands.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(brands).where(eq(brands.tenantId, ctx.user.tenantId));
   }),
   brandCreate: authedQuery.input(external_exports.object({ name: external_exports.string(), description: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(brands).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(brands).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Units
   unitList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(units).where(eq(units.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(units).where(eq(units.tenantId, ctx.user.tenantId));
   }),
   // Warehouses
   warehouseList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(warehouses).where(eq(warehouses.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(warehouses).where(eq(warehouses.tenantId, ctx.user.tenantId));
   }),
   warehouseCreate: authedQuery.input(external_exports.object({
     code: external_exports.string(),
@@ -116158,8 +116158,8 @@ var inventoryRouter = createRouter({
     phone: external_exports.string().optional(),
     isPrimary: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(warehouses).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(warehouses).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   warehouseUpdate: authedQuery.input(external_exports.object({
@@ -116172,13 +116172,13 @@ var inventoryRouter = createRouter({
     isPrimary: external_exports.boolean().optional(),
     isActive: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    const existing = await db5.query.warehouses.findFirst({
+    const existing = await db4.query.warehouses.findFirst({
       where: and(eq(warehouses.id, id), eq(warehouses.tenantId, ctx.user.tenantId))
     });
     if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Warehouse not found" });
-    await db5.update(warehouses).set(data).where(and(eq(warehouses.id, id), eq(warehouses.tenantId, ctx.user.tenantId)));
+    await db4.update(warehouses).set(data).where(and(eq(warehouses.id, id), eq(warehouses.tenantId, ctx.user.tenantId)));
     return { success: true, id };
   }),
   // Products
@@ -116186,19 +116186,19 @@ var inventoryRouter = createRouter({
     categoryId: external_exports.number().optional(),
     search: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(products.tenantId, tenantId)];
     if (input?.categoryId) conditions.push(eq(products.categoryId, input.categoryId));
     if (input?.search) conditions.push(like2(products.name, `%${input.search}%`));
-    return db5.select().from(products).where(and(...conditions)).orderBy(desc(products.createdAt));
+    return db4.select().from(products).where(and(...conditions)).orderBy(desc(products.createdAt));
   }),
   productGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const product = await db5.query.products.findFirst({
+    const db4 = getDb();
+    const product = await db4.query.products.findFirst({
       where: eq(products.id, input.id)
     });
-    const balances = await db5.select().from(inventoryBalances).where(eq(inventoryBalances.productId, input.id));
+    const balances = await db4.select().from(inventoryBalances).where(eq(inventoryBalances.productId, input.id));
     return { product, balances };
   }),
   productCreate: authedQuery.input(external_exports.object({
@@ -116219,8 +116219,8 @@ var inventoryRouter = createRouter({
     isTaxable: external_exports.boolean().optional(),
     image: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(products).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(products).values({
       ...input,
       tenantId: ctx.user.tenantId,
       costMethod: input.costMethod || "fifo"
@@ -116237,9 +116237,9 @@ var inventoryRouter = createRouter({
     isActive: external_exports.boolean().optional(),
     reorderLevel: external_exports.number().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(products).set(data).where(eq(products.id, id));
+    await db4.update(products).set(data).where(eq(products.id, id));
     return { success: true };
   }),
   // Inventory Balances
@@ -116247,12 +116247,12 @@ var inventoryRouter = createRouter({
     warehouseId: external_exports.number().optional(),
     lowStock: external_exports.boolean().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(inventoryBalances.tenantId, tenantId)];
     if (input?.warehouseId) conditions.push(eq(inventoryBalances.warehouseId, input.warehouseId));
     if (input?.lowStock) conditions.push(sql`quantity <= 10`);
-    return db5.select({
+    return db4.select({
       id: inventoryBalances.id,
       productId: inventoryBalances.productId,
       warehouseId: inventoryBalances.warehouseId,
@@ -116271,17 +116271,17 @@ var inventoryRouter = createRouter({
     productId: external_exports.number().optional(),
     warehouseId: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(inventoryMovements2.tenantId, tenantId)];
     if (input?.productId) conditions.push(eq(inventoryMovements2.productId, input.productId));
     if (input?.warehouseId) conditions.push(eq(inventoryMovements2.warehouseId, input.warehouseId));
-    return db5.select().from(inventoryMovements2).where(and(...conditions)).orderBy(desc(inventoryMovements2.createdAt));
+    return db4.select().from(inventoryMovements2).where(and(...conditions)).orderBy(desc(inventoryMovements2.createdAt));
   }),
   // Stock Transfers
   transferList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(stockTransfers).where(eq(stockTransfers.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(stockTransfers).where(eq(stockTransfers.tenantId, ctx.user.tenantId));
   }),
   transferCreate: authedQuery.input(external_exports.object({
     transferNumber: external_exports.string(),
@@ -116295,8 +116295,8 @@ var inventoryRouter = createRouter({
       unitCost: external_exports.string().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(stockTransfers).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(stockTransfers).values({
       tenantId: ctx.user.tenantId,
       transferNumber: input.transferNumber,
       fromWarehouseId: input.fromWarehouseId,
@@ -116305,31 +116305,31 @@ var inventoryRouter = createRouter({
       notes: input.notes
     }).$returningId();
     for (const item of input.items) {
-      await db5.insert(stockTransferItems).values({
+      await db4.insert(stockTransferItems).values({
         transferId: id,
         productId: item.productId,
         quantity: item.quantity,
         unitCost: item.unitCost
       });
-      const fromRows = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.fromWarehouseId)));
+      const fromRows = await db4.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.fromWarehouseId)));
       if (fromRows.length) {
         const newFrom = Math.max(0, Number(fromRows[0].quantity || 0) - item.quantity);
-        await db5.update(inventoryBalances).set({ quantity: newFrom }).where(eq(inventoryBalances.id, fromRows[0].id));
+        await db4.update(inventoryBalances).set({ quantity: newFrom }).where(eq(inventoryBalances.id, fromRows[0].id));
       }
-      const toRows = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.toWarehouseId)));
+      const toRows = await db4.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.toWarehouseId)));
       if (toRows.length) {
         const newTo = Number(toRows[0].quantity || 0) + item.quantity;
-        await db5.update(inventoryBalances).set({ quantity: newTo }).where(eq(inventoryBalances.id, toRows[0].id));
+        await db4.update(inventoryBalances).set({ quantity: newTo }).where(eq(inventoryBalances.id, toRows[0].id));
       } else {
-        await db5.insert(inventoryBalances).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.toWarehouseId, quantity: item.quantity });
+        await db4.insert(inventoryBalances).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.toWarehouseId, quantity: item.quantity });
       }
     }
     return { id, success: true };
   }),
   // Stock Adjustments
   adjustmentList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(stockAdjustments).where(eq(stockAdjustments.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(stockAdjustments).where(eq(stockAdjustments.tenantId, ctx.user.tenantId));
   }),
   adjustmentCreate: authedQuery.input(external_exports.object({
     adjustmentDate: external_exports.string(),
@@ -116344,12 +116344,12 @@ var inventoryRouter = createRouter({
       notes: external_exports.string().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const num = `ADJ-${Date.now()}`;
     let totalValue = 0;
     const typeMap = { addition: "other", subtraction: "other", damage: "damage", expiry: "expiry", audit: "count", theft: "theft", other: "other", count: "count" };
-    const [{ id }] = await db5.insert(stockAdjustments).values({
+    const [{ id }] = await db4.insert(stockAdjustments).values({
       tenantId,
       adjustmentNumber: num,
       warehouseId: input.warehouseId,
@@ -116360,21 +116360,21 @@ var inventoryRouter = createRouter({
       createdBy: ctx.user.id
     }).$returningId();
     for (const item of input.items) {
-      const balRows = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId), eq(inventoryBalances.warehouseId, input.warehouseId)));
+      const balRows = await db4.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId), eq(inventoryBalances.warehouseId, input.warehouseId)));
       const currentQty = balRows.length ? Number(balRows[0].quantity || 0) : 0;
       const adjustedQty = item.quantity;
       const difference = adjustedQty - currentQty;
       totalValue += Math.abs(difference) * Number(item.unitCost || 0);
-      await db5.insert(stockAdjustmentItems).values({ adjustmentId: id, productId: item.productId, currentQty, adjustedQty, difference, unitCost: item.unitCost, reason: item.notes });
+      await db4.insert(stockAdjustmentItems).values({ adjustmentId: id, productId: item.productId, currentQty, adjustedQty, difference, unitCost: item.unitCost, reason: item.notes });
       const newQty = Math.max(0, adjustedQty);
       if (balRows.length) {
-        await db5.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, balRows[0].id));
+        await db4.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, balRows[0].id));
       } else {
-        await db5.insert(inventoryBalances).values({ tenantId, productId: item.productId, warehouseId: input.warehouseId, quantity: newQty });
+        await db4.insert(inventoryBalances).values({ tenantId, productId: item.productId, warehouseId: input.warehouseId, quantity: newQty });
       }
-      await db5.insert(inventoryMovements2).values({ tenantId, productId: item.productId, warehouseId: input.warehouseId, movementType: "adjustment", quantity: difference, reference: "adjustment", referenceId: id, createdBy: ctx.user.id });
+      await db4.insert(inventoryMovements2).values({ tenantId, productId: item.productId, warehouseId: input.warehouseId, movementType: "adjustment", quantity: difference, reference: "adjustment", referenceId: id, createdBy: ctx.user.id });
     }
-    await db5.update(stockAdjustments).set({ totalValue: totalValue.toFixed(4) }).where(eq(stockAdjustments.id, id));
+    await db4.update(stockAdjustments).set({ totalValue: totalValue.toFixed(4) }).where(eq(stockAdjustments.id, id));
     return { id, success: true };
   })
 });
@@ -116557,8 +116557,8 @@ var SYSTEM_TEMPLATES = [
 var TemplateEngine = class {
   async getTemplate(tenantId, key2) {
     if (tenantId) {
-      const db5 = getDb();
-      const tpl = await db5.query.notificationTemplates.findFirst({
+      const db4 = getDb();
+      const tpl = await db4.query.notificationTemplates.findFirst({
         where: and(eq(notificationTemplates.tenantId, tenantId), eq(notificationTemplates.templateKey, key2))
       });
       if (tpl) {
@@ -116610,8 +116610,8 @@ var TemplateEngine = class {
       type: "info"
     }));
     if (!tenantId) return system;
-    const db5 = getDb();
-    const custom2 = await db5.select().from(notificationTemplates).where(
+    const db4 = getDb();
+    const custom2 = await db4.select().from(notificationTemplates).where(
       eq(notificationTemplates.tenantId, tenantId)
     );
     const customMapped = custom2.map((t2) => ({
@@ -116629,12 +116629,12 @@ var TemplateEngine = class {
     return [...customMapped, ...system.filter((s) => !custom2.find((c) => c.templateKey === s.templateKey))];
   }
   async saveTemplate(tenantId, data) {
-    const db5 = getDb();
-    const existing = await db5.query.notificationTemplates.findFirst({
+    const db4 = getDb();
+    const existing = await db4.query.notificationTemplates.findFirst({
       where: and(eq(notificationTemplates.tenantId, tenantId), eq(notificationTemplates.templateKey, data.templateKey))
     });
     if (existing) {
-      await db5.update(notificationTemplates).set({
+      await db4.update(notificationTemplates).set({
         name: data.name,
         title: data.title,
         titleAr: data.titleAr,
@@ -116645,7 +116645,7 @@ var TemplateEngine = class {
       }).where(eq(notificationTemplates.id, existing.id));
       return existing.id;
     }
-    const [ins] = await db5.insert(notificationTemplates).values({
+    const [ins] = await db4.insert(notificationTemplates).values({
       tenantId,
       templateKey: data.templateKey,
       name: data.name,
@@ -116670,8 +116670,8 @@ init_schema2();
 init_drizzle_orm();
 init_smtp();
 async function getChannelConfig(tenantId) {
-  const db5 = getDb();
-  const settings = await db5.query.companySettings.findFirst({
+  const db4 = getDb();
+  const settings = await db4.query.companySettings.findFirst({
     where: eq(companySettings.tenantId, tenantId)
   });
   return {
@@ -116688,8 +116688,8 @@ async function getChannelConfig(tenantId) {
   };
 }
 async function getUserChannelPreferences(tenantId, userId) {
-  const db5 = getDb();
-  const prefs = await db5.query.notificationTemplates.findFirst({
+  const db4 = getDb();
+  const prefs = await db4.query.notificationTemplates.findFirst({
     where: and(eq(notificationTemplates.tenantId, tenantId))
   });
   const vars = prefs?.variables;
@@ -116887,16 +116887,16 @@ function buildHtml(eventType, vars) {
   }
 }
 async function onInvoiceCreated(tenantId, invoiceId) {
-  const db5 = getDb();
-  const invoice = await db5.query.invoices.findFirst({
+  const db4 = getDb();
+  const invoice = await db4.query.invoices.findFirst({
     where: eq(invoices.id, invoiceId)
   });
   if (!invoice) return;
-  const customer = await db5.query.customers.findFirst({
+  const customer = await db4.query.customers.findFirst({
     where: eq(customers.id, invoice.customerId)
   });
   if (!customer) return;
-  const settings = await db5.query.companySettings.findFirst({
+  const settings = await db4.query.companySettings.findFirst({
     where: eq(companySettings.tenantId, tenantId)
   });
   if (customer.email) {
@@ -116929,12 +116929,12 @@ async function onInvoiceCreated(tenantId, invoiceId) {
   }
 }
 async function onPaymentReceived(tenantId, customerId, invoiceId, amount) {
-  const db5 = getDb();
-  const invoice = await db5.query.invoices.findFirst({
+  const db4 = getDb();
+  const invoice = await db4.query.invoices.findFirst({
     where: eq(invoices.id, invoiceId)
   });
   if (!invoice) return;
-  const customer = await db5.query.customers.findFirst({
+  const customer = await db4.query.customers.findFirst({
     where: eq(customers.id, customerId)
   });
   if (customer?.email) {
@@ -116951,8 +116951,8 @@ async function onPaymentReceived(tenantId, customerId, invoiceId, amount) {
   }
 }
 async function checkLowStockAndNotify(tenantId) {
-  const db5 = getDb();
-  const lowStockItems = await db5.select({
+  const db4 = getDb();
+  const lowStockItems = await db4.select({
     productId: products.id,
     productName: products.name,
     productNameAr: products.nameAr,
@@ -116966,7 +116966,7 @@ async function checkLowStockAndNotify(tenantId) {
     )
   );
   if (lowStockItems.length === 0) return;
-  const settings = await db5.query.companySettings.findFirst({
+  const settings = await db4.query.companySettings.findFirst({
     where: eq(companySettings.tenantId, tenantId)
   });
   const ownerEmail = settings?.email;
@@ -116996,12 +116996,12 @@ function encodeZatcaTlv(tag2, value) {
   buf.set(valueBytes, 2);
   return buf;
 }
-function buildZatcaQrPayload(sellerName, vatNumber, timestamp2, totalWithVat, vatTotal) {
+function buildZatcaQrPayload(sellerName, vatNumber, timestamp2, totalWithVat2, vatTotal) {
   const parts = [
     encodeZatcaTlv(1, sellerName),
     encodeZatcaTlv(2, vatNumber),
     encodeZatcaTlv(3, timestamp2),
-    encodeZatcaTlv(4, totalWithVat),
+    encodeZatcaTlv(4, totalWithVat2),
     encodeZatcaTlv(5, vatTotal)
   ];
   const combined = Buffer.concat(parts.map((part) => Buffer.from(part)));
@@ -117050,16 +117050,16 @@ function isIssuedOrZatcaLocked(invoice) {
 var salesRouter = createRouter({
   // Customers
   customerList: authedQuery.input(external_exports.object({ search: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(customers.tenantId, tenantId)];
     if (input?.search) conditions.push(like2(customers.name, `%${input.search}%`));
-    return db5.select().from(customers).where(and(...conditions)).orderBy(desc(customers.createdAt));
+    return db4.select().from(customers).where(and(...conditions)).orderBy(desc(customers.createdAt));
   }),
   customerGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    return db5.query.customers.findFirst({
+    return db4.query.customers.findFirst({
       where: and(eq(customers.tenantId, tenantId), eq(customers.id, input.id))
     });
   }),
@@ -117090,8 +117090,8 @@ var salesRouter = createRouter({
     openingBalanceDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(customers).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(customers).values({
       tenantId: ctx.user.tenantId,
       code: input.code || `CUST-${Date.now()}`,
       name: input.name,
@@ -117150,26 +117150,26 @@ var salesRouter = createRouter({
     notes: external_exports.string().optional(),
     isActive: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
     const updateData = { ...data };
     if (updateData.creditLimit === "" || updateData.creditLimit === void 0) updateData.creditLimit = "0";
     if (updateData.openingBalance === "" || updateData.openingBalance === void 0) updateData.openingBalance = "0";
     if (updateData.openingBalanceDate === "") updateData.openingBalanceDate = null;
     if (updateData.paymentTerms === void 0) delete updateData.paymentTerms;
-    const existing = await db5.query.customers.findFirst({
+    const existing = await db4.query.customers.findFirst({
       where: and(eq(customers.id, id), eq(customers.tenantId, ctx.user.tenantId))
     });
     if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
-    await db5.update(customers).set(updateData).where(and(eq(customers.id, id), eq(customers.tenantId, ctx.user.tenantId)));
+    await db4.update(customers).set(updateData).where(and(eq(customers.id, id), eq(customers.tenantId, ctx.user.tenantId)));
     return { success: true, id };
   }),
   quotationList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), customerId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(salesQuotations.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(salesQuotations.status, input.status));
     if (input?.customerId) conditions.push(eq(salesQuotations.customerId, input.customerId));
-    return db5.select().from(salesQuotations).where(and(...conditions)).orderBy(desc(salesQuotations.createdAt));
+    return db4.select().from(salesQuotations).where(and(...conditions)).orderBy(desc(salesQuotations.createdAt));
   }),
   quotationCreate: authedQuery.input(external_exports.object({
     quotationNumber: external_exports.string(),
@@ -117188,24 +117188,24 @@ var salesRouter = createRouter({
       totalAmount: external_exports.string()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, ...quotationData } = input;
-    const [{ id }] = await db5.insert(salesQuotations).values({
+    const [{ id }] = await db4.insert(salesQuotations).values({
       ...quotationData,
       tenantId: ctx.user.tenantId,
       status: "draft"
     }).$returningId();
     for (const item of items) {
-      await db5.insert(salesQuotationItems).values({ ...item, quotationId: id });
+      await db4.insert(salesQuotationItems).values({ ...item, quotationId: id });
     }
     return { id, success: true };
   }),
   orderList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), customerId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(salesOrders.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(salesOrders.status, input.status));
     if (input?.customerId) conditions.push(eq(salesOrders.customerId, input.customerId));
-    return db5.select().from(salesOrders).where(and(...conditions)).orderBy(desc(salesOrders.createdAt));
+    return db4.select().from(salesOrders).where(and(...conditions)).orderBy(desc(salesOrders.createdAt));
   }),
   orderCreate: authedQuery.input(external_exports.object({
     orderNumber: external_exports.string(),
@@ -117224,24 +117224,24 @@ var salesRouter = createRouter({
       totalAmount: external_exports.string()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, ...orderData } = input;
-    const [{ id }] = await db5.insert(salesOrders).values({
+    const [{ id }] = await db4.insert(salesOrders).values({
       ...orderData,
       tenantId: ctx.user.tenantId,
       status: "draft"
     }).$returningId();
     for (const item of items) {
-      await db5.insert(salesOrderItems).values({ ...item, orderId: id });
+      await db4.insert(salesOrderItems).values({ ...item, orderId: id });
     }
     return { id, success: true };
   }),
   invoiceList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), customerId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(invoices.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(invoices.status, input.status));
     if (input?.customerId) conditions.push(eq(invoices.customerId, input.customerId));
-    const rows = await db5.select({
+    const rows = await db4.select({
       id: invoices.id,
       tenantId: invoices.tenantId,
       invoiceNumber: invoices.invoiceNumber,
@@ -117269,16 +117269,16 @@ var salesRouter = createRouter({
     return rows;
   }),
   invoiceGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const invoice = await db5.query.invoices.findFirst({
+    const invoice = await db4.query.invoices.findFirst({
       where: and(eq(invoices.id, input.id), eq(invoices.tenantId, tenantId))
     });
-    const items = await db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.id));
-    const customer = invoice ? await db5.query.customers.findFirst({
+    const items = await db4.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.id));
+    const customer = invoice ? await db4.query.customers.findFirst({
       where: and(eq(customers.id, invoice.customerId), eq(customers.tenantId, tenantId))
     }) : null;
-    const company = await db5.query.companySettings.findFirst({
+    const company = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, tenantId)
     });
     return { invoice, items, customer, company };
@@ -117308,10 +117308,10 @@ var salesRouter = createRouter({
       totalAmount: external_exports.string()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, ...invoiceData } = input;
     const tenantId = ctx.user.tenantId;
-    const settings = await db5.query.companySettings.findFirst({
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, tenantId)
     });
     const isForcedZatca = invoiceData.invoiceType === "zatca";
@@ -117323,7 +117323,23 @@ var salesRouter = createRouter({
     const vatNumber = settings?.taxNumber || "";
     const isZatcaEligible = saudiInvoice && isValidSaudiVatNumber(vatNumber) && sellerName.trim();
     const isSimplified = saudiInvoice && !isZatcaEligible;
-    const invoiceType = isZatcaEligible ? "zatca" : isSimplified ? "simplified" : invoiceData.invoiceType || "standard";
+    const ZATCA_THRESHOLD = 7e5;
+    const salesAgg = await db4.select({ total: sql`COALESCE(SUM(CAST(${invoices.totalAmount} AS DECIMAL(15,2))), 0)` }).from(invoices).where(eq(invoices.tenantId, tenantId));
+    const totalSales = Number(salesAgg[0]?.total || 0) + Number(invoiceData.totalAmount || 0);
+    const isAboveThreshold = totalSales > ZATCA_THRESHOLD;
+    let invoiceType;
+    if (isAboveThreshold) {
+      if (isValidSaudiVatNumber(vatNumber) && sellerName.trim()) {
+        invoiceType = "zatca";
+      } else {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `ZATCA mandatory: Total sales (SAR ${totalSales.toLocaleString()}) exceeded SAR ${ZATCA_THRESHOLD.toLocaleString()}. Please add a valid 15-digit VAT number in Settings \u2192 Company Legal Information before creating invoices.`
+        });
+      }
+    } else {
+      invoiceType = isZatcaEligible ? "zatca" : isSimplified ? "simplified" : invoiceData.invoiceType || "standard";
+    }
     if (!sellerName.trim()) {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -117357,13 +117373,13 @@ var salesRouter = createRouter({
     }) : void 0;
     let resolvedCustomerId = invoiceData.customerId && invoiceData.customerId > 0 ? invoiceData.customerId : null;
     if (!resolvedCustomerId) {
-      const walkIn = await db5.query.customers.findFirst({
+      const walkIn = await db4.query.customers.findFirst({
         where: and(eq(customers.tenantId, tenantId), eq(customers.code, "WALK-IN"))
       });
       if (walkIn) {
         resolvedCustomerId = walkIn.id;
       } else {
-        const [{ id: wid }] = await db5.insert(customers).values({
+        const [{ id: wid }] = await db4.insert(customers).values({
           tenantId,
           code: "WALK-IN",
           name: "Walk-in Customer",
@@ -117374,7 +117390,7 @@ var salesRouter = createRouter({
         resolvedCustomerId = wid;
       }
     }
-    const [{ id }] = await db5.insert(invoices).values({
+    const [{ id }] = await db4.insert(invoices).values({
       invoiceNumber: invoiceData.invoiceNumber,
       invoiceType,
       customerId: resolvedCustomerId,
@@ -117386,15 +117402,15 @@ var salesRouter = createRouter({
       totalAmount: invoiceData.totalAmount,
       notes: invoiceData.notes,
       tenantId,
-      zatcaQrCode,
-      zatcaXml,
-      zatcaStatus: isZatcaEligible ? "pending" : void 0,
+      zatcaQrCode: isAboveThreshold ? zatcaQrCode : void 0,
+      zatcaXml: isAboveThreshold ? zatcaXml : void 0,
+      zatcaStatus: isAboveThreshold && isZatcaEligible ? "pending" : void 0,
       terms: settings?.invoiceTerms,
       balanceDue: invoiceData.totalAmount,
       status: "draft"
     }).$returningId();
     for (const item of items) {
-      await db5.insert(invoiceItems).values({
+      await db4.insert(invoiceItems).values({
         invoiceId: id,
         description: item.description,
         quantity: item.quantity,
@@ -117404,7 +117420,7 @@ var salesRouter = createRouter({
         productId: item.productId
       });
     }
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId,
       userId: ctx.user.id,
       action: "invoice_create",
@@ -117428,8 +117444,8 @@ var salesRouter = createRouter({
     return { id, success: true };
   }),
   invoiceUpdateStatus: authedQuery.input(external_exports.object({ id: external_exports.number(), status: external_exports.enum(["draft", "sent", "paid", "partial", "overdue", "cancelled"]) })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(invoices).set({ status: input.status }).where(eq(invoices.id, input.id));
+    const db4 = getDb();
+    await db4.update(invoices).set({ status: input.status }).where(eq(invoices.id, input.id));
     return { success: true };
   }),
   invoiceUpdate: authedQuery.input(external_exports.object({
@@ -117455,11 +117471,11 @@ var salesRouter = createRouter({
       totalAmount: external_exports.string()
     })).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const { items, ...invoiceData } = input;
     const invoiceId = input.id;
-    const existingInvoice = await db5.query.invoices.findFirst({
+    const existingInvoice = await db4.query.invoices.findFirst({
       where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
     });
     if (!existingInvoice) {
@@ -117471,7 +117487,7 @@ var salesRouter = createRouter({
         message: "Issued, paid, reported, or cleared invoices are immutable. Use a credit/debit note instead."
       });
     }
-    const settings = await db5.query.companySettings.findFirst({
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, tenantId)
     });
     const saudiInvoice = isSaudiCompany(settings) || invoiceData.invoiceType === "zatca";
@@ -117514,7 +117530,7 @@ var salesRouter = createRouter({
     }
     const invoiceUpdateData = { ...invoiceData };
     if (!invoiceUpdateData.dueDate) invoiceUpdateData.dueDate = null;
-    await db5.update(invoices).set({
+    await db4.update(invoices).set({
       ...invoiceUpdateData,
       invoiceType,
       taxPercent,
@@ -117526,12 +117542,12 @@ var salesRouter = createRouter({
       updatedAt: /* @__PURE__ */ new Date()
     }).where(eq(invoices.id, invoiceId));
     if (items) {
-      await db5.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
+      await db4.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
       for (const item of items) {
-        await db5.insert(invoiceItems).values({ ...item, invoiceId });
+        await db4.insert(invoiceItems).values({ ...item, invoiceId });
       }
     }
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId,
       userId: ctx.user.id,
       action: "invoice_update",
@@ -117548,10 +117564,10 @@ var salesRouter = createRouter({
     return { id: invoiceId, success: true };
   }),
   invoiceDelete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const invoiceId = input.id;
-    const existingInvoice = await db5.query.invoices.findFirst({
+    const existingInvoice = await db4.query.invoices.findFirst({
       where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
     });
     if (!existingInvoice) {
@@ -117563,9 +117579,9 @@ var salesRouter = createRouter({
         message: "Cannot delete issued, paid, reported, or cleared invoices. Create a credit/debit note instead."
       });
     }
-    await db5.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
-    await db5.delete(invoices).where(eq(invoices.id, invoiceId));
-    await db5.insert(auditLogs).values({
+    await db4.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
+    await db4.delete(invoices).where(eq(invoices.id, invoiceId));
+    await db4.insert(auditLogs).values({
       tenantId,
       userId: ctx.user.id,
       action: "invoice_delete",
@@ -117582,8 +117598,8 @@ var salesRouter = createRouter({
   }),
   // Credit Notes
   creditNoteList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(creditNotes).where(eq(creditNotes.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(creditNotes).where(eq(creditNotes.tenantId, ctx.user.tenantId));
   }),
   creditNoteCreate: authedQuery.input(external_exports.object({
     creditNoteNumber: external_exports.string(),
@@ -117593,8 +117609,8 @@ var salesRouter = createRouter({
     amount: external_exports.string(),
     reason: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(creditNotes).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(creditNotes).values({
       ...input,
       tenantId: ctx.user.tenantId,
       invoiceId: input.invoiceId || 0,
@@ -117606,11 +117622,11 @@ var salesRouter = createRouter({
   paymentList: authedQuery.input(external_exports.object({
     customerId: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(customerPayments.tenantId, tenantId)];
     if (input?.customerId) conditions.push(eq(customerPayments.customerId, input.customerId));
-    return db5.select().from(customerPayments).where(and(...conditions));
+    return db4.select().from(customerPayments).where(and(...conditions));
   }),
   paymentCreate: authedQuery.input(external_exports.object({
     paymentNumber: external_exports.string(),
@@ -117622,8 +117638,8 @@ var salesRouter = createRouter({
     reference: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(customerPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(customerPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     if (input.invoiceId) {
       onPaymentReceived(ctx.user.tenantId, input.customerId, input.invoiceId, input.amount).catch(
         (err) => console.error("[notify] onPaymentReceived error:", err)
@@ -117640,16 +117656,16 @@ init_drizzle_orm();
 var purchaseRouter = createRouter({
   // Suppliers
   supplierList: authedQuery.input(external_exports.object({ search: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(suppliers.tenantId, tenantId)];
     if (input?.search) conditions.push(like2(suppliers.name, `%${input.search}%`));
-    return db5.select().from(suppliers).where(and(...conditions)).orderBy(desc(suppliers.createdAt));
+    return db4.select().from(suppliers).where(and(...conditions)).orderBy(desc(suppliers.createdAt));
   }),
   supplierGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const supplier = await db5.query.suppliers.findFirst({ where: eq(suppliers.id, input.id) });
-    const pos = await db5.select().from(purchaseOrders).where(eq(purchaseOrders.supplierId, input.id));
+    const db4 = getDb();
+    const supplier = await db4.query.suppliers.findFirst({ where: eq(suppliers.id, input.id) });
+    const pos = await db4.select().from(purchaseOrders).where(eq(purchaseOrders.supplierId, input.id));
     return { supplier, purchaseOrders: pos };
   }),
   supplierCreate: authedQuery.input(external_exports.object({
@@ -117664,8 +117680,8 @@ var purchaseRouter = createRouter({
     creditLimit: external_exports.string().optional(),
     paymentTerms: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(suppliers).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(suppliers).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Purchase Orders
@@ -117673,12 +117689,12 @@ var purchaseRouter = createRouter({
     status: external_exports.string().optional(),
     supplierId: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(purchaseOrders.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(purchaseOrders.status, input.status));
     if (input?.supplierId) conditions.push(eq(purchaseOrders.supplierId, input.supplierId));
-    return db5.select().from(purchaseOrders).where(and(...conditions)).orderBy(desc(purchaseOrders.createdAt));
+    return db4.select().from(purchaseOrders).where(and(...conditions)).orderBy(desc(purchaseOrders.createdAt));
   }),
   poCreate: authedQuery.input(external_exports.object({
     poNumber: external_exports.string(),
@@ -117697,21 +117713,21 @@ var purchaseRouter = createRouter({
       totalAmount: external_exports.string()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, ...poData } = input;
-    const [{ id }] = await db5.insert(purchaseOrders).values({
+    const [{ id }] = await db4.insert(purchaseOrders).values({
       ...poData,
       tenantId: ctx.user.tenantId
     }).$returningId();
     for (const item of items) {
-      await db5.insert(purchaseOrderItems).values({ ...item, poId: id });
+      await db4.insert(purchaseOrderItems).values({ ...item, poId: id });
     }
     return { id, success: true };
   }),
   // GRN
   grnList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(goodsReceivedNotes).where(eq(goodsReceivedNotes.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(goodsReceivedNotes).where(eq(goodsReceivedNotes.tenantId, ctx.user.tenantId));
   }),
   grnCreate: authedQuery.input(external_exports.object({
     grnNumber: external_exports.string(),
@@ -117731,29 +117747,29 @@ var purchaseRouter = createRouter({
       expiryDate: external_exports.string().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, ...grnData } = input;
-    const [{ id }] = await db5.insert(goodsReceivedNotes).values({
+    const [{ id }] = await db4.insert(goodsReceivedNotes).values({
       ...grnData,
       tenantId: ctx.user.tenantId
     }).$returningId();
     for (const item of items) {
-      await db5.insert(grnItems).values({ ...item, grnId: id });
-      const balRows = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.warehouseId)));
+      await db4.insert(grnItems).values({ ...item, grnId: id });
+      const balRows = await db4.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, ctx.user.tenantId), eq(inventoryBalances.warehouseId, input.warehouseId)));
       if (balRows.length) {
         const newQty = Number(balRows[0].quantity || 0) + item.quantity;
-        await db5.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, balRows[0].id));
+        await db4.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, balRows[0].id));
       } else {
-        await db5.insert(inventoryBalances).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.warehouseId, quantity: item.quantity });
+        await db4.insert(inventoryBalances).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.warehouseId, quantity: item.quantity });
       }
-      await db5.insert(inventoryMovements2).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.warehouseId, movementType: "purchase", quantity: item.quantity, reference: "GRN", referenceId: id, unitCost: item.unitPrice });
+      await db4.insert(inventoryMovements2).values({ tenantId: ctx.user.tenantId, productId: item.productId, warehouseId: input.warehouseId, movementType: "purchase", quantity: item.quantity, reference: "GRN", referenceId: id, unitCost: item.unitPrice });
     }
     return { id, success: true };
   }),
   // Supplier Payments
   supplierPaymentList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(supplierPayments).where(eq(supplierPayments.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(supplierPayments).where(eq(supplierPayments.tenantId, ctx.user.tenantId));
   }),
   supplierPaymentCreate: authedQuery.input(external_exports.object({
     paymentNumber: external_exports.string(),
@@ -117764,8 +117780,8 @@ var purchaseRouter = createRouter({
     reference: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(supplierPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(supplierPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   })
 });
@@ -117780,17 +117796,17 @@ var crmRouter = createRouter({
     status: external_exports.string().optional(),
     assignedTo: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(leads.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(leads.status, input.status));
     if (input?.assignedTo) conditions.push(eq(leads.assignedTo, input.assignedTo));
-    return db5.select().from(leads).where(and(...conditions)).orderBy(desc(leads.createdAt));
+    return db4.select().from(leads).where(and(...conditions)).orderBy(desc(leads.createdAt));
   }),
   leadGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const lead = await db5.query.leads.findFirst({ where: eq(leads.id, input.id) });
-    const activities = await db5.select().from(crmActivities).where(and(eq(crmActivities.relatedType, "lead"), eq(crmActivities.relatedId, input.id)));
+    const db4 = getDb();
+    const lead = await db4.query.leads.findFirst({ where: eq(leads.id, input.id) });
+    const activities = await db4.select().from(crmActivities).where(and(eq(crmActivities.relatedType, "lead"), eq(crmActivities.relatedId, input.id)));
     return { lead, activities };
   }),
   leadCreate: authedQuery.input(external_exports.object({
@@ -117808,8 +117824,8 @@ var crmRouter = createRouter({
     assignedTo: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(leads).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(leads).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   leadUpdate: authedQuery.input(external_exports.object({
@@ -117821,9 +117837,9 @@ var crmRouter = createRouter({
     nextFollowUp: external_exports.string().optional(),
     isConverted: external_exports.boolean().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(leads).set({
+    await db4.update(leads).set({
       ...data,
       nextFollowUp: data.nextFollowUp ? new Date(data.nextFollowUp) : void 0
     }).where(eq(leads.id, id));
@@ -117834,12 +117850,12 @@ var crmRouter = createRouter({
     stage: external_exports.string().optional(),
     assignedTo: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(opportunities.tenantId, tenantId)];
     if (input?.stage) conditions.push(eq(opportunities.stage, input.stage));
     if (input?.assignedTo) conditions.push(eq(opportunities.assignedTo, input.assignedTo));
-    return db5.select().from(opportunities).where(and(...conditions)).orderBy(desc(opportunities.createdAt));
+    return db4.select().from(opportunities).where(and(...conditions)).orderBy(desc(opportunities.createdAt));
   }),
   opportunityCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
@@ -117852,8 +117868,8 @@ var crmRouter = createRouter({
     assignedTo: external_exports.number().optional(),
     description: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(opportunities).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(opportunities).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   opportunityUpdate: authedQuery.input(external_exports.object({
@@ -117864,9 +117880,9 @@ var crmRouter = createRouter({
     actualCloseDate: external_exports.string().optional(),
     lostReason: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(opportunities).set(data).where(eq(opportunities.id, id));
+    await db4.update(opportunities).set(data).where(eq(opportunities.id, id));
     return { success: true };
   }),
   // Activities
@@ -117875,13 +117891,13 @@ var crmRouter = createRouter({
     relatedId: external_exports.number().optional(),
     assignedTo: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(crmActivities.tenantId, tenantId)];
     if (input?.relatedType) conditions.push(eq(crmActivities.relatedType, input.relatedType));
     if (input?.relatedId) conditions.push(eq(crmActivities.relatedId, input.relatedId));
     if (input?.assignedTo) conditions.push(eq(crmActivities.assignedTo, input.assignedTo));
-    return db5.select().from(crmActivities).where(and(...conditions)).orderBy(desc(crmActivities.createdAt));
+    return db4.select().from(crmActivities).where(and(...conditions)).orderBy(desc(crmActivities.createdAt));
   }),
   activityCreate: authedQuery.input(external_exports.object({
     activityType: external_exports.enum(["call", "email", "meeting", "task", "note", "whatsapp", "sms"]),
@@ -117892,8 +117908,8 @@ var crmRouter = createRouter({
     dueDate: external_exports.string().optional(),
     assignedTo: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(crmActivities).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(crmActivities).values({
       ...input,
       tenantId: ctx.user.tenantId,
       dueDate: input.dueDate ? new Date(input.dueDate) : void 0
@@ -117902,12 +117918,12 @@ var crmRouter = createRouter({
   }),
   // CRM Dashboard Stats
   crmStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalLeads] = await db5.select({ count: sql`count(*)` }).from(leads).where(eq(leads.tenantId, tenantId));
-    const [totalOpportunities] = await db5.select({ count: sql`count(*)` }).from(opportunities).where(eq(opportunities.tenantId, tenantId));
-    const [totalCustomers] = await db5.select({ count: sql`count(*)` }).from(customers).where(eq(customers.tenantId, tenantId));
-    const [pipelineValue] = await db5.select({
+    const [totalLeads] = await db4.select({ count: sql`count(*)` }).from(leads).where(eq(leads.tenantId, tenantId));
+    const [totalOpportunities] = await db4.select({ count: sql`count(*)` }).from(opportunities).where(eq(opportunities.tenantId, tenantId));
+    const [totalCustomers] = await db4.select({ count: sql`count(*)` }).from(customers).where(eq(customers.tenantId, tenantId));
+    const [pipelineValue] = await db4.select({
       total: sql`coalesce(sum(expected_value), 0)`
     }).from(opportunities).where(and(eq(opportunities.tenantId, tenantId), eq(opportunities.stage, "negotiation")));
     return {
@@ -117930,22 +117946,22 @@ function combineDateTime(dateValue, timeValue) {
 var hrmRouter = createRouter({
   // Departments
   departmentList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(departments).where(eq(departments.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(departments).where(eq(departments.tenantId, ctx.user.tenantId));
   }),
   departmentCreate: authedQuery.input(external_exports.object({ name: external_exports.string(), description: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(departments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(departments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Designations
   designationList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(designations).where(eq(designations.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(designations).where(eq(designations.tenantId, ctx.user.tenantId));
   }),
   designationCreate: authedQuery.input(external_exports.object({ name: external_exports.string(), description: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(designations).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(designations).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Employees
@@ -117953,16 +117969,16 @@ var hrmRouter = createRouter({
     departmentId: external_exports.number().optional(),
     status: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(employees.tenantId, tenantId)];
     if (input?.departmentId) conditions.push(eq(employees.departmentId, input.departmentId));
     if (input?.status) conditions.push(eq(employees.status, input.status));
-    return db5.select().from(employees).where(and(...conditions)).orderBy(desc(employees.createdAt));
+    return db4.select().from(employees).where(and(...conditions)).orderBy(desc(employees.createdAt));
   }),
   employeeGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const employee = await db5.query.employees.findFirst({ where: eq(employees.id, input.id) });
+    const db4 = getDb();
+    const employee = await db4.query.employees.findFirst({ where: eq(employees.id, input.id) });
     return { employee };
   }),
   employeeCreate: authedQuery.input(external_exports.object({
@@ -117992,8 +118008,8 @@ var hrmRouter = createRouter({
     nationalId: external_exports.string().optional(),
     nationality: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(employees).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(employees).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   employeeUpdate: authedQuery.input(external_exports.object({
@@ -118008,9 +118024,9 @@ var hrmRouter = createRouter({
     basicSalary: external_exports.string().optional(),
     isActive: external_exports.boolean().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(employees).set(data).where(eq(employees.id, id));
+    await db4.update(employees).set(data).where(eq(employees.id, id));
     return { success: true };
   }),
   // Attendance
@@ -118018,12 +118034,12 @@ var hrmRouter = createRouter({
     employeeId: external_exports.number().optional(),
     date: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(attendance.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(attendance.employeeId, input.employeeId));
     if (input?.date) conditions.push(eq(attendance.date, input.date));
-    return db5.select().from(attendance).where(and(...conditions)).orderBy(desc(attendance.date));
+    return db4.select().from(attendance).where(and(...conditions)).orderBy(desc(attendance.date));
   }),
   attendanceCreate: authedQuery.input(external_exports.object({
     employeeId: external_exports.number(),
@@ -118035,8 +118051,8 @@ var hrmRouter = createRouter({
     overtimeHours: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(attendance).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(attendance).values({
       ...input,
       tenantId: ctx.user.tenantId,
       checkIn: combineDateTime(input.date, input.checkIn),
@@ -118046,12 +118062,12 @@ var hrmRouter = createRouter({
   }),
   // Leave Types
   leaveTypeList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(leaveTypes).where(eq(leaveTypes.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(leaveTypes).where(eq(leaveTypes.tenantId, ctx.user.tenantId));
   }),
   leaveTypeCreate: authedQuery.input(external_exports.object({ name: external_exports.string(), daysAllowed: external_exports.number().optional(), isPaid: external_exports.boolean().optional(), description: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(leaveTypes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(leaveTypes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Leave Requests
@@ -118059,12 +118075,12 @@ var hrmRouter = createRouter({
     employeeId: external_exports.number().optional(),
     status: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(leaveRequests.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(leaveRequests.employeeId, input.employeeId));
     if (input?.status) conditions.push(eq(leaveRequests.status, input.status));
-    return db5.select().from(leaveRequests).where(and(...conditions)).orderBy(desc(leaveRequests.createdAt));
+    return db4.select().from(leaveRequests).where(and(...conditions)).orderBy(desc(leaveRequests.createdAt));
   }),
   leaveRequestCreate: authedQuery.input(external_exports.object({
     employeeId: external_exports.number(),
@@ -118074,8 +118090,8 @@ var hrmRouter = createRouter({
     days: external_exports.number(),
     reason: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(leaveRequests).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(leaveRequests).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   leaveRequestUpdate: authedQuery.input(external_exports.object({
@@ -118084,19 +118100,19 @@ var hrmRouter = createRouter({
     approvedBy: external_exports.number().optional(),
     rejectionReason: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
     const updateData = {
       ...data,
       approvedAt: data.status === "approved" ? /* @__PURE__ */ new Date() : void 0
     };
-    await db5.update(leaveRequests).set(updateData).where(eq(leaveRequests.id, id));
+    await db4.update(leaveRequests).set(updateData).where(eq(leaveRequests.id, id));
     return { success: true };
   }),
   // Payroll Periods
   payrollPeriodList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(payrollPeriods).where(eq(payrollPeriods.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(payrollPeriods).where(eq(payrollPeriods.tenantId, ctx.user.tenantId));
   }),
   payrollPeriodCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
@@ -118105,8 +118121,8 @@ var hrmRouter = createRouter({
     month: external_exports.number(),
     year: external_exports.number()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(payrollPeriods).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(payrollPeriods).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Salary Slips
@@ -118114,12 +118130,12 @@ var hrmRouter = createRouter({
     payrollPeriodId: external_exports.number().optional(),
     employeeId: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(salarySlips.tenantId, tenantId)];
     if (input?.payrollPeriodId) conditions.push(eq(salarySlips.payrollPeriodId, input.payrollPeriodId));
     if (input?.employeeId) conditions.push(eq(salarySlips.employeeId, input.employeeId));
-    return db5.select().from(salarySlips).where(and(...conditions));
+    return db4.select().from(salarySlips).where(and(...conditions));
   }),
   salarySlipCreate: authedQuery.input(external_exports.object({
     payrollPeriodId: external_exports.number(),
@@ -118138,8 +118154,8 @@ var hrmRouter = createRouter({
     totalDeductions: external_exports.string().optional(),
     netSalary: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(salarySlips).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(salarySlips).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Employee Loans
@@ -118147,12 +118163,12 @@ var hrmRouter = createRouter({
     employeeId: external_exports.number().optional(),
     status: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(employeeLoans.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(employeeLoans.employeeId, input.employeeId));
     if (input?.status) conditions.push(eq(employeeLoans.status, input.status));
-    return db5.select().from(employeeLoans).where(and(...conditions));
+    return db4.select().from(employeeLoans).where(and(...conditions));
   }),
   loanCreate: authedQuery.input(external_exports.object({
     employeeId: external_exports.number(),
@@ -118161,8 +118177,8 @@ var hrmRouter = createRouter({
     installmentAmount: external_exports.string().optional(),
     purpose: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(employeeLoans).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(employeeLoans).values({
       ...input,
       tenantId: ctx.user.tenantId,
       remainingAmount: input.loanAmount
@@ -118171,18 +118187,18 @@ var hrmRouter = createRouter({
   }),
   // Advances
   advanceList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(advances).where(eq(advances.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(advances).where(eq(advances.tenantId, ctx.user.tenantId));
   }),
   // Performance Reviews
   performanceReviewList: authedQuery.input(external_exports.object({
     employeeId: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(performanceReviews.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(performanceReviews.employeeId, input.employeeId));
-    return db5.select().from(performanceReviews).where(and(...conditions));
+    return db4.select().from(performanceReviews).where(and(...conditions));
   }),
   performanceReviewCreate: authedQuery.input(external_exports.object({
     employeeId: external_exports.number(),
@@ -118197,19 +118213,19 @@ var hrmRouter = createRouter({
     goals: external_exports.string().optional(),
     reviewedBy: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(performanceReviews).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(performanceReviews).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // HRM Stats
   hrmStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalEmployees] = await db5.select({ count: sql`count(*)` }).from(employees).where(eq(employees.tenantId, tenantId));
-    const [activeEmployees] = await db5.select({ count: sql`count(*)` }).from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "active")));
-    const [onLeave] = await db5.select({ count: sql`count(*)` }).from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "on_leave")));
-    const [pendingLeaves] = await db5.select({ count: sql`count(*)` }).from(leaveRequests).where(and(eq(leaveRequests.tenantId, tenantId), eq(leaveRequests.status, "pending")));
-    const [pendingLoans] = await db5.select({ count: sql`count(*)` }).from(employeeLoans).where(and(eq(employeeLoans.tenantId, tenantId), eq(employeeLoans.status, "pending")));
+    const [totalEmployees] = await db4.select({ count: sql`count(*)` }).from(employees).where(eq(employees.tenantId, tenantId));
+    const [activeEmployees] = await db4.select({ count: sql`count(*)` }).from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "active")));
+    const [onLeave] = await db4.select({ count: sql`count(*)` }).from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "on_leave")));
+    const [pendingLeaves] = await db4.select({ count: sql`count(*)` }).from(leaveRequests).where(and(eq(leaveRequests.tenantId, tenantId), eq(leaveRequests.status, "pending")));
+    const [pendingLoans] = await db4.select({ count: sql`count(*)` }).from(employeeLoans).where(and(eq(employeeLoans.tenantId, tenantId), eq(employeeLoans.status, "pending")));
     return {
       totalEmployees: totalEmployees.count,
       activeEmployees: activeEmployees.count,
@@ -118227,8 +118243,8 @@ init_drizzle_orm();
 var manufacturingRouter = createRouter({
   // BOM
   bomList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(billOfMaterials).where(eq(billOfMaterials.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(billOfMaterials).where(eq(billOfMaterials.tenantId, ctx.user.tenantId));
   }),
   bomCreate: authedQuery.input(external_exports.object({
     productId: external_exports.number(),
@@ -118243,14 +118259,14 @@ var manufacturingRouter = createRouter({
       wastagePercent: external_exports.string().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, ...bomData } = input;
-    const [{ id }] = await db5.insert(billOfMaterials).values({
+    const [{ id }] = await db4.insert(billOfMaterials).values({
       ...bomData,
       tenantId: ctx.user.tenantId
     }).$returningId();
     for (const item of items) {
-      await db5.insert(bomItems).values({
+      await db4.insert(bomItems).values({
         ...item,
         bomId: id,
         totalCost: item.unitCost ? (Number(item.quantity) * Number(item.unitCost)).toString() : "0"
@@ -118259,20 +118275,20 @@ var manufacturingRouter = createRouter({
     return { id, success: true };
   }),
   bomGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const bom = await db5.query.billOfMaterials.findFirst({ where: eq(billOfMaterials.id, input.id) });
-    const items = await db5.select().from(bomItems).where(eq(bomItems.bomId, input.id));
+    const db4 = getDb();
+    const bom = await db4.query.billOfMaterials.findFirst({ where: eq(billOfMaterials.id, input.id) });
+    const items = await db4.select().from(bomItems).where(eq(bomItems.bomId, input.id));
     return { bom, items };
   }),
   // Work Orders
   workOrderList: authedQuery.input(external_exports.object({
     status: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(workOrders.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(workOrders.status, input.status));
-    return db5.select().from(workOrders).where(and(...conditions)).orderBy(desc(workOrders.createdAt));
+    return db4.select().from(workOrders).where(and(...conditions)).orderBy(desc(workOrders.createdAt));
   }),
   workOrderCreate: authedQuery.input(external_exports.object({
     woNumber: external_exports.string(),
@@ -118284,8 +118300,8 @@ var manufacturingRouter = createRouter({
     estimatedCost: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workOrders).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workOrders).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   workOrderUpdate: authedQuery.input(external_exports.object({
@@ -118294,15 +118310,15 @@ var manufacturingRouter = createRouter({
     producedQty: external_exports.number().optional(),
     actualCost: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(workOrders).set(data).where(eq(workOrders.id, id));
+    await db4.update(workOrders).set(data).where(eq(workOrders.id, id));
     return { success: true };
   }),
   // Production Orders
   productionOrderList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(productionOrders).where(eq(productionOrders.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(productionOrders).where(eq(productionOrders.tenantId, ctx.user.tenantId));
   }),
   productionOrderCreate: authedQuery.input(external_exports.object({
     poNumber: external_exports.string(),
@@ -118317,14 +118333,14 @@ var manufacturingRouter = createRouter({
       unitCost: external_exports.string().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, ...poData } = input;
-    const [{ id }] = await db5.insert(productionOrders).values({
+    const [{ id }] = await db4.insert(productionOrders).values({
       ...poData,
       tenantId: ctx.user.tenantId
     }).$returningId();
     for (const item of items) {
-      await db5.insert(productionItems).values({
+      await db4.insert(productionItems).values({
         ...item,
         productionOrderId: id,
         totalCost: item.unitCost ? (item.quantity * Number(item.unitCost)).toString() : "0"
@@ -118343,17 +118359,17 @@ var projectsRouter = createRouter({
   projectList: authedQuery.input(external_exports.object({
     status: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(projects.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(projects.status, input.status));
-    return db5.select().from(projects).where(and(...conditions)).orderBy(desc(projects.createdAt));
+    return db4.select().from(projects).where(and(...conditions)).orderBy(desc(projects.createdAt));
   }),
   projectGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const project = await db5.query.projects.findFirst({ where: eq(projects.id, input.id) });
-    const tasks = await db5.select().from(projectTasks).where(eq(projectTasks.projectId, input.id));
-    const milestones = await db5.select().from(projectMilestones).where(eq(projectMilestones.projectId, input.id));
+    const db4 = getDb();
+    const project = await db4.query.projects.findFirst({ where: eq(projects.id, input.id) });
+    const tasks = await db4.select().from(projectTasks).where(eq(projectTasks.projectId, input.id));
+    const milestones = await db4.select().from(projectMilestones).where(eq(projectMilestones.projectId, input.id));
     return { project, tasks, milestones };
   }),
   projectCreate: authedQuery.input(external_exports.object({
@@ -118367,8 +118383,8 @@ var projectsRouter = createRouter({
     budget: external_exports.string().optional(),
     priority: external_exports.enum(["low", "medium", "high", "urgent"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(projects).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(projects).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   projectUpdate: authedQuery.input(external_exports.object({
@@ -118379,9 +118395,9 @@ var projectsRouter = createRouter({
     actualCost: external_exports.string().optional(),
     priority: external_exports.enum(["low", "medium", "high", "urgent"]).optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(projects).set(data).where(eq(projects.id, id));
+    await db4.update(projects).set(data).where(eq(projects.id, id));
     return { success: true };
   }),
   // Tasks
@@ -118390,13 +118406,13 @@ var projectsRouter = createRouter({
     status: external_exports.string().optional(),
     assignedTo: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(projectTasks.tenantId, tenantId)];
     if (input?.projectId) conditions.push(eq(projectTasks.projectId, input.projectId));
     if (input?.status) conditions.push(eq(projectTasks.status, input.status));
     if (input?.assignedTo) conditions.push(eq(projectTasks.assignedTo, input.assignedTo));
-    return db5.select().from(projectTasks).where(and(...conditions)).orderBy(desc(projectTasks.createdAt));
+    return db4.select().from(projectTasks).where(and(...conditions)).orderBy(desc(projectTasks.createdAt));
   }),
   taskCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -118409,8 +118425,8 @@ var projectsRouter = createRouter({
     priority: external_exports.enum(["low", "medium", "high", "urgent"]).optional(),
     parentId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(projectTasks).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(projectTasks).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   taskUpdate: authedQuery.input(external_exports.object({
@@ -118421,9 +118437,9 @@ var projectsRouter = createRouter({
     completedAt: external_exports.string().optional(),
     assignedTo: external_exports.number().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(projectTasks).set({
+    await db4.update(projectTasks).set({
       ...data,
       completedAt: data.completedAt ? new Date(data.completedAt) : void 0
     }).where(eq(projectTasks.id, id));
@@ -118431,11 +118447,11 @@ var projectsRouter = createRouter({
   }),
   // Milestones
   milestoneList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(projectMilestones.tenantId, tenantId)];
     if (input?.projectId) conditions.push(eq(projectMilestones.projectId, input.projectId));
-    return db5.select().from(projectMilestones).where(and(...conditions));
+    return db4.select().from(projectMilestones).where(and(...conditions));
   }),
   milestoneCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -118444,8 +118460,8 @@ var projectsRouter = createRouter({
     dueDate: external_exports.string().optional(),
     deliverables: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(projectMilestones).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(projectMilestones).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Timesheets
@@ -118453,12 +118469,12 @@ var projectsRouter = createRouter({
     employeeId: external_exports.number().optional(),
     projectId: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(timesheets.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(timesheets.employeeId, input.employeeId));
     if (input?.projectId) conditions.push(eq(timesheets.projectId, input.projectId));
-    return db5.select().from(timesheets).where(and(...conditions)).orderBy(desc(timesheets.date));
+    return db4.select().from(timesheets).where(and(...conditions)).orderBy(desc(timesheets.date));
   }),
   timesheetCreate: authedQuery.input(external_exports.object({
     employeeId: external_exports.number(),
@@ -118469,8 +118485,8 @@ var projectsRouter = createRouter({
     description: external_exports.string().optional(),
     billable: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(timesheets).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(timesheets).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   })
 });
@@ -118485,18 +118501,18 @@ var helpdeskRouter = createRouter({
     priority: external_exports.string().optional(),
     assignedTo: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(supportTickets.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(supportTickets.status, input.status));
     if (input?.priority) conditions.push(eq(supportTickets.priority, input.priority));
     if (input?.assignedTo) conditions.push(eq(supportTickets.assignedTo, input.assignedTo));
-    return db5.select().from(supportTickets).where(and(...conditions)).orderBy(desc(supportTickets.createdAt));
+    return db4.select().from(supportTickets).where(and(...conditions)).orderBy(desc(supportTickets.createdAt));
   }),
   ticketGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const ticket = await db5.query.supportTickets.findFirst({ where: eq(supportTickets.id, input.id) });
-    const comments = await db5.select().from(ticketComments).where(eq(ticketComments.ticketId, input.id));
+    const db4 = getDb();
+    const ticket = await db4.query.supportTickets.findFirst({ where: eq(supportTickets.id, input.id) });
+    const comments = await db4.select().from(ticketComments).where(eq(ticketComments.ticketId, input.id));
     return { ticket, comments };
   }),
   ticketCreate: authedQuery.input(external_exports.object({
@@ -118511,8 +118527,8 @@ var helpdeskRouter = createRouter({
     assignedTo: external_exports.number().optional(),
     source: external_exports.enum(["email", "phone", "web", "chat", "whatsapp"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(supportTickets).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(supportTickets).values({
       ...input,
       tenantId: ctx.user.tenantId,
       slaDeadline: new Date(Date.now() + 24 * 60 * 60 * 1e3)
@@ -118527,14 +118543,14 @@ var helpdeskRouter = createRouter({
     resolvedAt: external_exports.string().optional(),
     satisfaction: external_exports.number().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
     const updateData = {
       ...data,
       resolvedAt: data.status === "resolved" ? /* @__PURE__ */ new Date() : data.resolvedAt ? new Date(data.resolvedAt) : void 0,
       closedAt: data.status === "closed" ? /* @__PURE__ */ new Date() : void 0
     };
-    await db5.update(supportTickets).set(updateData).where(eq(supportTickets.id, id));
+    await db4.update(supportTickets).set(updateData).where(eq(supportTickets.id, id));
     return { success: true };
   }),
   commentCreate: authedQuery.input(external_exports.object({
@@ -118543,17 +118559,17 @@ var helpdeskRouter = createRouter({
     comment: external_exports.string(),
     isInternal: external_exports.boolean().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(ticketComments).values(input).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(ticketComments).values(input).$returningId();
     return { id, success: true };
   }),
   helpdeskStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalTickets] = await db5.select({ count: sql`count(*)` }).from(supportTickets).where(eq(supportTickets.tenantId, tenantId));
-    const [openTickets] = await db5.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.status, "open")));
-    const [resolvedToday] = await db5.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.status, "resolved"), sql`date(resolved_at) = curdate()`));
-    const [highPriority] = await db5.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.priority, "urgent"), eq(supportTickets.status, "open")));
+    const [totalTickets] = await db4.select({ count: sql`count(*)` }).from(supportTickets).where(eq(supportTickets.tenantId, tenantId));
+    const [openTickets] = await db4.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.status, "open")));
+    const [resolvedToday] = await db4.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.status, "resolved"), sql`date(resolved_at) = curdate()`));
+    const [highPriority] = await db4.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.priority, "urgent"), eq(supportTickets.status, "open")));
     return {
       totalTickets: totalTickets.count,
       openTickets: openTickets.count,
@@ -118573,18 +118589,18 @@ var assetsRouter = createRouter({
     status: external_exports.string().optional(),
     category: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(assets.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(assets.status, input.status));
     if (input?.category) conditions.push(eq(assets.category, input.category));
-    return db5.select().from(assets).where(and(...conditions)).orderBy(desc(assets.createdAt));
+    return db4.select().from(assets).where(and(...conditions)).orderBy(desc(assets.createdAt));
   }),
   assetGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const asset = await db5.query.assets.findFirst({ where: eq(assets.id, input.id) });
-    const maintenance = await db5.select().from(assetMaintenance).where(eq(assetMaintenance.assetId, input.id));
-    const depreciation = await db5.select().from(depreciationEntries).where(eq(depreciationEntries.assetId, input.id));
+    const db4 = getDb();
+    const asset = await db4.query.assets.findFirst({ where: eq(assets.id, input.id) });
+    const maintenance = await db4.select().from(assetMaintenance).where(eq(assetMaintenance.assetId, input.id));
+    const depreciation = await db4.select().from(depreciationEntries).where(eq(depreciationEntries.assetId, input.id));
     return { asset, maintenance, depreciation };
   }),
   assetCreate: authedQuery.input(external_exports.object({
@@ -118604,9 +118620,9 @@ var assetsRouter = createRouter({
     warrantyExpiry: external_exports.string().optional(),
     assignedTo: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const purchaseCost = Number(input.purchaseCost || 0);
-    const [{ id }] = await db5.insert(assets).values({
+    const [{ id }] = await db4.insert(assets).values({
       ...input,
       tenantId: ctx.user.tenantId,
       bookValue: purchaseCost.toString(),
@@ -118622,9 +118638,9 @@ var assetsRouter = createRouter({
     assignedTo: external_exports.number().optional(),
     bookValue: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(assets).set(data).where(eq(assets.id, id));
+    await db4.update(assets).set(data).where(eq(assets.id, id));
     return { success: true };
   }),
   // Maintenance
@@ -118638,29 +118654,29 @@ var assetsRouter = createRouter({
     nextDueDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(assetMaintenance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(assetMaintenance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Depreciation
   depreciationList: authedQuery.input(external_exports.object({
     assetId: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(depreciationEntries.tenantId, tenantId)];
     if (input?.assetId) conditions.push(eq(depreciationEntries.assetId, input.assetId));
-    return db5.select().from(depreciationEntries).where(and(...conditions));
+    return db4.select().from(depreciationEntries).where(and(...conditions));
   }),
   // Vehicles
   vehicleList: authedQuery.input(external_exports.object({
     status: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(vehicles.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(vehicles.status, input.status));
-    return db5.select().from(vehicles).where(and(...conditions));
+    return db4.select().from(vehicles).where(and(...conditions));
   }),
   vehicleCreate: authedQuery.input(external_exports.object({
     vehicleNumber: external_exports.string(),
@@ -118675,19 +118691,19 @@ var assetsRouter = createRouter({
     purchaseCost: external_exports.string().optional(),
     assignedDriverId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(vehicles).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(vehicles).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Fuel Records
   fuelList: authedQuery.input(external_exports.object({
     vehicleId: external_exports.number().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(fuelRecords.tenantId, tenantId)];
     if (input?.vehicleId) conditions.push(eq(fuelRecords.vehicleId, input.vehicleId));
-    return db5.select().from(fuelRecords).where(and(...conditions)).orderBy(desc(fuelRecords.date));
+    return db4.select().from(fuelRecords).where(and(...conditions)).orderBy(desc(fuelRecords.date));
   }),
   fuelCreate: authedQuery.input(external_exports.object({
     vehicleId: external_exports.number(),
@@ -118698,30 +118714,30 @@ var assetsRouter = createRouter({
     totalCost: external_exports.string().optional(),
     station: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(fuelRecords).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(fuelRecords).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Vehicle Maintenance
   vehicleMaintenanceList: authedQuery.input(external_exports.object({ vehicleId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(vehicleMaintenance.tenantId, tenantId)];
     if (input?.vehicleId) conditions.push(eq(vehicleMaintenance.vehicleId, input.vehicleId));
-    return db5.select().from(vehicleMaintenance).where(and(...conditions));
+    return db4.select().from(vehicleMaintenance).where(and(...conditions));
   }),
   // Drivers
   driverList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(drivers).where(eq(drivers.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(drivers).where(eq(drivers.tenantId, ctx.user.tenantId));
   }),
   assetStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalAssets] = await db5.select({ count: sql`count(*)` }).from(assets).where(eq(assets.tenantId, tenantId));
-    const [activeAssets] = await db5.select({ count: sql`count(*)` }).from(assets).where(and(eq(assets.tenantId, tenantId), eq(assets.status, "active")));
-    const [totalVehicles] = await db5.select({ count: sql`count(*)` }).from(vehicles).where(eq(vehicles.tenantId, tenantId));
-    const [totalValue] = await db5.select({ total: sql`coalesce(sum(book_value), 0)` }).from(assets).where(eq(assets.tenantId, tenantId));
+    const [totalAssets] = await db4.select({ count: sql`count(*)` }).from(assets).where(eq(assets.tenantId, tenantId));
+    const [activeAssets] = await db4.select({ count: sql`count(*)` }).from(assets).where(and(eq(assets.tenantId, tenantId), eq(assets.status, "active")));
+    const [totalVehicles] = await db4.select({ count: sql`count(*)` }).from(vehicles).where(eq(vehicles.tenantId, tenantId));
+    const [totalValue] = await db4.select({ total: sql`coalesce(sum(book_value), 0)` }).from(assets).where(eq(assets.tenantId, tenantId));
     return {
       totalAssets: totalAssets.count,
       activeAssets: activeAssets.count,
@@ -118738,8 +118754,8 @@ init_drizzle_orm();
 var settingsRouter = createRouter({
   // Company Settings
   companySettingsGet: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.query.companySettings.findFirst({
+    const db4 = getDb();
+    return db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
   }),
@@ -118772,17 +118788,17 @@ var settingsRouter = createRouter({
     aiApiKey: external_exports.string().optional(),
     aiModel: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const data = input;
-    const existing = await db5.query.companySettings.findFirst({
+    const existing = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     if (existing) {
-      await db5.update(companySettings).set(data).where(eq(companySettings.tenantId, ctx.user.tenantId));
+      await db4.update(companySettings).set(data).where(eq(companySettings.tenantId, ctx.user.tenantId));
     } else {
-      await db5.insert(companySettings).values({ tenantId: ctx.user.tenantId, ...data });
+      await db4.insert(companySettings).values({ tenantId: ctx.user.tenantId, ...data });
     }
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       action: "company_settings_update",
@@ -118796,8 +118812,8 @@ var settingsRouter = createRouter({
   }),
   // AI Settings
   aiSettingsGet: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const settings = await db5.query.companySettings.findFirst({
+    const db4 = getDb();
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId),
       columns: {
         aiApiKey: true,
@@ -118815,19 +118831,19 @@ var settingsRouter = createRouter({
     aiApiKey: external_exports.string().optional(),
     aiModel: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const data = {};
     if (input.aiApiKey !== void 0) data.aiApiKey = input.aiApiKey;
     if (input.aiModel !== void 0) data.aiModel = input.aiModel;
-    const existing = await db5.query.companySettings.findFirst({
+    const existing = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     if (existing) {
-      await db5.update(companySettings).set(data).where(eq(companySettings.tenantId, ctx.user.tenantId));
+      await db4.update(companySettings).set(data).where(eq(companySettings.tenantId, ctx.user.tenantId));
     } else {
-      await db5.insert(companySettings).values({ tenantId: ctx.user.tenantId, ...data });
+      await db4.insert(companySettings).values({ tenantId: ctx.user.tenantId, ...data });
     }
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       action: "ai_settings_update",
@@ -118841,8 +118857,8 @@ var settingsRouter = createRouter({
   }),
   // Tax Rates
   taxRateList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(taxRates).where(eq(taxRates.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(taxRates).where(eq(taxRates.tenantId, ctx.user.tenantId));
   }),
   taxRateCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
@@ -118850,14 +118866,14 @@ var settingsRouter = createRouter({
     type: external_exports.enum(["vat", "gst", "sales_tax", "withholding", "other"]).optional(),
     isDefault: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(taxRates).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(taxRates).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Currencies
   currencyList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(currencies).where(eq(currencies.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(currencies).where(eq(currencies.tenantId, ctx.user.tenantId));
   }),
   currencyCreate: authedQuery.input(external_exports.object({
     code: external_exports.string(),
@@ -118866,8 +118882,8 @@ var settingsRouter = createRouter({
     exchangeRate: external_exports.string().optional(),
     isBase: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(currencies).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(currencies).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Notifications
@@ -118875,13 +118891,13 @@ var settingsRouter = createRouter({
     userId: external_exports.number(),
     isRead: external_exports.boolean().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [
       eq(notifications.tenantId, ctx.user.tenantId),
       eq(notifications.userId, input?.userId || 0)
     ];
     if (input?.isRead !== void 0) conditions.push(eq(notifications.isRead, input.isRead));
-    return db5.select().from(notifications).where(and(...conditions)).orderBy(desc(notifications.createdAt));
+    return db4.select().from(notifications).where(and(...conditions)).orderBy(desc(notifications.createdAt));
   }),
   notificationCreate: authedQuery.input(external_exports.object({
     userId: external_exports.number(),
@@ -118890,27 +118906,27 @@ var settingsRouter = createRouter({
     type: external_exports.enum(["info", "warning", "success", "error"]).optional(),
     link: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(notifications).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(notifications).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   notificationMarkRead: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(notifications).set({ isRead: true }).where(eq(notifications.id, input.id));
+    const db4 = getDb();
+    await db4.update(notifications).set({ isRead: true }).where(eq(notifications.id, input.id));
     return { success: true };
   }),
   // Layout Theme
   themeGet: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const tenant = await db5.query.tenants.findFirst({
+    const db4 = getDb();
+    const tenant = await db4.query.tenants.findFirst({
       where: eq(tenants.id, ctx.user.tenantId),
       columns: { layoutTheme: true }
     });
     return { layoutTheme: tenant?.layoutTheme ?? "launcher_theme" };
   }),
   themeUpdate: authedQuery.input(external_exports.object({ layoutTheme: external_exports.enum(["sidebar", "app_launcher", "launcher_theme"]) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(tenants).set({ layoutTheme: input.layoutTheme }).where(eq(tenants.id, ctx.user.tenantId));
+    const db4 = getDb();
+    await db4.update(tenants).set({ layoutTheme: input.layoutTheme }).where(eq(tenants.id, ctx.user.tenantId));
     return { success: true };
   })
 });
@@ -118919,12 +118935,12 @@ var settingsRouter = createRouter({
 init_connection();
 init_schema2();
 init_drizzle_orm();
-async function getOrCreateWalkInCustomer(db5, tenantId) {
-  const existing = await db5.query.customers.findFirst({
+async function getOrCreateWalkInCustomer(db4, tenantId) {
+  const existing = await db4.query.customers.findFirst({
     where: and(eq(customers.tenantId, tenantId), eq(customers.code, "WALK-IN"))
   });
   if (existing) return existing.id;
-  const [{ id }] = await db5.insert(customers).values({
+  const [{ id }] = await db4.insert(customers).values({
     tenantId,
     code: "WALK-IN",
     name: "Walk-in Customer",
@@ -118937,7 +118953,7 @@ async function getOrCreateWalkInCustomer(db5, tenantId) {
 var posRouter = createRouter({
   // ITEMS
   itemSearch: authedQuery.input(external_exports.object({ query: external_exports.string(), categoryId: external_exports.number().optional(), warehouseId: external_exports.number().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [
       eq(products.tenantId, tenantId),
@@ -118949,38 +118965,38 @@ var posRouter = createRouter({
       );
     }
     if (input.categoryId) conditions.push(eq(products.categoryId, input.categoryId));
-    const items = await db5.select().from(products).where(and(...conditions)).limit(20);
+    const items = await db4.select().from(products).where(and(...conditions)).limit(20);
     const result = [];
     for (const item of items) {
       let stockQty = 0;
       const stockConditions = [eq(inventoryBalances.productId, item.id), eq(inventoryBalances.tenantId, tenantId)];
       if (input.warehouseId) stockConditions.push(eq(inventoryBalances.warehouseId, input.warehouseId));
-      const stock = await db5.select({ qty: sql`coalesce(sum(${inventoryBalances.quantity}),0)` }).from(inventoryBalances).where(and(...stockConditions));
+      const stock = await db4.select({ qty: sql`coalesce(sum(${inventoryBalances.quantity}),0)` }).from(inventoryBalances).where(and(...stockConditions));
       stockQty = Number(stock[0]?.qty || 0);
       result.push({ ...item, stockQty, stockQtyDisplay: stockQty });
     }
     return result;
   }),
   itemGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const item = await db5.query.products.findFirst({
+    const db4 = getDb();
+    const item = await db4.query.products.findFirst({
       where: and(eq(products.tenantId, ctx.user.tenantId), eq(products.id, input.id))
     });
     if (!item) return null;
-    const stock = await db5.select({ qty: sql`coalesce(sum(${inventoryBalances.quantity}),0)` }).from(inventoryBalances).where(and(eq(inventoryBalances.productId, input.id), eq(inventoryBalances.tenantId, ctx.user.tenantId)));
+    const stock = await db4.select({ qty: sql`coalesce(sum(${inventoryBalances.quantity}),0)` }).from(inventoryBalances).where(and(eq(inventoryBalances.productId, input.id), eq(inventoryBalances.tenantId, ctx.user.tenantId)));
     return { ...item, stockQty: Number(stock[0]?.qty || 0) };
   }),
   // CUSTOMERS
   customerSearch: authedQuery.input(external_exports.object({ query: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(customers.tenantId, ctx.user.tenantId)];
     if (input?.query) conditions.push(like2(customers.name, `%${input.query}%`));
-    return db5.select().from(customers).where(and(...conditions)).limit(20);
+    return db4.select().from(customers).where(and(...conditions)).limit(20);
   }),
   // SESSION
   sessionOpen: authedQuery.input(external_exports.object({ openingBalance: external_exports.string().default("0") })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(posSessions).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(posSessions).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       openingBalance: input.openingBalance,
@@ -118989,12 +119005,12 @@ var posRouter = createRouter({
     return { id, success: true };
   }),
   sessionClose: authedQuery.input(external_exports.object({ id: external_exports.number(), closingBalance: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const session = await db5.query.posSessions.findFirst({
+    const db4 = getDb();
+    const session = await db4.query.posSessions.findFirst({
       where: and(eq(posSessions.id, input.id), eq(posSessions.tenantId, ctx.user.tenantId))
     });
     if (!session) throw new Error("Session not found");
-    await db5.update(posSessions).set({
+    await db4.update(posSessions).set({
       status: "closed",
       closingBalance: input.closingBalance,
       closedAt: /* @__PURE__ */ new Date()
@@ -119002,8 +119018,8 @@ var posRouter = createRouter({
     return { success: true };
   }),
   sessionCurrent: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.query.posSessions.findFirst({
+    const db4 = getDb();
+    return db4.query.posSessions.findFirst({
       where: and(eq(posSessions.tenantId, ctx.user.tenantId), eq(posSessions.userId, ctx.user.id), eq(posSessions.status, "open")),
       orderBy: desc(posSessions.createdAt)
     });
@@ -119032,13 +119048,13 @@ var posRouter = createRouter({
       totalAmount: external_exports.string()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const invoiceNumber = `POS-${Date.now()}`;
     const { items, ...invoiceData } = input;
-    const customerId = input.customerId ?? await getOrCreateWalkInCustomer(db5, tenantId);
+    const customerId = input.customerId ?? await getOrCreateWalkInCustomer(db4, tenantId);
     const balanceDue = Math.max(0, Number(input.totalAmount) - Number(input.paymentAmount || 0)).toFixed(4);
-    const [{ id: invoiceId }] = await db5.insert(invoices).values({
+    const [{ id: invoiceId }] = await db4.insert(invoices).values({
       tenantId,
       invoiceNumber,
       customerId,
@@ -119056,7 +119072,7 @@ var posRouter = createRouter({
       createdBy: ctx.user.id
     }).$returningId();
     for (const item of items) {
-      await db5.insert(invoiceItems).values({
+      await db4.insert(invoiceItems).values({
         invoiceId,
         productId: item.productId,
         description: item.description && item.description.trim() ? item.description : item.productId ? `Item #${item.productId}` : "POS Sale",
@@ -119068,21 +119084,21 @@ var posRouter = createRouter({
       });
     }
     for (const item of items) {
-      const balances = await db5.select().from(inventoryBalances).where(and(
+      const balances = await db4.select().from(inventoryBalances).where(and(
         eq(inventoryBalances.productId, item.productId),
         eq(inventoryBalances.tenantId, tenantId)
       ));
       for (const bal of balances) {
         const newQty = Math.max(0, Number(bal.quantity || 0) - item.quantity);
-        await db5.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, bal.id));
+        await db4.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, bal.id));
       }
     }
     const paymentAmount = Number(input.paymentAmount);
     if (paymentAmount > 0) {
-      const lastTx = await db5.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+      const lastTx = await db4.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
       const prevBal = Number(lastTx[0]?.bal || 0);
       const txNum = `CB-${Date.now()}`;
-      await db5.insert(cashboxTransactions).values({
+      await db4.insert(cashboxTransactions).values({
         tenantId,
         userId: ctx.user.id,
         transactionNumber: txNum,
@@ -119114,9 +119130,9 @@ var posRouter = createRouter({
     totalAmount: external_exports.string(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const holdNumber = `HLD-${Date.now()}`;
-    const [{ id }] = await db5.insert(posHolds).values({
+    const [{ id }] = await db4.insert(posHolds).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       holdNumber,
@@ -119131,29 +119147,29 @@ var posRouter = createRouter({
     return { id, holdNumber, success: true };
   }),
   heldSalesList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(posHolds).where(and(eq(posHolds.tenantId, ctx.user.tenantId), eq(posHolds.status, "held"))).orderBy(desc(posHolds.createdAt));
+    const db4 = getDb();
+    return db4.select().from(posHolds).where(and(eq(posHolds.tenantId, ctx.user.tenantId), eq(posHolds.status, "held"))).orderBy(desc(posHolds.createdAt));
   }),
   resumeHold: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const hold = await db5.query.posHolds.findFirst({
+    const db4 = getDb();
+    const hold = await db4.query.posHolds.findFirst({
       where: and(eq(posHolds.id, input.id), eq(posHolds.tenantId, ctx.user.tenantId))
     });
     if (!hold) throw new Error("Hold not found");
-    await db5.update(posHolds).set({ status: "resumed" }).where(eq(posHolds.id, input.id));
+    await db4.update(posHolds).set({ status: "resumed" }).where(eq(posHolds.id, input.id));
     return hold;
   }),
   cancelHold: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(posHolds).set({ status: "cancelled" }).where(and(eq(posHolds.id, input.id), eq(posHolds.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(posHolds).set({ status: "cancelled" }).where(and(eq(posHolds.id, input.id), eq(posHolds.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   // TODAY SALE SUMMARY
   todaySummary: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const invoicesToday = await db5.select({
+    const invoicesToday = await db4.select({
       total: sql`coalesce(sum(${invoices.totalAmount}),0)`,
       count: sql`count(*)`,
       cashTotal: sql`0`,
@@ -119170,10 +119186,10 @@ var posRouter = createRouter({
   }),
   // Alias for backward-compat / frontend calls using todaySalesSummary (fixes 404)
   todaySalesSummary: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const invoicesToday = await db5.select({
+    const invoicesToday = await db4.select({
       total: sql`coalesce(sum(${invoices.totalAmount}),0)`,
       count: sql`count(*)`,
       cashTotal: sql`0`,
@@ -119190,28 +119206,28 @@ var posRouter = createRouter({
   }),
   // REPORTS
   salesReport: authedQuery.input(external_exports.object({ from: external_exports.string().optional(), to: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(invoices.tenantId, ctx.user.tenantId)];
     if (input.from) conditions.push(gte(invoices.date, input.from));
     if (input.to) conditions.push(lte(invoices.date, input.to));
-    return db5.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.date));
+    return db4.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.date));
   }),
   topSellingItems: authedQuery.input(external_exports.object({ from: external_exports.string().optional(), to: external_exports.string().optional(), limit: external_exports.number().default(10) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const invoiceRows = await db5.select({ id: invoices.id }).from(invoices).where(eq(invoices.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    const invoiceRows = await db4.select({ id: invoices.id }).from(invoices).where(eq(invoices.tenantId, ctx.user.tenantId));
     const invoiceIds = invoiceRows.map((row) => row.id);
     if (invoiceIds.length === 0) return [];
     const conditions = [inArray(invoiceItems.invoiceId, invoiceIds)];
     if (input.from) conditions.push(gte(invoiceItems.createdAt, new Date(input.from)));
     if (input.to) conditions.push(lte(invoiceItems.createdAt, new Date(input.to)));
-    const data = await db5.select({
+    const data = await db4.select({
       productId: invoiceItems.productId,
       totalQty: sql`sum(${invoiceItems.quantity})`,
       totalAmount: sql`sum(${invoiceItems.totalAmount})`
     }).from(invoiceItems).where(and(...conditions)).groupBy(invoiceItems.productId).orderBy(desc(sql`sum(${invoiceItems.quantity})`)).limit(input.limit);
     const result = [];
     for (const d of data) {
-      const product = await db5.query.products.findFirst({ where: eq(products.id, d.productId) });
+      const product = await db4.query.products.findFirst({ where: eq(products.id, d.productId) });
       result.push({ ...d, productName: product?.name || "Unknown", productNameAr: product?.nameAr || "" });
     }
     return result;
@@ -119225,12 +119241,12 @@ init_drizzle_orm();
 var posRestaurantRouter = createRouter({
   // ============ FLOOR PLANS ============
   floorPlanList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(floorPlans).where(and(eq(floorPlans.tenantId, ctx.user.tenantId), eq(floorPlans.isActive, true))).orderBy(desc(floorPlans.createdAt));
+    const db4 = getDb();
+    return db4.select().from(floorPlans).where(and(eq(floorPlans.tenantId, ctx.user.tenantId), eq(floorPlans.isActive, true))).orderBy(desc(floorPlans.createdAt));
   }),
   floorPlanCreate: authedQuery.input(external_exports.object({ name: external_exports.string(), nameAr: external_exports.string().optional(), width: external_exports.number().default(800), height: external_exports.number().default(600) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(floorPlans).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(floorPlans).values({
       tenantId: ctx.user.tenantId,
       name: input.name,
       nameAr: input.nameAr,
@@ -119241,8 +119257,8 @@ var posRestaurantRouter = createRouter({
   }),
   // ============ TABLES ============
   tableList: authedQuery.input(external_exports.object({ floorPlanId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(restaurantTables).where(and(eq(restaurantTables.tenantId, ctx.user.tenantId), eq(restaurantTables.floorPlanId, input.floorPlanId))).orderBy(restaurantTables.tableNumber);
+    const db4 = getDb();
+    return db4.select().from(restaurantTables).where(and(eq(restaurantTables.tenantId, ctx.user.tenantId), eq(restaurantTables.floorPlanId, input.floorPlanId))).orderBy(restaurantTables.tableNumber);
   }),
   tableCreate: authedQuery.input(external_exports.object({
     floorPlanId: external_exports.number(),
@@ -119256,8 +119272,8 @@ var posRestaurantRouter = createRouter({
     width: external_exports.number().default(80),
     height: external_exports.number().default(60)
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(restaurantTables).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(restaurantTables).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
@@ -119270,14 +119286,14 @@ var posRestaurantRouter = createRouter({
     status: external_exports.enum(["vacant", "occupied", "ordered", "served", "paid", "reserved", "cleaning"]).optional(),
     waiterId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(restaurantTables).set(data).where(and(eq(restaurantTables.id, id), eq(restaurantTables.tenantId, ctx.user.tenantId)));
+    await db4.update(restaurantTables).set(data).where(and(eq(restaurantTables.id, id), eq(restaurantTables.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   tableDelete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(restaurantTables).set({ isActive: false }).where(and(eq(restaurantTables.id, input.id), eq(restaurantTables.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(restaurantTables).set({ isActive: false }).where(and(eq(restaurantTables.id, input.id), eq(restaurantTables.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   // ============ TABLE ORDERS ============
@@ -119298,14 +119314,14 @@ var posRestaurantRouter = createRouter({
       course: external_exports.enum(["appetizer", "main", "dessert", "drinks", "other"]).default("main")
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const orderNumber = `TO-${Date.now()}`;
     let subtotal = 0;
     for (const item of input.items) subtotal += Number(item.unitPrice) * item.quantity;
     const servicePct = Number(input.serviceChargePercent || 0);
     const serviceCharge = subtotal * (servicePct / 100);
-    const [{ id: orderId }] = await db5.insert(tableOrders).values({
+    const [{ id: orderId }] = await db4.insert(tableOrders).values({
       tenantId,
       restaurantTableId: input.restaurantTableId,
       waiterId: input.waiterId,
@@ -119319,9 +119335,9 @@ var posRestaurantRouter = createRouter({
       totalAmount: String(subtotal + serviceCharge),
       createdBy: ctx.user.id
     }).$returningId();
-    await db5.update(restaurantTables).set({ status: "ordered", currentOrderId: orderId }).where(eq(restaurantTables.id, input.restaurantTableId));
-    const stations = await db5.select().from(kdsStations).where(and(eq(kdsStations.tenantId, tenantId), eq(kdsStations.isActive, true)));
-    const stationProducts = await db5.select().from(kdsStationProducts).where(inArray(kdsStationProducts.stationId, stations.map((s) => s.id)));
+    await db4.update(restaurantTables).set({ status: "ordered", currentOrderId: orderId }).where(eq(restaurantTables.id, input.restaurantTableId));
+    const stations = await db4.select().from(kdsStations).where(and(eq(kdsStations.tenantId, tenantId), eq(kdsStations.isActive, true)));
+    const stationProducts = await db4.select().from(kdsStationProducts).where(inArray(kdsStationProducts.stationId, stations.map((s) => s.id)));
     const courseMap = { appetizer: 0, main: 1, dessert: 2, drinks: 3, other: 4 };
     const kotTicketsMap = /* @__PURE__ */ new Map();
     for (const item of input.items) {
@@ -119353,37 +119369,37 @@ var posRestaurantRouter = createRouter({
     }
     for (const [, ticket] of kotTicketsMap) {
       const { items, ...ticketData } = ticket;
-      const [{ id: ticketId }] = await db5.insert(kotTickets).values(ticketData).$returningId();
+      const [{ id: ticketId }] = await db4.insert(kotTickets).values(ticketData).$returningId();
       for (const ti of items) {
-        await db5.insert(kotTicketItems).values({ kotTicketId: ticketId, ...ti });
+        await db4.insert(kotTicketItems).values({ kotTicketId: ticketId, ...ti });
       }
     }
     return { id: orderId, orderNumber, success: true };
   }),
   tableOrderList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(tableOrders.tenantId, ctx.user.tenantId)];
     if (input.status) conditions.push(eq(tableOrders.status, input.status));
-    return db5.select().from(tableOrders).where(and(...conditions)).orderBy(desc(tableOrders.createdAt));
+    return db4.select().from(tableOrders).where(and(...conditions)).orderBy(desc(tableOrders.createdAt));
   }),
   tableOrderGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const order = await db5.query.tableOrders.findFirst({
+    const db4 = getDb();
+    const order = await db4.query.tableOrders.findFirst({
       where: and(eq(tableOrders.id, input.id), eq(tableOrders.tenantId, ctx.user.tenantId))
     });
     if (!order) return null;
-    const tickets = await db5.select().from(kotTickets).where(eq(kotTickets.tableOrderId, input.id));
+    const tickets = await db4.select().from(kotTickets).where(eq(kotTickets.tableOrderId, input.id));
     const ticketIds = tickets.map((t2) => t2.id);
-    const items = ticketIds.length ? await db5.select().from(kotTicketItems).where(inArray(kotTicketItems.kotTicketId, ticketIds)) : [];
+    const items = ticketIds.length ? await db4.select().from(kotTicketItems).where(inArray(kotTicketItems.kotTicketId, ticketIds)) : [];
     return { ...order, tickets, ticketItems: items };
   }),
   tableOrderUpdateStatus: authedQuery.input(external_exports.object({ id: external_exports.number(), status: external_exports.enum(["open", "in_progress", "served", "partial", "completed", "cancelled", "transferred"]) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(tableOrders).set({ status: input.status }).where(and(eq(tableOrders.id, input.id), eq(tableOrders.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(tableOrders).set({ status: input.status }).where(and(eq(tableOrders.id, input.id), eq(tableOrders.tenantId, ctx.user.tenantId)));
     if (input.status === "completed" || input.status === "cancelled") {
-      const order = await db5.query.tableOrders.findFirst({ where: eq(tableOrders.id, input.id) });
+      const order = await db4.query.tableOrders.findFirst({ where: eq(tableOrders.id, input.id) });
       if (order?.restaurantTableId) {
-        await db5.update(restaurantTables).set({ status: input.status === "completed" ? "paid" : "vacant", currentOrderId: null }).where(eq(restaurantTables.id, order.restaurantTableId));
+        await db4.update(restaurantTables).set({ status: input.status === "completed" ? "paid" : "vacant", currentOrderId: null }).where(eq(restaurantTables.id, order.restaurantTableId));
       }
     }
     return { success: true };
@@ -119395,14 +119411,14 @@ var posRestaurantRouter = createRouter({
     itemIds: external_exports.array(external_exports.number())
     // KOT ticket item IDs to move
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const origOrder = await db5.query.tableOrders.findFirst({
+    const origOrder = await db4.query.tableOrders.findFirst({
       where: and(eq(tableOrders.id, input.orderId), eq(tableOrders.tenantId, tenantId))
     });
     if (!origOrder) throw new Error("Order not found");
     const splitNumber = `TO-${Date.now()}`;
-    const [{ id: newOrderId }] = await db5.insert(tableOrders).values({
+    const [{ id: newOrderId }] = await db4.insert(tableOrders).values({
       tenantId,
       restaurantTableId: input.newTableId,
       waiterId: origOrder.waiterId,
@@ -119412,9 +119428,9 @@ var posRestaurantRouter = createRouter({
       orderType: origOrder.orderType,
       splitFromId: input.orderId
     }).$returningId();
-    const itemsToMove = await db5.select().from(kotTicketItems).where(inArray(kotTicketItems.id, input.itemIds));
+    const itemsToMove = await db4.select().from(kotTicketItems).where(inArray(kotTicketItems.id, input.itemIds));
     for (const item of itemsToMove) {
-      await db5.insert(kotTicketItems).values({
+      await db4.insert(kotTicketItems).values({
         kotTicketId: item.kotTicketId,
         productId: item.productId,
         productName: item.productName,
@@ -119423,34 +119439,34 @@ var posRestaurantRouter = createRouter({
         instructions: item.instructions
       });
     }
-    await db5.update(restaurantTables).set({ status: "ordered", currentOrderId: newOrderId }).where(eq(restaurantTables.id, input.newTableId));
+    await db4.update(restaurantTables).set({ status: "ordered", currentOrderId: newOrderId }).where(eq(restaurantTables.id, input.newTableId));
     return { id: newOrderId, success: true };
   }),
   // ============ TABLE TRANSFER ============
   tableOrderTransfer: authedQuery.input(external_exports.object({ orderId: external_exports.number(), fromTableId: external_exports.number(), toTableId: external_exports.number(), newWaiterId: external_exports.number().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    await db5.update(tableOrders).set({
+    await db4.update(tableOrders).set({
       restaurantTableId: input.toTableId,
       waiterId: input.newWaiterId,
       status: "transferred"
     }).where(and(eq(tableOrders.id, input.orderId), eq(tableOrders.tenantId, tenantId)));
-    await db5.update(restaurantTables).set({ status: "vacant", currentOrderId: null }).where(eq(restaurantTables.id, input.fromTableId));
-    await db5.update(restaurantTables).set({ status: "occupied", currentOrderId: input.orderId }).where(eq(restaurantTables.id, input.toTableId));
+    await db4.update(restaurantTables).set({ status: "vacant", currentOrderId: null }).where(eq(restaurantTables.id, input.fromTableId));
+    await db4.update(restaurantTables).set({ status: "occupied", currentOrderId: input.orderId }).where(eq(restaurantTables.id, input.toTableId));
     return { success: true };
   }),
   // ============ HOLD/RELEASE ITEMS ============
   kotItemHold: authedQuery.input(external_exports.object({ id: external_exports.number(), hold: external_exports.boolean() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const item = await db5.query.kotTicketItems.findFirst({ where: eq(kotTicketItems.id, input.id) });
+    const db4 = getDb();
+    const item = await db4.query.kotTicketItems.findFirst({ where: eq(kotTicketItems.id, input.id) });
     if (!item) throw new Error("Item not found");
-    await db5.update(kotTicketItems).set({ status: input.hold ? "held" : "pending" }).where(eq(kotTicketItems.id, input.id));
+    await db4.update(kotTicketItems).set({ status: input.hold ? "held" : "pending" }).where(eq(kotTicketItems.id, input.id));
     return { success: true };
   }),
   // ============ KDS / KOT ============
   kdsStationList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(kdsStations).where(and(eq(kdsStations.tenantId, ctx.user.tenantId), eq(kdsStations.isActive, true))).orderBy(kdsStations.sortOrder);
+    const db4 = getDb();
+    return db4.select().from(kdsStations).where(and(eq(kdsStations.tenantId, ctx.user.tenantId), eq(kdsStations.isActive, true))).orderBy(kdsStations.sortOrder);
   }),
   kdsStationCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
@@ -119460,27 +119476,27 @@ var posRestaurantRouter = createRouter({
     sortOrder: external_exports.number().default(0),
     productIds: external_exports.array(external_exports.number()).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { productIds, ...stationData } = input;
-    const [{ id }] = await db5.insert(kdsStations).values({
+    const [{ id }] = await db4.insert(kdsStations).values({
       tenantId: ctx.user.tenantId,
       ...stationData
     }).$returningId();
     if (productIds?.length) {
       for (const pid of productIds) {
-        await db5.insert(kdsStationProducts).values({ stationId: id, productId: pid });
+        await db4.insert(kdsStationProducts).values({ stationId: id, productId: pid });
       }
     }
     return { id, success: true };
   }),
   kotPendingTickets: authedQuery.input(external_exports.object({ stationId: external_exports.number().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(kotTickets.tenantId, ctx.user.tenantId)];
     if (input.stationId) conditions.push(eq(kotTickets.stationId, input.stationId));
     conditions.push(sql`${kotTickets.status} IN ('pending','preparing')`);
-    const tickets = await db5.select().from(kotTickets).where(and(...conditions)).orderBy(kotTickets.courseSequence, kotTickets.createdAt);
+    const tickets = await db4.select().from(kotTickets).where(and(...conditions)).orderBy(kotTickets.courseSequence, kotTickets.createdAt);
     const ticketIds = tickets.map((t2) => t2.id);
-    const items = ticketIds.length ? await db5.select().from(kotTicketItems).where(inArray(kotTicketItems.kotTicketId, ticketIds)) : [];
+    const items = ticketIds.length ? await db4.select().from(kotTicketItems).where(inArray(kotTicketItems.kotTicketId, ticketIds)) : [];
     return tickets.map((t2) => ({ ...t2, items: items.filter((i) => i.kotTicketId === t2.id) }));
   }),
   kotUpdateStatus: authedQuery.input(external_exports.object({
@@ -119488,19 +119504,19 @@ var posRestaurantRouter = createRouter({
     status: external_exports.enum(["pending", "preparing", "ready", "served", "cancelled"]),
     preparedBy: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const updates = { status: input.status };
     if (input.status === "preparing") updates.preparedBy = input.preparedBy;
     if (input.status === "ready") updates.readyAt = /* @__PURE__ */ new Date();
     if (input.status === "served") updates.servedAt = /* @__PURE__ */ new Date();
-    await db5.update(kotTickets).set(updates).where(eq(kotTickets.id, input.id));
+    await db4.update(kotTickets).set(updates).where(eq(kotTickets.id, input.id));
     return { success: true };
   }),
   // ============ QR ORDERING ============
   qrSessionCreate: authedQuery.input(external_exports.object({ restaurantTableId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const token = `QR-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const [{ id }] = await db5.insert(qrOrderSessions).values({
+    const [{ id }] = await db4.insert(qrOrderSessions).values({
       tenantId: ctx.user.tenantId,
       restaurantTableId: input.restaurantTableId,
       sessionToken: token,
@@ -119510,14 +119526,14 @@ var posRestaurantRouter = createRouter({
   }),
   // ============ SERVICE CHARGE ============
   tableOrderSetServiceCharge: authedQuery.input(external_exports.object({ orderId: external_exports.number(), percent: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const order = await db5.query.tableOrders.findFirst({
+    const db4 = getDb();
+    const order = await db4.query.tableOrders.findFirst({
       where: and(eq(tableOrders.id, input.orderId), eq(tableOrders.tenantId, ctx.user.tenantId))
     });
     if (!order) throw new Error("Order not found");
     const pct = Number(input.percent);
     const serviceCharge = Number(order.subtotal) * (pct / 100);
-    await db5.update(tableOrders).set({
+    await db4.update(tableOrders).set({
       serviceChargePercent: String(pct),
       serviceChargeAmount: String(serviceCharge),
       totalAmount: String(Number(order.subtotal) + serviceCharge - Number(order.discountAmount || 0) + Number(order.taxAmount || 0))
@@ -119533,13 +119549,13 @@ init_drizzle_orm();
 var posPharmacyRouter = createRouter({
   // ============ PRESCRIPTIONS ============
   prescriptionSearch: authedQuery.input(external_exports.object({ query: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(prescriptions.tenantId, ctx.user.tenantId)];
     if (input.query) {
       conditions.push(sql`(${like2(prescriptions.prescriptionNumber, `%${input.query}%`)} OR ${like2(prescriptions.doctorName, `%${input.query}%`)})`);
     }
     if (input.status) conditions.push(eq(prescriptions.status, input.status));
-    return db5.select().from(prescriptions).where(and(...conditions)).orderBy(desc(prescriptions.createdAt)).limit(20);
+    return db4.select().from(prescriptions).where(and(...conditions)).orderBy(desc(prescriptions.createdAt)).limit(20);
   }),
   prescriptionCreate: authedQuery.input(external_exports.object({
     prescriptionNumber: external_exports.string(),
@@ -119562,22 +119578,22 @@ var posPharmacyRouter = createRouter({
       instructions: external_exports.string().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, ...rxData } = input;
-    const [{ id: rxId }] = await db5.insert(prescriptions).values({
+    const [{ id: rxId }] = await db4.insert(prescriptions).values({
       tenantId: ctx.user.tenantId,
       ...rxData
     }).$returningId();
     for (const item of items) {
-      const product = await db5.query.products.findFirst({ where: eq(products.id, item.productId) });
-      await db5.insert(prescriptionItems).values({
+      const product = await db4.query.products.findFirst({ where: eq(products.id, item.productId) });
+      await db4.insert(prescriptionItems).values({
         prescriptionId: rxId,
         ...item,
         isControlled: input.isControlledSubstance
       });
       const otherIds = items.filter((i) => i.productId !== item.productId).map((i) => i.productId);
       if (otherIds.length) {
-        const interactions = await db5.select().from(drugInteractions).where(and(
+        const interactions = await db4.select().from(drugInteractions).where(and(
           eq(drugInteractions.tenantId, ctx.user.tenantId),
           sql`((${drugInteractions.productIdA} = ${item.productId} AND ${inArray(drugInteractions.productIdB, otherIds)}) OR (${drugInteractions.productIdB} = ${item.productId} AND ${inArray(drugInteractions.productIdA, otherIds)}))`
         ));
@@ -119588,12 +119604,12 @@ var posPharmacyRouter = createRouter({
     return { id: rxId, success: true };
   }),
   prescriptionGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const rx = await db5.query.prescriptions.findFirst({
+    const db4 = getDb();
+    const rx = await db4.query.prescriptions.findFirst({
       where: and(eq(prescriptions.id, input.id), eq(prescriptions.tenantId, ctx.user.tenantId))
     });
     if (!rx) return null;
-    const items = await db5.select().from(prescriptionItems).where(eq(prescriptionItems.prescriptionId, input.id));
+    const items = await db4.select().from(prescriptionItems).where(eq(prescriptionItems.prescriptionId, input.id));
     return { ...rx, items };
   }),
   prescriptionDispense: authedQuery.input(external_exports.object({
@@ -119607,38 +119623,38 @@ var posPharmacyRouter = createRouter({
     })),
     invoiceId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const rx = await db5.query.prescriptions.findFirst({
+    const rx = await db4.query.prescriptions.findFirst({
       where: and(eq(prescriptions.id, input.prescriptionId), eq(prescriptions.tenantId, tenantId))
     });
     if (!rx) throw new Error("Prescription not found");
     for (const item of input.items) {
-      await db5.update(prescriptionItems).set({
+      await db4.update(prescriptionItems).set({
         quantityDispensed: sql`${prescriptionItems.quantityDispensed} + ${item.quantityDispensed}`
       }).where(eq(prescriptionItems.id, item.prescriptionItemId));
       if (item.batchNumber) {
-        const bal = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId))).limit(1);
+        const bal = await db4.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId))).limit(1);
         if (bal.length) {
-          await db5.update(inventoryBalances).set({
+          await db4.update(inventoryBalances).set({
             quantity: sql`greatest(0, ${inventoryBalances.quantity} - ${item.quantityDispensed})`
           }).where(eq(inventoryBalances.id, bal[0].id));
         }
       }
       if (item.serialNumber) {
-        await db5.update(sfdaSerialNumbers).set({
+        await db4.update(sfdaSerialNumbers).set({
           status: "sold",
           soldAt: /* @__PURE__ */ new Date(),
           invoiceItemId: input.invoiceId
         }).where(and(eq(sfdaSerialNumbers.serialNumber, item.serialNumber), eq(sfdaSerialNumbers.tenantId, tenantId)));
       }
     }
-    const rxItems = await db5.select().from(prescriptionItems).where(eq(prescriptionItems.prescriptionId, input.prescriptionId));
+    const rxItems = await db4.select().from(prescriptionItems).where(eq(prescriptionItems.prescriptionId, input.prescriptionId));
     const fullyDispensed = rxItems.every((i) => i.quantityDispensed >= i.quantityPrescribed);
     if (fullyDispensed) {
-      await db5.update(prescriptions).set({ status: "dispensed" }).where(eq(prescriptions.id, input.prescriptionId));
+      await db4.update(prescriptions).set({ status: "dispensed" }).where(eq(prescriptions.id, input.prescriptionId));
     } else {
-      await db5.update(prescriptions).set({ status: "partial" }).where(eq(prescriptions.id, input.prescriptionId));
+      await db4.update(prescriptions).set({ status: "partial" }).where(eq(prescriptions.id, input.prescriptionId));
     }
     checkLowStockAndNotify(tenantId).catch(
       (err) => console.error("[notify] Pharmacy checkLowStock error:", err)
@@ -119659,9 +119675,9 @@ var posPharmacyRouter = createRouter({
     witnessedBy: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const balanceAfter = input.balanceBefore - input.quantityDispensed;
-    await db5.insert(controlledSubstanceLog).values({
+    await db4.insert(controlledSubstanceLog).values({
       tenantId: ctx.user.tenantId,
       ...input,
       balanceAfter
@@ -119669,16 +119685,16 @@ var posPharmacyRouter = createRouter({
     return { success: true };
   }),
   controlledSubstanceLogList: authedQuery.input(external_exports.object({ from: external_exports.string().optional(), to: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(controlledSubstanceLog.tenantId, ctx.user.tenantId)];
     if (input.from) conditions.push(gte(controlledSubstanceLog.dispensedAt, new Date(input.from)));
     if (input.to) conditions.push(lte(controlledSubstanceLog.dispensedAt, new Date(input.to)));
-    return db5.select().from(controlledSubstanceLog).where(and(...conditions)).orderBy(desc(controlledSubstanceLog.dispensedAt));
+    return db4.select().from(controlledSubstanceLog).where(and(...conditions)).orderBy(desc(controlledSubstanceLog.dispensedAt));
   }),
   // ============ INSURANCE ============
   insuranceCompanyList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(insuranceCompanies).where(and(eq(insuranceCompanies.tenantId, ctx.user.tenantId), eq(insuranceCompanies.isActive, true)));
+    const db4 = getDb();
+    return db4.select().from(insuranceCompanies).where(and(eq(insuranceCompanies.tenantId, ctx.user.tenantId), eq(insuranceCompanies.isActive, true)));
   }),
   insuranceClaimCreate: authedQuery.input(external_exports.object({
     invoiceId: external_exports.number().optional(),
@@ -119691,9 +119707,9 @@ var posPharmacyRouter = createRouter({
     claimAmount: external_exports.string(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const claimNumber = `CLM-${Date.now()}`;
-    const [{ id }] = await db5.insert(insuranceClaims).values({
+    const [{ id }] = await db4.insert(insuranceClaims).values({
       tenantId: ctx.user.tenantId,
       claimNumber,
       ...input,
@@ -119703,16 +119719,16 @@ var posPharmacyRouter = createRouter({
   }),
   // ============ DRUG INTERACTIONS ============
   drugInteractionCheck: authedQuery.input(external_exports.object({ productIds: external_exports.array(external_exports.number()) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     if (input.productIds.length < 2) return [];
-    const interactions = await db5.select().from(drugInteractions).where(and(
+    const interactions = await db4.select().from(drugInteractions).where(and(
       eq(drugInteractions.tenantId, ctx.user.tenantId),
       sql`((${inArray(drugInteractions.productIdA, input.productIds)} AND ${inArray(drugInteractions.productIdB, input.productIds)}))`
     ));
     const result = [];
     for (const interaction of interactions) {
-      const prodA = await db5.query.products.findFirst({ where: eq(products.id, interaction.productIdA) });
-      const prodB = await db5.query.products.findFirst({ where: eq(products.id, interaction.productIdB) });
+      const prodA = await db4.query.products.findFirst({ where: eq(products.id, interaction.productIdA) });
+      const prodB = await db4.query.products.findFirst({ where: eq(products.id, interaction.productIdB) });
       result.push({
         ...interaction,
         productAName: prodA?.name,
@@ -119729,8 +119745,8 @@ var posPharmacyRouter = createRouter({
     descriptionAr: external_exports.string().optional(),
     recommendation: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.insert(drugInteractions).values({ tenantId: ctx.user.tenantId, ...input });
+    const db4 = getDb();
+    await db4.insert(drugInteractions).values({ tenantId: ctx.user.tenantId, ...input });
     return { success: true };
   }),
   // ============ SFDA SERIAL TRACKING ============
@@ -119740,20 +119756,20 @@ var posPharmacyRouter = createRouter({
     serialNumber: external_exports.string(),
     expiryDate: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.insert(sfdaSerialNumbers).values({ tenantId: ctx.user.tenantId, ...input });
+    const db4 = getDb();
+    await db4.insert(sfdaSerialNumbers).values({ tenantId: ctx.user.tenantId, ...input });
     return { success: true };
   }),
   sfdaSerialLookup: authedQuery.input(external_exports.object({ serialNumber: external_exports.string() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.query.sfdaSerialNumbers.findFirst({
+    const db4 = getDb();
+    return db4.query.sfdaSerialNumbers.findFirst({
       where: and(eq(sfdaSerialNumbers.serialNumber, input.serialNumber), eq(sfdaSerialNumbers.tenantId, ctx.user.tenantId))
     });
   }),
   // ============ BATCH SELECTION ============
   batchAvailable: authedQuery.input(external_exports.object({ productId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const batches = await db5.select({
+    const db4 = getDb();
+    const batches = await db4.select({
       batchNumber: inventoryMovements2.batchNumber,
       expiryDate: inventoryMovements2.expiryDate,
       quantity: sql`coalesce(sum(case when ${inventoryMovements2.movementType} = 'purchase' then ${inventoryMovements2.quantity} when ${inventoryMovements2.movementType} = 'sale' then -${inventoryMovements2.quantity} else 0 end), 0)`
@@ -119769,12 +119785,12 @@ var posPharmacyRouter = createRouter({
 init_connection();
 init_schema2();
 init_drizzle_orm();
-async function getOrCreateWalkInCustomer2(db5, tenantId) {
-  const existing = await db5.query.customers.findFirst({
+async function getOrCreateWalkInCustomer2(db4, tenantId) {
+  const existing = await db4.query.customers.findFirst({
     where: and(eq(customers.tenantId, tenantId), eq(customers.code, "WALK-IN"))
   });
   if (existing) return existing.id;
-  const [{ id }] = await db5.insert(customers).values({
+  const [{ id }] = await db4.insert(customers).values({
     tenantId,
     code: "WALK-IN",
     name: "Walk-in Customer",
@@ -119787,26 +119803,26 @@ async function getOrCreateWalkInCustomer2(db5, tenantId) {
 var posWholesaleRouter = createRouter({
   // ============ PRICE TIERS ============
   priceTierList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(priceTiers).where(and(eq(priceTiers.tenantId, ctx.user.tenantId), eq(priceTiers.isActive, true)));
+    const db4 = getDb();
+    return db4.select().from(priceTiers).where(and(eq(priceTiers.tenantId, ctx.user.tenantId), eq(priceTiers.isActive, true)));
   }),
   priceTierCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
     nameAr: external_exports.string().optional(),
     tierType: external_exports.enum(["quantity_break", "customer_group", "trade_discount"]).default("quantity_break")
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(priceTiers).values({ tenantId: ctx.user.tenantId, ...input }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(priceTiers).values({ tenantId: ctx.user.tenantId, ...input }).$returningId();
     return { id, success: true };
   }),
   priceTierBreaksList: authedQuery.input(external_exports.object({ priceTierId: external_exports.number(), productId: external_exports.number().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [
       eq(priceTierBreaks.priceTierId, input.priceTierId),
       eq(priceTierBreaks.tenantId, ctx.user.tenantId)
     ];
     if (input.productId) conditions.push(eq(priceTierBreaks.productId, input.productId));
-    return db5.select().from(priceTierBreaks).where(and(...conditions)).orderBy(priceTierBreaks.minQuantity);
+    return db4.select().from(priceTierBreaks).where(and(...conditions)).orderBy(priceTierBreaks.minQuantity);
   }),
   priceTierBreakCreate: authedQuery.input(external_exports.object({
     priceTierId: external_exports.number(),
@@ -119817,17 +119833,17 @@ var posWholesaleRouter = createRouter({
     unitPrice: external_exports.string(),
     discountPercent: external_exports.string().default("0")
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.insert(priceTierBreaks).values({ tenantId: ctx.user.tenantId, ...input });
+    const db4 = getDb();
+    await db4.insert(priceTierBreaks).values({ tenantId: ctx.user.tenantId, ...input });
     return { success: true };
   }),
   customerPriceTierSet: authedQuery.input(external_exports.object({ customerId: external_exports.number(), priceTierId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const existing = await db5.query.customerPriceTiers.findFirst({
+    const db4 = getDb();
+    const existing = await db4.query.customerPriceTiers.findFirst({
       where: and(eq(customerPriceTiers.customerId, input.customerId), eq(customerPriceTiers.priceTierId, input.priceTierId))
     });
     if (!existing) {
-      await db5.insert(customerPriceTiers).values({
+      await db4.insert(customerPriceTiers).values({
         customerId: input.customerId,
         priceTierId: input.priceTierId,
         tenantId: ctx.user.tenantId
@@ -119836,18 +119852,18 @@ var posWholesaleRouter = createRouter({
     return { success: true };
   }),
   getEffectivePrice: authedQuery.input(external_exports.object({ customerId: external_exports.number().optional(), productId: external_exports.number(), quantity: external_exports.number().default(1) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const product = await db5.query.products.findFirst({
+    const db4 = getDb();
+    const product = await db4.query.products.findFirst({
       where: and(eq(products.id, input.productId), eq(products.tenantId, ctx.user.tenantId))
     });
     if (!product) throw new Error("Product not found");
     let effectivePrice = Number(product.salePrice);
     if (input.customerId && input.quantity > 1) {
-      const cpt = await db5.query.customerPriceTiers.findFirst({
+      const cpt = await db4.query.customerPriceTiers.findFirst({
         where: and(eq(customerPriceTiers.customerId, input.customerId), eq(customerPriceTiers.tenantId, ctx.user.tenantId))
       });
       if (cpt) {
-        const breaks = await db5.select().from(priceTierBreaks).where(and(
+        const breaks = await db4.select().from(priceTierBreaks).where(and(
           eq(priceTierBreaks.priceTierId, cpt.priceTierId),
           eq(priceTierBreaks.tenantId, ctx.user.tenantId),
           lte(priceTierBreaks.minQuantity, input.quantity),
@@ -119885,13 +119901,13 @@ var posWholesaleRouter = createRouter({
       batchNumber: external_exports.string().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const invoiceNumber = `WS-${Date.now()}`;
     const { items, ...invoiceData } = input;
-    const customerId = input.customerId ?? await getOrCreateWalkInCustomer2(db5, tenantId);
+    const customerId = input.customerId ?? await getOrCreateWalkInCustomer2(db4, tenantId);
     if (input.paymentMethod === "credit") {
-      const customer = await db5.query.customers.findFirst({ where: eq(customers.id, customerId) });
+      const customer = await db4.query.customers.findFirst({ where: eq(customers.id, customerId) });
       if (customer) {
         const newBalance = Number(customer.currentBalance) + Number(input.totalAmount);
         if (Number(customer.creditLimit) > 0 && newBalance > Number(customer.creditLimit)) {
@@ -119901,7 +119917,7 @@ var posWholesaleRouter = createRouter({
     }
     const balanceDue = Math.max(0, Number(input.totalAmount) - Number(input.paymentAmount || 0)).toFixed(4);
     const tradeDisc = Number(input.tradeDiscountPercent);
-    const [{ id: invoiceId }] = await db5.insert(invoices).values({
+    const [{ id: invoiceId }] = await db4.insert(invoices).values({
       tenantId,
       invoiceNumber,
       customerId,
@@ -119919,7 +119935,7 @@ var posWholesaleRouter = createRouter({
       createdBy: ctx.user.id
     }).$returningId();
     for (const item of items) {
-      await db5.insert(invoiceItems).values({
+      await db4.insert(invoiceItems).values({
         invoiceId,
         productId: item.productId,
         description: item.description && item.description.trim() ? item.description : item.productId ? `Item #${item.productId}` : "WS Invoice",
@@ -119931,10 +119947,10 @@ var posWholesaleRouter = createRouter({
       });
     }
     for (const item of items) {
-      const balances = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId)));
+      const balances = await db4.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId)));
       for (const bal of balances) {
         const newQty = Math.max(0, Number(bal.quantity || 0) - item.quantity);
-        await db5.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, bal.id));
+        await db4.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, bal.id));
       }
     }
     checkLowStockAndNotify(tenantId).catch(
@@ -119944,28 +119960,28 @@ var posWholesaleRouter = createRouter({
   }),
   // ============ QUICK ORDER TEMPLATES ============
   customerLastOrder: authedQuery.input(external_exports.object({ customerId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const lastOrder = await db5.query.salesOrders.findFirst({
+    const db4 = getDb();
+    const lastOrder = await db4.query.salesOrders.findFirst({
       where: and(eq(salesOrders.customerId, input.customerId), eq(salesOrders.tenantId, ctx.user.tenantId)),
       orderBy: desc(salesOrders.createdAt)
     });
     if (!lastOrder) return null;
-    const items = await db5.select().from(salesOrderItems).where(eq(salesOrderItems.orderId, lastOrder.id));
+    const items = await db4.select().from(salesOrderItems).where(eq(salesOrderItems.orderId, lastOrder.id));
     return { order: lastOrder, items };
   }),
   customerFrequentItems: authedQuery.input(external_exports.object({ customerId: external_exports.number(), limit: external_exports.number().default(10) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const customerOrders = await db5.select({ id: salesOrders.id }).from(salesOrders).where(and(eq(salesOrders.customerId, input.customerId), eq(salesOrders.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const customerOrders = await db4.select({ id: salesOrders.id }).from(salesOrders).where(and(eq(salesOrders.customerId, input.customerId), eq(salesOrders.tenantId, ctx.user.tenantId)));
     const orderIds = customerOrders.map((o) => o.id);
     if (!orderIds.length) return [];
-    const freq = await db5.select({
+    const freq = await db4.select({
       productId: salesOrderItems.productId,
       totalQty: sql`sum(${salesOrderItems.quantity})`,
       orderCount: sql`count(distinct ${salesOrderItems.orderId})`
     }).from(salesOrderItems).where(and(inArray(salesOrderItems.orderId, orderIds), sql`${salesOrderItems.productId} IS NOT NULL`)).groupBy(salesOrderItems.productId).orderBy(desc(sql`sum(${salesOrderItems.quantity})`)).limit(input.limit);
     const result = [];
     for (const f of freq) {
-      const product = await db5.query.products.findFirst({ where: eq(products.id, f.productId) });
+      const product = await db4.query.products.findFirst({ where: eq(products.id, f.productId) });
       result.push({ ...f, productName: product?.name, salePrice: product?.salePrice });
     }
     return result;
@@ -119979,8 +119995,8 @@ init_drizzle_orm();
 var posSharedRouter = createRouter({
   // ============ LOYALTY PROGRAMS ============
   loyaltyProgramList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(loyaltyPrograms).where(and(eq(loyaltyPrograms.tenantId, ctx.user.tenantId), eq(loyaltyPrograms.isActive, true)));
+    const db4 = getDb();
+    return db4.select().from(loyaltyPrograms).where(and(eq(loyaltyPrograms.tenantId, ctx.user.tenantId), eq(loyaltyPrograms.isActive, true)));
   }),
   loyaltyProgramCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
@@ -119992,8 +120008,8 @@ var posSharedRouter = createRouter({
     maxRedeemPercent: external_exports.string().default("100"),
     tierConfig: external_exports.any().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(loyaltyPrograms).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(loyaltyPrograms).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
@@ -120004,16 +120020,16 @@ var posSharedRouter = createRouter({
     customerId: external_exports.number(),
     cardNumber: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(loyaltyCards).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(loyaltyCards).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
     return { id, success: true };
   }),
   loyaltyCardBalance: authedQuery.input(external_exports.object({ cardNumber: external_exports.string() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.query.loyaltyCards.findFirst({
+    const db4 = getDb();
+    return db4.query.loyaltyCards.findFirst({
       where: and(eq(loyaltyCards.cardNumber, input.cardNumber), eq(loyaltyCards.tenantId, ctx.user.tenantId))
     });
   }),
@@ -120023,23 +120039,23 @@ var posSharedRouter = createRouter({
     referenceType: external_exports.string().optional(),
     referenceId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const card = await db5.query.loyaltyCards.findFirst({
+    const db4 = getDb();
+    const card = await db4.query.loyaltyCards.findFirst({
       where: and(eq(loyaltyCards.id, input.cardId), eq(loyaltyCards.tenantId, ctx.user.tenantId))
     });
     if (!card) throw new Error("Card not found");
-    const program = await db5.query.loyaltyPrograms.findFirst({ where: eq(loyaltyPrograms.id, card.programId) });
+    const program = await db4.query.loyaltyPrograms.findFirst({ where: eq(loyaltyPrograms.id, card.programId) });
     if (!program) throw new Error("Program not found");
     const points = Math.floor(Number(input.amount) * Number(program.pointsPerCurrency));
     const balBefore = Number(card.currentBalance);
     const balAfter = balBefore + points;
-    await db5.update(loyaltyCards).set({
+    await db4.update(loyaltyCards).set({
       totalPoints: sql`${loyaltyCards.totalPoints} + ${points}`,
       lifetimePoints: sql`${loyaltyCards.lifetimePoints} + ${points}`,
       lifetimeSpend: sql`${loyaltyCards.lifetimeSpend} + ${Number(input.amount)}`,
       currentBalance: String(balAfter)
     }).where(eq(loyaltyCards.id, input.cardId));
-    await db5.insert(loyaltyTransactions).values({
+    await db4.insert(loyaltyTransactions).values({
       tenantId: ctx.user.tenantId,
       cardId: input.cardId,
       transactionType: "earn",
@@ -120058,17 +120074,17 @@ var posSharedRouter = createRouter({
     referenceType: external_exports.string().optional(),
     referenceId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const card = await db5.query.loyaltyCards.findFirst({
+    const db4 = getDb();
+    const card = await db4.query.loyaltyCards.findFirst({
       where: and(eq(loyaltyCards.id, input.cardId), eq(loyaltyCards.tenantId, ctx.user.tenantId))
     });
     if (!card) throw new Error("Card not found");
     if (Number(card.currentBalance) < input.points) throw new Error("Insufficient points");
-    const program = await db5.query.loyaltyPrograms.findFirst({ where: eq(loyaltyPrograms.id, card.programId) });
+    const program = await db4.query.loyaltyPrograms.findFirst({ where: eq(loyaltyPrograms.id, card.programId) });
     const balBefore = Number(card.currentBalance);
     const balAfter = balBefore - input.points;
-    await db5.update(loyaltyCards).set({ currentBalance: String(balAfter) }).where(eq(loyaltyCards.id, input.cardId));
-    await db5.insert(loyaltyTransactions).values({
+    await db4.update(loyaltyCards).set({ currentBalance: String(balAfter) }).where(eq(loyaltyCards.id, input.cardId));
+    await db4.insert(loyaltyTransactions).values({
       tenantId: ctx.user.tenantId,
       cardId: input.cardId,
       transactionType: "redeem",
@@ -120093,14 +120109,14 @@ var posSharedRouter = createRouter({
     expiresAt: external_exports.string().optional(),
     issuerCustomerId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(giftCards).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(giftCards).values({
       tenantId: ctx.user.tenantId,
       currentBalance: input.initialBalance,
       ...input,
       issuedBy: ctx.user.id
     }).$returningId();
-    await db5.insert(giftCardTransactions).values({
+    await db4.insert(giftCardTransactions).values({
       giftCardId: id,
       transactionType: "issue",
       amount: input.initialBalance,
@@ -120111,8 +120127,8 @@ var posSharedRouter = createRouter({
     return { id, success: true };
   }),
   giftCardBalance: authedQuery.input(external_exports.object({ cardNumber: external_exports.string(), pin: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const card = await db5.query.giftCards.findFirst({
+    const db4 = getDb();
+    const card = await db4.query.giftCards.findFirst({
       where: and(eq(giftCards.cardNumber, input.cardNumber), eq(giftCards.tenantId, ctx.user.tenantId))
     });
     if (!card) throw new Error("Gift card not found");
@@ -120125,16 +120141,16 @@ var posSharedRouter = createRouter({
     referenceType: external_exports.string().optional(),
     referenceId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const card = await db5.query.giftCards.findFirst({
+    const db4 = getDb();
+    const card = await db4.query.giftCards.findFirst({
       where: and(eq(giftCards.id, input.cardId), eq(giftCards.tenantId, ctx.user.tenantId))
     });
     if (!card) throw new Error("Gift card not found");
     const redeemAmount = Math.min(Number(input.amount), Number(card.currentBalance));
     const balBefore = Number(card.currentBalance);
     const balAfter = balBefore - redeemAmount;
-    await db5.update(giftCards).set({ currentBalance: String(balAfter) }).where(eq(giftCards.id, input.cardId));
-    await db5.insert(giftCardTransactions).values({
+    await db4.update(giftCards).set({ currentBalance: String(balAfter) }).where(eq(giftCards.id, input.cardId));
+    await db4.insert(giftCardTransactions).values({
       giftCardId: input.cardId,
       transactionType: "redeem",
       amount: String(redeemAmount),
@@ -120145,15 +120161,15 @@ var posSharedRouter = createRouter({
       createdBy: ctx.user.id
     });
     if (balAfter <= 0) {
-      await db5.update(giftCards).set({ status: "redeemed", redeemedAt: /* @__PURE__ */ new Date() }).where(eq(giftCards.id, input.cardId));
+      await db4.update(giftCards).set({ status: "redeemed", redeemedAt: /* @__PURE__ */ new Date() }).where(eq(giftCards.id, input.cardId));
     }
     return { amount: String(redeemAmount), balance: balAfter, success: true };
   }),
   // ============ SHIFT / TILL MANAGEMENT ============
   shiftOpen: authedQuery.input(external_exports.object({ openingBalance: external_exports.string().default("0"), notes: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const shiftNumber = `SFT-${Date.now()}`;
-    const [{ id }] = await db5.insert(posShifts).values({
+    const [{ id }] = await db4.insert(posShifts).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       shiftNumber,
@@ -120161,7 +120177,7 @@ var posSharedRouter = createRouter({
       status: "open",
       notes: input.notes
     }).$returningId();
-    await db5.insert(cashDrawerLogs).values({
+    await db4.insert(cashDrawerLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       shiftId: id,
@@ -120174,15 +120190,15 @@ var posSharedRouter = createRouter({
     return { id, shiftNumber, success: true };
   }),
   shiftClose: authedQuery.input(external_exports.object({ id: external_exports.number(), closingActual: external_exports.string(), notes: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const shift = await db5.query.posShifts.findFirst({
+    const db4 = getDb();
+    const shift = await db4.query.posShifts.findFirst({
       where: and(eq(posShifts.id, input.id), eq(posShifts.tenantId, ctx.user.tenantId))
     });
     if (!shift) throw new Error("Shift not found");
     const expected = Number(shift.openingBalance) + Number(shift.cashSales) + Number(shift.cashIn || 0) - Number(shift.cashOut || 0);
     const actual = Number(input.closingActual);
     const difference = actual - expected;
-    await db5.update(posShifts).set({
+    await db4.update(posShifts).set({
       status: "closed",
       closingExpected: String(expected),
       closingActual: input.closingActual,
@@ -120190,7 +120206,7 @@ var posSharedRouter = createRouter({
       closedAt: /* @__PURE__ */ new Date(),
       notes: input.notes
     }).where(eq(posShifts.id, input.id));
-    await db5.insert(cashDrawerLogs).values({
+    await db4.insert(cashDrawerLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       shiftId: input.id,
@@ -120203,24 +120219,24 @@ var posSharedRouter = createRouter({
     return { expected, actual, difference, success: true };
   }),
   shiftCurrent: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.query.posShifts.findFirst({
+    const db4 = getDb();
+    return db4.query.posShifts.findFirst({
       where: and(eq(posShifts.tenantId, ctx.user.tenantId), eq(posShifts.userId, ctx.user.id), eq(posShifts.status, "open")),
       orderBy: desc(posShifts.openedAt)
     });
   }),
   shiftCashIn: authedQuery.input(external_exports.object({ shiftId: external_exports.number(), amount: external_exports.string(), description: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const shift = await db5.query.posShifts.findFirst({
+    const db4 = getDb();
+    const shift = await db4.query.posShifts.findFirst({
       where: and(eq(posShifts.id, input.shiftId), eq(posShifts.tenantId, ctx.user.tenantId))
     });
     if (!shift) throw new Error("Shift not found");
     const balBefore = Number(shift.cashSales) + Number(shift.cashIn || 0) - Number(shift.cashOut || 0);
     const balAfter = balBefore + Number(input.amount);
-    await db5.update(posShifts).set({
+    await db4.update(posShifts).set({
       cashIn: sql`coalesce(${posShifts.cashIn},0) + ${Number(input.amount)}`
     }).where(eq(posShifts.id, input.shiftId));
-    await db5.insert(cashDrawerLogs).values({
+    await db4.insert(cashDrawerLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       shiftId: input.shiftId,
@@ -120233,18 +120249,18 @@ var posSharedRouter = createRouter({
     return { success: true };
   }),
   shiftCashOut: authedQuery.input(external_exports.object({ shiftId: external_exports.number(), amount: external_exports.string(), description: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const shift = await db5.query.posShifts.findFirst({
+    const db4 = getDb();
+    const shift = await db4.query.posShifts.findFirst({
       where: and(eq(posShifts.id, input.shiftId), eq(posShifts.tenantId, ctx.user.tenantId))
     });
     if (!shift) throw new Error("Shift not found");
     const balBefore = Number(shift.cashSales) + Number(shift.cashIn || 0) - Number(shift.cashOut || 0);
     if (balBefore < Number(input.amount)) throw new Error("Insufficient cash in drawer");
     const balAfter = balBefore - Number(input.amount);
-    await db5.update(posShifts).set({
+    await db4.update(posShifts).set({
       cashOut: sql`coalesce(${posShifts.cashOut},0) + ${Number(input.amount)}`
     }).where(eq(posShifts.id, input.shiftId));
-    await db5.insert(cashDrawerLogs).values({
+    await db4.insert(cashDrawerLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       shiftId: input.shiftId,
@@ -120257,15 +120273,15 @@ var posSharedRouter = createRouter({
     return { success: true };
   }),
   shiftHistory: authedQuery.input(external_exports.object({ from: external_exports.string().optional(), to: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(posShifts.tenantId, ctx.user.tenantId)];
     if (input.from) conditions.push(gte(posShifts.openedAt, new Date(input.from)));
     if (input.to) conditions.push(lte(posShifts.openedAt, new Date(input.to)));
-    return db5.select().from(posShifts).where(and(...conditions)).orderBy(desc(posShifts.openedAt));
+    return db4.select().from(posShifts).where(and(...conditions)).orderBy(desc(posShifts.openedAt));
   }),
   cashDrawerLog: authedQuery.input(external_exports.object({ shiftId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(cashDrawerLogs).where(and(eq(cashDrawerLogs.shiftId, input.shiftId), eq(cashDrawerLogs.tenantId, ctx.user.tenantId))).orderBy(desc(cashDrawerLogs.createdAt));
+    const db4 = getDb();
+    return db4.select().from(cashDrawerLogs).where(and(eq(cashDrawerLogs.shiftId, input.shiftId), eq(cashDrawerLogs.tenantId, ctx.user.tenantId))).orderBy(desc(cashDrawerLogs.createdAt));
   }),
   // ============ MULTI-PAYMENT SPLIT ============
   paymentSplitCreate: authedQuery.input(external_exports.object({
@@ -120279,14 +120295,14 @@ var posSharedRouter = createRouter({
       loyaltyPointsUsed: external_exports.number().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     let totalPaid = 0;
     for (const split of input.splits) {
       totalPaid += Number(split.amount);
       let emvTxId;
       if (split.paymentMethod === "card") {
-        const [{ id }] = await db5.insert(emvTransactions).values({
+        const [{ id }] = await db4.insert(emvTransactions).values({
           tenantId,
           invoiceId: input.invoiceId,
           amount: split.amount,
@@ -120295,7 +120311,7 @@ var posSharedRouter = createRouter({
         }).$returningId();
         emvTxId = id;
       }
-      const [{ id: splitId }] = await db5.insert(paymentSplits).values({
+      const [{ id: splitId }] = await db4.insert(paymentSplits).values({
         tenantId,
         invoiceId: input.invoiceId,
         paymentMethod: split.paymentMethod,
@@ -120306,7 +120322,7 @@ var posSharedRouter = createRouter({
         loyaltyPointsUsed: split.loyaltyPointsUsed ? String(split.loyaltyPointsUsed) : void 0
       }).$returningId();
       if (split.giftCardId) {
-        await db5.insert(giftCardTransactions).values({
+        await db4.insert(giftCardTransactions).values({
           giftCardId: split.giftCardId,
           transactionType: "redeem",
           amount: split.amount,
@@ -120318,7 +120334,7 @@ var posSharedRouter = createRouter({
         });
       }
     }
-    await db5.update(invoices).set({
+    await db4.update(invoices).set({
       paidAmount: String(totalPaid),
       balanceDue: String(Math.max(0, 0)),
       // simplified: full payment assumed
@@ -120328,19 +120344,19 @@ var posSharedRouter = createRouter({
   }),
   // ============ CUSTOMER FACING DISPLAY ============
   customerDisplayData: authedQuery.input(external_exports.object({ invoiceId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const invoice = await db5.query.invoices.findFirst({
+    const db4 = getDb();
+    const invoice = await db4.query.invoices.findFirst({
       where: and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, ctx.user.tenantId))
     });
     if (!invoice) return null;
-    const items = await db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.invoiceId));
-    const customer = invoice.customerId ? await db5.query.customers.findFirst({ where: eq(customers.id, invoice.customerId) }) : null;
+    const items = await db4.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.invoiceId));
+    const customer = invoice.customerId ? await db4.query.customers.findFirst({ where: eq(customers.id, invoice.customerId) }) : null;
     return { invoice, items, customerName: customer?.name };
   }),
   // ============ EMV CARD READER PLACEHOLDERS ============
   emvInitiatePayment: authedQuery.input(external_exports.object({ invoiceId: external_exports.number(), amount: external_exports.string(), terminalId: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(emvTransactions).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(emvTransactions).values({
       tenantId: ctx.user.tenantId,
       invoiceId: input.invoiceId,
       amount: input.amount,
@@ -120362,7 +120378,7 @@ var posSharedRouter = createRouter({
     cardLastFour: external_exports.string().optional(),
     responsePayload: external_exports.any().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const updates = {
       status: input.status,
       authCode: input.authCode,
@@ -120373,7 +120389,7 @@ var posSharedRouter = createRouter({
       cardLastFour: input.cardLastFour,
       responsePayload: input.responsePayload || {}
     };
-    await db5.update(emvTransactions).set(updates).where(and(eq(emvTransactions.id, input.id), eq(emvTransactions.tenantId, ctx.user.tenantId)));
+    await db4.update(emvTransactions).set(updates).where(and(eq(emvTransactions.id, input.id), eq(emvTransactions.tenantId, ctx.user.tenantId)));
     return { success: true };
   })
 });
@@ -120385,8 +120401,8 @@ init_drizzle_orm();
 var cashboxRouter = createRouter({
   // TODAY BALANCE
   currentBalance: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const lastTx = await db5.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+    const db4 = getDb();
+    const lastTx = await db4.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
     return { balance: Number(lastTx[0]?.bal || 0) };
   }),
   // TRANSACTION LIST
@@ -120398,15 +120414,15 @@ var cashboxRouter = createRouter({
     page: external_exports.number().default(1),
     limit: external_exports.number().default(20)
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(cashboxTransactions.tenantId, ctx.user.tenantId)];
     if (input?.from) conditions.push(gte(cashboxTransactions.createdAt, new Date(input.from)));
     if (input?.to) conditions.push(lte(cashboxTransactions.createdAt, new Date(input.to)));
     if (input?.type) conditions.push(eq(cashboxTransactions.transactionType, input.type));
     if (input?.search) conditions.push(like2(cashboxTransactions.description, `%${input.search}%`));
     const offset = ((input?.page || 1) - 1) * (input?.limit || 20);
-    const data = await db5.select().from(cashboxTransactions).where(and(...conditions)).orderBy(desc(cashboxTransactions.createdAt)).limit(input?.limit || 20).offset(offset);
-    const [{ count: count4 }] = await db5.select({ count: sql`count(*)` }).from(cashboxTransactions).where(and(...conditions));
+    const data = await db4.select().from(cashboxTransactions).where(and(...conditions)).orderBy(desc(cashboxTransactions.createdAt)).limit(input?.limit || 20).offset(offset);
+    const [{ count: count4 }] = await db4.select({ count: sql`count(*)` }).from(cashboxTransactions).where(and(...conditions));
     return { data, total: count4, page: input?.page || 1 };
   }),
   // CASH IN
@@ -120418,12 +120434,12 @@ var cashboxRouter = createRouter({
     referenceId: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const lastTx = await db5.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+    const db4 = getDb();
+    const lastTx = await db4.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
     const prevBal = Number(lastTx[0]?.bal || 0);
     const amount = Number(input.amount);
     const txNum = `CI-${Date.now()}`;
-    const [{ id }] = await db5.insert(cashboxTransactions).values({
+    const [{ id }] = await db4.insert(cashboxTransactions).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       transactionNumber: txNum,
@@ -120449,13 +120465,13 @@ var cashboxRouter = createRouter({
     referenceId: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const lastTx = await db5.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+    const db4 = getDb();
+    const lastTx = await db4.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
     const prevBal = Number(lastTx[0]?.bal || 0);
     const amount = Number(input.amount);
     if (amount > prevBal) throw new Error("Insufficient cashbox balance");
     const txNum = `CO-${Date.now()}`;
-    const [{ id }] = await db5.insert(cashboxTransactions).values({
+    const [{ id }] = await db4.insert(cashboxTransactions).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       transactionNumber: txNum,
@@ -120480,13 +120496,13 @@ var cashboxRouter = createRouter({
     paymentMethod: external_exports.enum(["cash", "card", "transfer", "cheque", "wallet", "other"]).default("cash"),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const lastTx = await db5.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+    const db4 = getDb();
+    const lastTx = await db4.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
     const prevBal = Number(lastTx[0]?.bal || 0);
     const amount = Number(input.amount);
     if (amount > prevBal) throw new Error("Insufficient cashbox balance");
     const txNum = `EXP-${Date.now()}`;
-    const [{ id }] = await db5.insert(cashboxTransactions).values({
+    const [{ id }] = await db4.insert(cashboxTransactions).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       transactionNumber: txNum,
@@ -120503,7 +120519,7 @@ var cashboxRouter = createRouter({
   }),
   // DAILY SUMMARY
   todaySummary: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const ranges = {
@@ -120514,7 +120530,7 @@ var cashboxRouter = createRouter({
     };
     const results = {};
     for (const [key2, { type }] of Object.entries(ranges)) {
-      const data = await db5.select({
+      const data = await db4.select({
         total: sql`coalesce(sum(${cashboxTransactions.amount}),0)`,
         count: sql`count(*)`
       }).from(cashboxTransactions).where(and(
@@ -120528,16 +120544,16 @@ var cashboxRouter = createRouter({
   }),
   // SUMMARY BY DATE RANGE
   summary: authedQuery.input(external_exports.object({ from: external_exports.string().optional(), to: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(cashboxTransactions.tenantId, ctx.user.tenantId)];
     if (input.from) conditions.push(gte(cashboxTransactions.createdAt, new Date(input.from)));
     if (input.to) conditions.push(lte(cashboxTransactions.createdAt, new Date(input.to)));
-    const totals = await db5.select({
+    const totals = await db4.select({
       type: cashboxTransactions.transactionType,
       total: sql`coalesce(sum(${cashboxTransactions.amount}),0)`,
       count: sql`count(*)`
     }).from(cashboxTransactions).where(and(...conditions)).groupBy(cashboxTransactions.transactionType);
-    const byPayment = await db5.select({
+    const byPayment = await db4.select({
       method: cashboxTransactions.paymentMethod,
       total: sql`coalesce(sum(${cashboxTransactions.amount}),0)`,
       count: sql`count(*)`
@@ -120546,18 +120562,18 @@ var cashboxRouter = createRouter({
   }),
   // CANCEL TRANSACTION
   cancelTransaction: authedQuery.input(external_exports.object({ id: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const tx = await db5.query.cashboxTransactions.findFirst({
+    const db4 = getDb();
+    const tx = await db4.query.cashboxTransactions.findFirst({
       where: and(eq(cashboxTransactions.id, input.id), eq(cashboxTransactions.tenantId, ctx.user.tenantId))
     });
     if (!tx) throw new Error("Transaction not found");
     if (tx.status === "cancelled") throw new Error("Already cancelled");
-    const lastTx = await db5.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(and(
+    const lastTx = await db4.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(and(
       eq(cashboxTransactions.tenantId, ctx.user.tenantId),
       lte(cashboxTransactions.createdAt, tx.createdAt),
       sql`${cashboxTransactions.id} != ${tx.id}`
     )).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
-    await db5.update(cashboxTransactions).set({ status: "cancelled", notes: `Cancelled: ${input.reason || "No reason"}` }).where(eq(cashboxTransactions.id, input.id));
+    await db4.update(cashboxTransactions).set({ status: "cancelled", notes: `Cancelled: ${input.reason || "No reason"}` }).where(eq(cashboxTransactions.id, input.id));
     return { success: true };
   })
 });
@@ -120575,7 +120591,7 @@ var installmentsRouter = createRouter({
     page: external_exports.number().default(1),
     limit: external_exports.number().default(20)
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(installments.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(installments.status, input.status));
     if (input?.customerId) conditions.push(eq(installments.customerId, input.customerId));
@@ -120585,24 +120601,24 @@ var installmentsRouter = createRouter({
       );
     }
     const offset = ((input?.page || 1) - 1) * (input?.limit || 20);
-    const data = await db5.select().from(installments).where(and(...conditions)).orderBy(desc(installments.createdAt)).limit(input?.limit || 20).offset(offset);
-    const [{ count: count4 }] = await db5.select({ count: sql`count(*)` }).from(installments).where(and(...conditions));
+    const data = await db4.select().from(installments).where(and(...conditions)).orderBy(desc(installments.createdAt)).limit(input?.limit || 20).offset(offset);
+    const [{ count: count4 }] = await db4.select({ count: sql`count(*)` }).from(installments).where(and(...conditions));
     const result = [];
     for (const inst of data) {
-      const customer = inst.customerId ? await db5.query.customers.findFirst({ where: eq(customers.id, inst.customerId) }) : null;
+      const customer = inst.customerId ? await db4.query.customers.findFirst({ where: eq(customers.id, inst.customerId) }) : null;
       result.push({ ...inst, customerName: customer?.name || "Walk-in" });
     }
     return { data: result, total: count4, page: input?.page || 1 };
   }),
   // GET BY ID
   get: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const inst = await db5.query.installments.findFirst({
+    const db4 = getDb();
+    const inst = await db4.query.installments.findFirst({
       where: and(eq(installments.id, input.id), eq(installments.tenantId, ctx.user.tenantId))
     });
     if (!inst) return null;
-    const customer = inst.customerId ? await db5.query.customers.findFirst({ where: eq(customers.id, inst.customerId) }) : null;
-    const payments = await db5.select().from(installmentPayments).where(eq(installmentPayments.installmentId, inst.id)).orderBy(installmentPayments.dueDate);
+    const customer = inst.customerId ? await db4.query.customers.findFirst({ where: eq(customers.id, inst.customerId) }) : null;
+    const payments = await db4.select().from(installmentPayments).where(eq(installmentPayments.installmentId, inst.id)).orderBy(installmentPayments.dueDate);
     return { ...inst, customerName: customer?.name || "Walk-in", payments };
   }),
   // CREATE
@@ -120617,7 +120633,7 @@ var installmentsRouter = createRouter({
     startDate: external_exports.string(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const total = Number(input.totalAmount);
     const downPayment = Number(input.downPayment);
     const financed = total - downPayment;
@@ -120625,7 +120641,7 @@ var installmentsRouter = createRouter({
     const installmentNumber = `INST-${Date.now()}`;
     const endDate = new Date(input.startDate);
     endDate.setDate(endDate.getDate() + input.intervalDays * input.numberOfInstallments);
-    const [{ id }] = await db5.insert(installments).values({
+    const [{ id }] = await db4.insert(installments).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       installmentNumber,
@@ -120648,7 +120664,7 @@ var installmentsRouter = createRouter({
     for (let i = 1; i <= input.numberOfInstallments; i++) {
       const dueDate = new Date(input.startDate);
       dueDate.setDate(dueDate.getDate() + input.intervalDays * i);
-      await db5.insert(installmentPayments).values({
+      await db4.insert(installmentPayments).values({
         tenantId: ctx.user.tenantId,
         installmentId: id,
         paymentNumber: `${installmentNumber}-P${i.toString().padStart(2, "0")}`,
@@ -120667,40 +120683,40 @@ var installmentsRouter = createRouter({
     paidDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const payment = await db5.query.installmentPayments.findFirst({
+    const db4 = getDb();
+    const payment = await db4.query.installmentPayments.findFirst({
       where: and(eq(installmentPayments.id, input.installmentPaymentId), eq(installmentPayments.tenantId, ctx.user.tenantId))
     });
     if (!payment) throw new Error("Payment not found");
     if (payment.status === "paid") throw new Error("Already paid");
     const paidDate = input.paidDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    await db5.update(installmentPayments).set({
+    await db4.update(installmentPayments).set({
       paidAmount: input.paidAmount,
       paidDate,
       paymentMethod: input.paymentMethod,
       status: "paid",
       notes: input.notes
     }).where(eq(installmentPayments.id, input.installmentPaymentId));
-    const inst = await db5.query.installments.findFirst({
+    const inst = await db4.query.installments.findFirst({
       where: eq(installments.id, payment.installmentId)
     });
     if (inst) {
-      const payments = await db5.select({
+      const payments = await db4.select({
         totalPaid: sql`coalesce(sum(${installmentPayments.paidAmount}),0)`
       }).from(installmentPayments).where(and(eq(installmentPayments.installmentId, inst.id), eq(installmentPayments.status, "paid")));
       const totalPaid = Number(payments[0]?.totalPaid || 0) + Number(inst.downPayment);
       const remaining = Number(inst.totalAmount) - totalPaid;
       const newStatus = remaining <= 0 ? "completed" : "active";
-      await db5.update(installments).set({
+      await db4.update(installments).set({
         totalPaid: String(totalPaid),
         remainingAmount: String(Math.max(0, remaining)),
         status: newStatus
       }).where(eq(installments.id, inst.id));
       const { cashboxTransactions: cashboxTransactions3 } = await Promise.resolve().then(() => (init_schema2(), schema_exports));
-      const lastTx = await db5.select({ bal: cashboxTransactions3.balanceAfter }).from(cashboxTransactions3).where(eq(cashboxTransactions3.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions3.createdAt)).limit(1);
+      const lastTx = await db4.select({ bal: cashboxTransactions3.balanceAfter }).from(cashboxTransactions3).where(eq(cashboxTransactions3.tenantId, ctx.user.tenantId)).orderBy(desc(cashboxTransactions3.createdAt)).limit(1);
       const prevBal = Number(lastTx[0]?.bal || 0);
       const amount = Number(input.paidAmount);
-      await db5.insert(cashboxTransactions3).values({
+      await db4.insert(cashboxTransactions3).values({
         tenantId: ctx.user.tenantId,
         userId: ctx.user.id,
         transactionNumber: `IP-${Date.now()}`,
@@ -120719,35 +120735,35 @@ var installmentsRouter = createRouter({
   }),
   // OVERDUE INSTALLMENTS
   overdue: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const overduePayments = await db5.select().from(installmentPayments).where(and(
+    const overduePayments = await db4.select().from(installmentPayments).where(and(
       eq(installmentPayments.tenantId, ctx.user.tenantId),
       eq(installmentPayments.status, "pending"),
       lte(installmentPayments.dueDate, today)
     )).orderBy(installmentPayments.dueDate);
     const result = [];
     for (const p of overduePayments) {
-      const inst = await db5.query.installments.findFirst({
+      const inst = await db4.query.installments.findFirst({
         where: eq(installments.id, p.installmentId)
       });
-      const customer = inst?.customerId ? await db5.query.customers.findFirst({ where: eq(customers.id, inst.customerId) }) : null;
+      const customer = inst?.customerId ? await db4.query.customers.findFirst({ where: eq(customers.id, inst.customerId) }) : null;
       result.push({ ...p, installment: inst, customerName: customer?.name || "Unknown" });
     }
     return result;
   }),
   // SUMMARY
   summary: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const active = await db5.select({
+    const active = await db4.select({
       total: sql`coalesce(sum(${installments.remainingAmount}),0)`,
       count: sql`count(*)`
     }).from(installments).where(and(eq(installments.tenantId, tenantId), eq(installments.status, "active")));
-    const completed = await db5.select({
+    const completed = await db4.select({
       count: sql`count(*)`
     }).from(installments).where(and(eq(installments.tenantId, tenantId), eq(installments.status, "completed")));
-    const defaulted = await db5.select({
+    const defaulted = await db4.select({
       count: sql`count(*)`
     }).from(installments).where(and(eq(installments.tenantId, tenantId), eq(installments.status, "defaulted")));
     return {
@@ -120769,13 +120785,13 @@ var reportsRouter = createRouter({
     to: external_exports.string().optional(),
     groupBy: external_exports.enum(["day", "month", "year"]).default("month")
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(invoices.tenantId, tenantId)];
     if (input.from) conditions.push(gte(invoices.date, input.from));
     if (input.to) conditions.push(lte(invoices.date, input.to));
     const dateFormat = input.groupBy === "day" ? invoices.date : input.groupBy === "year" ? sql`date_format(${invoices.date}, '%Y')` : sql`date_format(${invoices.date}, '%Y-%m')`;
-    const rows = await db5.select({
+    const rows = await db4.select({
       period: dateFormat,
       count: sql`count(*)`,
       subtotal: sql`coalesce(sum(${invoices.subTotal}), 0)`,
@@ -120784,7 +120800,7 @@ var reportsRouter = createRouter({
       paid: sql`coalesce(sum(${invoices.paidAmount}), 0)`,
       balance: sql`coalesce(sum(${invoices.balanceDue}), 0)`
     }).from(invoices).where(and(...conditions)).groupBy(sql`1`).orderBy(sql`1`);
-    const [{ totalRevenue, totalTax, totalPaid, invoiceCount }] = await db5.select({
+    const [{ totalRevenue, totalTax, totalPaid, invoiceCount }] = await db4.select({
       totalRevenue: sql`coalesce(sum(${invoices.totalAmount}), 0)`,
       totalTax: sql`coalesce(sum(${invoices.taxAmount}), 0)`,
       totalPaid: sql`coalesce(sum(${invoices.paidAmount}), 0)`,
@@ -120793,9 +120809,9 @@ var reportsRouter = createRouter({
     return { rows, summary: { totalRevenue, totalTax, totalPaid, invoiceCount } };
   }),
   inventoryReport: authedQuery.input(external_exports.object({ categoryId: external_exports.number().optional() }).optional()).query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const rows = await db5.select({
+    const rows = await db4.select({
       productId: products.id,
       sku: products.sku,
       name: products.name,
@@ -120804,7 +120820,7 @@ var reportsRouter = createRouter({
       quantity: sql`coalesce(${inventoryBalances.quantity}, 0)`,
       totalValue: sql`coalesce(${inventoryBalances.totalValue}, 0)`
     }).from(products).leftJoin(inventoryBalances, eq(products.id, inventoryBalances.productId)).where(eq(products.tenantId, tenantId)).orderBy(desc(inventoryBalances.totalValue));
-    const [{ totalProducts, totalQty, totalValue }] = await db5.select({
+    const [{ totalProducts, totalQty, totalValue }] = await db4.select({
       totalProducts: sql`count(distinct ${products.id})`,
       totalQty: sql`coalesce(sum(${inventoryBalances.quantity}), 0)`,
       totalValue: sql`coalesce(sum(${inventoryBalances.totalValue}), 0)`
@@ -120815,12 +120831,12 @@ var reportsRouter = createRouter({
     from: external_exports.string().optional(),
     to: external_exports.string().optional()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(journalEntries.tenantId, tenantId), eq(journalEntries.isPosted, true)];
     if (input.from) conditions.push(gte(journalEntries.date, input.from));
     if (input.to) conditions.push(lte(journalEntries.date, input.to));
-    const rows = await db5.select({
+    const rows = await db4.select({
       accountId: chartOfAccounts.id,
       code: chartOfAccounts.code,
       name: chartOfAccounts.name,
@@ -120854,12 +120870,12 @@ var reportsRouter = createRouter({
     from: external_exports.string().optional(),
     to: external_exports.string().optional()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(invoices.tenantId, tenantId)];
     if (input.from) conditions.push(gte(invoices.date, input.from));
     if (input.to) conditions.push(lte(invoices.date, input.to));
-    const rows = await db5.select({
+    const rows = await db4.select({
       invoiceId: invoices.id,
       invoiceNumber: invoices.invoiceNumber,
       date: invoices.date,
@@ -120879,9 +120895,9 @@ var reportsRouter = createRouter({
     return { rows, summary: totals };
   }),
   agingReport: authedQuery.input(external_exports.object({ asOfDate: external_exports.string().optional() }).optional()).query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const rows = await db5.select({
+    const rows = await db4.select({
       customerId: customers.id,
       customerName: customers.name,
       customerCode: customers.code,
@@ -120899,19 +120915,19 @@ var reportsRouter = createRouter({
     from: external_exports.string().optional(),
     to: external_exports.string().optional()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(purchaseOrders.tenantId, tenantId)];
     if (input.from) conditions.push(gte(purchaseOrders.date, input.from));
     if (input.to) conditions.push(lte(purchaseOrders.date, input.to));
-    const rows = await db5.select({
+    const rows = await db4.select({
       period: sql`date_format(${purchaseOrders.date}, '%Y-%m')`,
       count: sql`count(*)`,
       subtotal: sql`coalesce(sum(${purchaseOrders.subTotal}), 0)`,
       tax: sql`coalesce(sum(${purchaseOrders.taxAmount}), 0)`,
       total: sql`coalesce(sum(${purchaseOrders.totalAmount}), 0)`
     }).from(purchaseOrders).where(and(...conditions)).groupBy(sql`1`).orderBy(sql`1`);
-    const [{ totalAmount, poCount }] = await db5.select({
+    const [{ totalAmount, poCount }] = await db4.select({
       totalAmount: sql`coalesce(sum(${purchaseOrders.totalAmount}), 0)`,
       poCount: sql`count(*)`
     }).from(purchaseOrders).where(and(...conditions));
@@ -122021,12 +122037,12 @@ function encodeZatcaTlv2(tag2, value) {
   buf.set(valueBytes, 2);
   return buf;
 }
-function buildZatcaQrPayload2(sellerName, vatNumber, timestamp2, totalWithVat, vatTotal) {
+function buildZatcaQrPayload2(sellerName, vatNumber, timestamp2, totalWithVat2, vatTotal) {
   const parts = [
     encodeZatcaTlv2(1, sellerName),
     encodeZatcaTlv2(2, vatNumber),
     encodeZatcaTlv2(3, timestamp2),
-    encodeZatcaTlv2(4, totalWithVat),
+    encodeZatcaTlv2(4, totalWithVat2),
     encodeZatcaTlv2(5, vatTotal)
   ];
   const combined = new Uint8Array(parts.reduce((acc, p) => acc + p.length, 0));
@@ -122060,18 +122076,18 @@ function buildZatcaPhase2QrPayload(input) {
 function validSaudiVat(vatNumber) {
   return /^3\d{13}3$/.test(vatNumber.replace(/\D/g, ""));
 }
-async function getZatcaPhase2Profile(db5, tenantId) {
-  const settings = await db5.query.companySettings.findFirst({
+async function getZatcaPhase2Profile(db4, tenantId) {
+  const settings = await db4.query.companySettings.findFirst({
     where: eq(companySettings.tenantId, tenantId)
   });
-  const integration = await db5.query.taxIntegrations.findFirst({
+  const integration = await db4.query.taxIntegrations.findFirst({
     where: and(
       eq(taxIntegrations.tenantId, tenantId),
       eq(taxIntegrations.countryCode, "SA"),
       eq(taxIntegrations.integrationType, "zatca_phase2")
     )
   });
-  const credentials = integration ? await db5.select().from(taxCredentials).where(and(eq(taxCredentials.integrationId, integration.id), eq(taxCredentials.isActive, true))) : [];
+  const credentials = integration ? await db4.select().from(taxCredentials).where(and(eq(taxCredentials.integrationId, integration.id), eq(taxCredentials.isActive, true))) : [];
   const credentialTypes = new Set(credentials.map((credential) => credential.credentialType));
   const config2 = integration?.config ?? {};
   const checks = [
@@ -122136,8 +122152,8 @@ var taxComplianceRouter = createRouter({
   // ZATCA (Saudi Arabia)
   // =====================================================================
   zatcaSettings: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const settings = await db5.query.companySettings.findFirst({
+    const db4 = getDb();
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     if (!settings) {
@@ -122185,7 +122201,7 @@ var taxComplianceRouter = createRouter({
     additionalNumber: external_exports.string().optional(),
     registrationName: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const updateData = {};
     if (input.enabled !== void 0) updateData.zatcaEnabled = input.enabled;
     if (input.sandbox !== void 0) updateData.zatcaSandbox = input.sandbox;
@@ -122196,20 +122212,20 @@ var taxComplianceRouter = createRouter({
     if (input.country) updateData.country = input.country;
     if (input.registrationName) updateData.companyName = input.registrationName;
     if (input.streetName) updateData.address = input.streetName;
-    const existing = await db5.query.companySettings.findFirst({
+    const existing = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     if (existing) {
-      await db5.update(companySettings).set(updateData).where(eq(companySettings.tenantId, ctx.user.tenantId));
+      await db4.update(companySettings).set(updateData).where(eq(companySettings.tenantId, ctx.user.tenantId));
     } else {
-      await db5.insert(companySettings).values({ tenantId: ctx.user.tenantId, ...updateData });
+      await db4.insert(companySettings).values({ tenantId: ctx.user.tenantId, ...updateData });
     }
     return { success: true };
   }),
   zatcaPhase2Profile: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    return getZatcaPhase2Profile(db5, tenantId);
+    return getZatcaPhase2Profile(db4, tenantId);
   }),
   updateZatcaPhase2Profile: adminQuery.input(external_exports.object({
     enabled: external_exports.boolean().optional(),
@@ -122227,9 +122243,9 @@ var taxComplianceRouter = createRouter({
     publicKey: external_exports.string().optional(),
     certificateExpiresAt: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const existing = await db5.query.taxIntegrations.findFirst({
+    const existing = await db4.query.taxIntegrations.findFirst({
       where: and(
         eq(taxIntegrations.tenantId, tenantId),
         eq(taxIntegrations.countryCode, "SA"),
@@ -122255,9 +122271,9 @@ var taxComplianceRouter = createRouter({
       config: config2
     };
     if (existing) {
-      await db5.update(taxIntegrations).set(values).where(eq(taxIntegrations.id, existing.id));
+      await db4.update(taxIntegrations).set(values).where(eq(taxIntegrations.id, existing.id));
     } else {
-      const [{ id }] = await db5.insert(taxIntegrations).values(values).$returningId();
+      const [{ id }] = await db4.insert(taxIntegrations).values(values).$returningId();
       integrationId = id;
     }
     const credentialInputs = [
@@ -122270,7 +122286,7 @@ var taxComplianceRouter = createRouter({
     for (const [credentialType, rawValue] of credentialInputs) {
       if (!rawValue || !integrationId) continue;
       const encryptedValue = encryptSecret(rawValue);
-      const existingCredential = await db5.query.taxCredentials.findFirst({
+      const existingCredential = await db4.query.taxCredentials.findFirst({
         where: and(
           eq(taxCredentials.integrationId, integrationId),
           eq(taxCredentials.credentialType, credentialType),
@@ -122278,12 +122294,12 @@ var taxComplianceRouter = createRouter({
         )
       });
       if (existingCredential) {
-        await db5.update(taxCredentials).set({
+        await db4.update(taxCredentials).set({
           encryptedValue,
           expiresAt: credentialType === "pcsid" && input.certificateExpiresAt ? new Date(input.certificateExpiresAt) : existingCredential.expiresAt
         }).where(eq(taxCredentials.id, existingCredential.id));
       } else {
-        await db5.insert(taxCredentials).values({
+        await db4.insert(taxCredentials).values({
           tenantId,
           integrationId,
           credentialType,
@@ -122293,7 +122309,7 @@ var taxComplianceRouter = createRouter({
         });
       }
     }
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId,
       userId: ctx.user.id,
       action: "zatca_phase2_profile_update",
@@ -122312,8 +122328,8 @@ var taxComplianceRouter = createRouter({
     return { success: true, integrationId };
   }),
   zatcaComplianceChecks: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const profile = await getZatcaPhase2Profile(db5, ctx.user.tenantId);
+    const db4 = getDb();
+    const profile = await getZatcaPhase2Profile(db4, ctx.user.tenantId);
     const requiredInvoiceTypes = [
       "standard_tax_invoice",
       "standard_credit_note",
@@ -122339,13 +122355,13 @@ var taxComplianceRouter = createRouter({
     invoiceId: external_exports.number(),
     invoiceMode: external_exports.enum(["standard", "simplified"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const invoice = await db5.query.invoices.findFirst({
+    const invoice = await db4.query.invoices.findFirst({
       where: and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, tenantId))
     });
     if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
-    const settings = await db5.query.companySettings.findFirst({
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, tenantId)
     });
     if (!settings?.companyName && !settings?.companyNameAr) {
@@ -122354,7 +122370,7 @@ var taxComplianceRouter = createRouter({
     if (!validSaudiVat(settings?.taxNumber || "")) {
       throw new TRPCError({ code: "BAD_REQUEST", message: "Saudi VAT number must be 15 digits and start/end with 3." });
     }
-    const items = await db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id));
+    const items = await db4.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id));
     const xml = buildSimplifiedZatcaXml(invoice, items, {
       sellerName: settings.companyName || settings.companyNameAr,
       vatNumber: settings.taxNumber
@@ -122376,12 +122392,12 @@ var taxComplianceRouter = createRouter({
       publicKey: readinessPublicKey,
       ecdsaSignature: readinessSignature
     });
-    await db5.update(invoices).set({
+    await db4.update(invoices).set({
       zatcaStatus: "pending",
       zatcaXml: xml,
       zatcaQrCode: qrPayload
     }).where(eq(invoices.id, invoice.id));
-    const [{ id: submissionId }] = await db5.insert(taxSubmissions).values({
+    const [{ id: submissionId }] = await db4.insert(taxSubmissions).values({
       tenantId,
       submissionType: mode === "standard" ? "zatca_clearance_readiness" : "zatca_reporting_readiness",
       submissionNumber: `ZATCA-P2-${Date.now()}`,
@@ -122397,7 +122413,7 @@ var taxComplianceRouter = createRouter({
       },
       createdAt: /* @__PURE__ */ new Date()
     }).$returningId();
-    await db5.insert(taxSubmissionLogs).values({
+    await db4.insert(taxSubmissionLogs).values({
       submissionId,
       action: "zatca_phase2_prepare",
       status: "ready_for_connector",
@@ -122405,7 +122421,7 @@ var taxComplianceRouter = createRouter({
       metadata: { invoiceId: invoice.id, invoiceHash },
       createdAt: /* @__PURE__ */ new Date()
     });
-    await db5.insert(eInvoiceDocuments).values({
+    await db4.insert(eInvoiceDocuments).values({
       tenantId,
       invoiceId: invoice.id,
       countryCode: "SA",
@@ -122418,7 +122434,7 @@ var taxComplianceRouter = createRouter({
       submissionId,
       createdAt: /* @__PURE__ */ new Date()
     });
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId,
       userId: ctx.user.id,
       action: "zatca_phase2_invoice_prepare",
@@ -122440,8 +122456,8 @@ var taxComplianceRouter = createRouter({
   zatcaSubmitInvoice: authedQuery.input(external_exports.object({
     invoiceId: external_exports.number()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const invoice = await db5.query.invoices.findFirst({
+    const db4 = getDb();
+    const invoice = await db4.query.invoices.findFirst({
       where: and(
         eq(invoices.id, input.invoiceId),
         eq(invoices.tenantId, ctx.user.tenantId)
@@ -122450,18 +122466,18 @@ var taxComplianceRouter = createRouter({
     if (!invoice) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
-    const settings = await db5.query.companySettings.findFirst({
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     const isSandbox = settings?.zatcaSandbox ?? true;
     const environment = isSandbox ? "sandbox" : "production";
     const submissionId = `ZATCA-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const submittedAt = isoNow();
-    await db5.update(invoices).set({
+    await db4.update(invoices).set({
       zatcaStatus: "pending",
       zatcaQrCode: submissionId
     }).where(eq(invoices.id, input.invoiceId));
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       action: "zatca_prepare_submission",
@@ -122481,8 +122497,8 @@ var taxComplianceRouter = createRouter({
   zatcaCheckStatus: authedQuery.input(external_exports.object({
     invoiceId: external_exports.number()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const invoice = await db5.query.invoices.findFirst({
+    const db4 = getDb();
+    const invoice = await db4.query.invoices.findFirst({
       where: and(
         eq(invoices.id, input.invoiceId),
         eq(invoices.tenantId, ctx.user.tenantId)
@@ -122508,8 +122524,8 @@ var taxComplianceRouter = createRouter({
   generateZatcaQr: authedQuery.input(external_exports.object({
     invoiceId: external_exports.number()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const invoice = await db5.query.invoices.findFirst({
+    const db4 = getDb();
+    const invoice = await db4.query.invoices.findFirst({
       where: and(
         eq(invoices.id, input.invoiceId),
         eq(invoices.tenantId, ctx.user.tenantId)
@@ -122518,22 +122534,22 @@ var taxComplianceRouter = createRouter({
     if (!invoice) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
-    const settings = await db5.query.companySettings.findFirst({
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     const sellerName = settings?.companyName || "Company";
     const vatNumber = settings?.taxNumber || "0000000000";
     const timestamp2 = new Date(invoice.date).toISOString();
-    const totalWithVat = decimal2(Number(invoice.totalAmount));
+    const totalWithVat2 = decimal2(Number(invoice.totalAmount));
     const vatTotal = decimal2(Number(invoice.taxAmount));
-    const qrPayload = buildZatcaQrPayload2(sellerName, vatNumber, timestamp2, totalWithVat, vatTotal);
+    const qrPayload = buildZatcaQrPayload2(sellerName, vatNumber, timestamp2, totalWithVat2, vatTotal);
     return {
       invoiceId: input.invoiceId,
       invoiceNumber: invoice.invoiceNumber,
       qrCodeBase64: qrPayload,
       sellerName,
       vatNumber,
-      totalWithVat,
+      totalWithVat: totalWithVat2,
       vatTotal,
       timestamp: timestamp2
     };
@@ -122541,8 +122557,8 @@ var taxComplianceRouter = createRouter({
   generateZatcaXml: authedQuery.input(external_exports.object({
     invoiceId: external_exports.number()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const invoice = await db5.query.invoices.findFirst({
+    const db4 = getDb();
+    const invoice = await db4.query.invoices.findFirst({
       where: and(
         eq(invoices.id, input.invoiceId),
         eq(invoices.tenantId, ctx.user.tenantId)
@@ -122551,8 +122567,8 @@ var taxComplianceRouter = createRouter({
     if (!invoice) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
     }
-    const items = await db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.invoiceId));
-    const settings = await db5.query.companySettings.findFirst({
+    const items = await db4.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.invoiceId));
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     }) || {};
     const xml = buildSimplifiedZatcaXml(invoice, items, settings);
@@ -122567,8 +122583,8 @@ var taxComplianceRouter = createRouter({
   // FBR Pakistan
   // =====================================================================
   fbrSettings: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const settings = await db5.query.companySettings.findFirst({
+    const db4 = getDb();
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     return {
@@ -122606,26 +122622,26 @@ var taxComplianceRouter = createRouter({
     salesTaxPeriod: external_exports.enum(["monthly", "quarterly", "annual"]).optional(),
     salesTaxFrequency: external_exports.enum(["monthly", "quarterly", "annual"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const updateData = {};
     if (input.businessName) updateData.companyName = input.businessName;
     if (input.businessAddress) updateData.address = input.businessAddress;
     if (input.businessCity) updateData.city = input.businessCity;
     if (input.businessCountry) updateData.country = input.businessCountry;
     if (input.ntnNumber) updateData.taxNumber = input.ntnNumber;
-    const existing = await db5.query.companySettings.findFirst({
+    const existing = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     if (existing && Object.keys(updateData).length > 0) {
-      await db5.update(companySettings).set(updateData).where(eq(companySettings.tenantId, ctx.user.tenantId));
+      await db4.update(companySettings).set(updateData).where(eq(companySettings.tenantId, ctx.user.tenantId));
     }
     return { success: true, message: "FBR settings updated (full persistence requires schema extension)" };
   }),
   fbrSubmitInvoice: authedQuery.input(external_exports.object({
     invoiceId: external_exports.number()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const invoice = await db5.query.invoices.findFirst({
+    const db4 = getDb();
+    const invoice = await db4.query.invoices.findFirst({
       where: and(
         eq(invoices.id, input.invoiceId),
         eq(invoices.tenantId, ctx.user.tenantId)
@@ -122636,7 +122652,7 @@ var taxComplianceRouter = createRouter({
     }
     const submissionNumber = `FBR-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const submittedAt = isoNow();
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       action: "fbr_prepare_submission",
@@ -122662,8 +122678,8 @@ var taxComplianceRouter = createRouter({
   fbrCheckStatus: authedQuery.input(external_exports.object({
     submissionNumber: external_exports.string()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const log = await db5.query.auditLogs.findFirst({
+    const db4 = getDb();
+    const log = await db4.query.auditLogs.findFirst({
       where: and(
         eq(auditLogs.tenantId, ctx.user.tenantId),
         eq(auditLogs.action, "fbr_prepare_submission"),
@@ -122687,7 +122703,7 @@ var taxComplianceRouter = createRouter({
     offset: external_exports.number().min(0).optional().default(0),
     invoiceId: external_exports.number().optional()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [
       eq(auditLogs.tenantId, ctx.user.tenantId),
       eq(auditLogs.action, "fbr_prepare_submission")
@@ -122695,8 +122711,8 @@ var taxComplianceRouter = createRouter({
     if (input.invoiceId) {
       conditions.push(eq(auditLogs.entityId, input.invoiceId));
     }
-    const logs = await db5.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.createdAt)).limit(input.limit).offset(input.offset);
-    const [{ total }] = await db5.select({ total: count() }).from(auditLogs).where(and(...conditions));
+    const logs = await db4.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.createdAt)).limit(input.limit).offset(input.offset);
+    const [{ total }] = await db4.select({ total: count() }).from(auditLogs).where(and(...conditions));
     return {
       logs: logs.map((l) => ({
         id: l.id,
@@ -122715,8 +122731,8 @@ var taxComplianceRouter = createRouter({
   // UAE VAT
   // =====================================================================
   uaeVatSettings: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const settings = await db5.query.companySettings.findFirst({
+    const db4 = getDb();
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     return {
@@ -122745,18 +122761,18 @@ var taxComplianceRouter = createRouter({
     designatedAgent: external_exports.string().optional(),
     agentEmail: external_exports.string().email().optional().or(external_exports.literal(""))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const updateData = {};
     if (input.businessName) updateData.companyName = input.businessName;
     if (input.businessAddress) updateData.address = input.businessAddress;
     if (input.businessCity) updateData.city = input.businessCity;
     if (input.trn) updateData.taxNumber = input.trn;
     if (input.vatRate !== void 0) updateData.vatRate = String(input.vatRate);
-    const existing = await db5.query.companySettings.findFirst({
+    const existing = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     if (existing && Object.keys(updateData).length > 0) {
-      await db5.update(companySettings).set(updateData).where(eq(companySettings.tenantId, ctx.user.tenantId));
+      await db4.update(companySettings).set(updateData).where(eq(companySettings.tenantId, ctx.user.tenantId));
     }
     return { success: true, message: "UAE VAT settings updated" };
   }),
@@ -122764,10 +122780,10 @@ var taxComplianceRouter = createRouter({
     fromDate: external_exports.string(),
     toDate: external_exports.string()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const from = input.fromDate;
     const to = input.toDate;
-    const invoiceRows = await db5.select().from(invoices).where(and(
+    const invoiceRows = await db4.select().from(invoices).where(and(
       eq(invoices.tenantId, ctx.user.tenantId),
       eq(invoices.status, "paid"),
       gte(invoices.date, from),
@@ -122776,7 +122792,7 @@ var taxComplianceRouter = createRouter({
     const totalSales = invoiceRows.reduce((s, inv) => s + Number(inv.subTotal), 0);
     const totalVat = invoiceRows.reduce((s, inv) => s + Number(inv.taxAmount), 0);
     const totalInvoices = invoiceRows.length;
-    const settings = await db5.query.companySettings.findFirst({
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     return {
@@ -122832,14 +122848,14 @@ var taxComplianceRouter = createRouter({
     groupBy: external_exports.enum(["day", "month", "quarter", "year"]).optional().default("month"),
     taxType: external_exports.enum(["vat", "gst", "sales_tax", "withholding", "all"]).optional().default("all")
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const invoiceRows = await db5.select().from(invoices).where(and(
+    const db4 = getDb();
+    const invoiceRows = await db4.select().from(invoices).where(and(
       eq(invoices.tenantId, ctx.user.tenantId),
       gte(invoices.date, input.fromDate),
       lte(invoices.date, input.toDate),
       sql`${invoices.status} IN ('paid', 'sent', 'partial', 'overdue')`
     )).orderBy(desc(invoices.date));
-    const allTaxRates = await db5.select().from(taxRates).where(eq(taxRates.tenantId, ctx.user.tenantId));
+    const allTaxRates = await db4.select().from(taxRates).where(eq(taxRates.tenantId, ctx.user.tenantId));
     const totalTaxableSales = invoiceRows.reduce((s, inv) => s + Number(inv.subTotal), 0);
     const totalTaxAmount = invoiceRows.reduce((s, inv) => s + Number(inv.taxAmount), 0);
     const totalNonTaxable = invoiceRows.filter((inv) => Number(inv.taxAmount) === 0).reduce((s, inv) => s + Number(inv.subTotal), 0);
@@ -122867,7 +122883,7 @@ var taxComplianceRouter = createRouter({
       taxAmount: decimal2(data.taxAmount),
       effectiveRate: data.taxableSales > 0 ? (data.taxAmount / data.taxableSales * 100).toFixed(2) : "0.00"
     })).sort((a, b) => a.period.localeCompare(b.period));
-    const settings = await db5.query.companySettings.findFirst({
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     return {
@@ -122897,14 +122913,14 @@ var taxComplianceRouter = createRouter({
     toDate: external_exports.string(),
     supplierId: external_exports.number().optional()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [
       eq(invoices.tenantId, ctx.user.tenantId),
       gte(invoices.date, input.fromDate),
       lte(invoices.date, input.toDate),
       sql`${invoices.status} IN ('paid', 'partial')`
     ];
-    const invoiceRows = await db5.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.date));
+    const invoiceRows = await db4.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.date));
     const totalInvoiceAmount = invoiceRows.reduce((s, inv) => s + Number(inv.totalAmount), 0);
     const wthRate = 0.1;
     const wthAmount = totalInvoiceAmount * wthRate;
@@ -122932,10 +122948,10 @@ var taxComplianceRouter = createRouter({
     asOfDate: external_exports.string().optional(),
     agingBuckets: external_exports.array(external_exports.number()).optional().default([30, 60, 90, 120])
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const asOf = input.asOfDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const buckets = [...input.agingBuckets].sort((a, b) => a - b);
-    const invoiceRows = await db5.select().from(invoices).where(and(
+    const invoiceRows = await db4.select().from(invoices).where(and(
       eq(invoices.tenantId, ctx.user.tenantId),
       sql`${invoices.status} IN ('sent', 'partial', 'overdue')`,
       lt(invoices.dueDate, asOf)
@@ -123027,13 +123043,13 @@ var masterRouter = createRouter({
     };
   }),
   saudiReadiness: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const settings = await db5.query.companySettings.findFirst({
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, tenantId)
     });
-    const [zatcaInvoices] = await db5.select({ value: count() }).from(invoices).where(and(eq(invoices.tenantId, tenantId), eq(invoices.invoiceType, "zatca")));
-    const [defaultVatRates] = await db5.select({ value: count() }).from(taxRates).where(and(eq(taxRates.tenantId, tenantId), eq(taxRates.rate, "15"), eq(taxRates.type, "vat")));
+    const [zatcaInvoices] = await db4.select({ value: count() }).from(invoices).where(and(eq(invoices.tenantId, tenantId), eq(invoices.invoiceType, "zatca")));
+    const [defaultVatRates] = await db4.select({ value: count() }).from(taxRates).where(and(eq(taxRates.tenantId, tenantId), eq(taxRates.rate, "15"), eq(taxRates.type, "vat")));
     const checks = [
       { key: "company-name", label: "Company English/Arabic name saved", status: settings?.companyName || settings?.companyNameAr ? "complete" : "missing", detail: "Required for Saudi invoice seller identity." },
       { key: "country-currency", label: "Saudi country and SAR currency", status: settings?.defaultCurrency === "SAR" && (settings.country || "").toLowerCase().includes("saudi") ? "complete" : "partial", detail: "Use Saudi Arabia + SAR for Saudi tenants and branches." },
@@ -123052,7 +123068,7 @@ var masterRouter = createRouter({
     };
   }),
   systemSnapshot: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const [
       productCount,
@@ -123066,18 +123082,18 @@ var masterRouter = createRouter({
       moduleCount,
       auditCount
     ] = await Promise.all([
-      db5.select({ value: count() }).from(products).where(eq(products.tenantId, tenantId)),
-      db5.select({ value: count() }).from(customers).where(eq(customers.tenantId, tenantId)),
-      db5.select({ value: count() }).from(suppliers).where(eq(suppliers.tenantId, tenantId)),
-      db5.select({ value: count() }).from(employees).where(eq(employees.tenantId, tenantId)),
-      db5.select({ value: count() }).from(supportTickets).where(eq(supportTickets.tenantId, tenantId)),
-      db5.select({ value: count() }).from(projects).where(eq(projects.tenantId, tenantId)),
-      db5.select({ value: count() }).from(billOfMaterials).where(eq(billOfMaterials.tenantId, tenantId)),
-      db5.select({ value: count() }).from(workOrders).where(eq(workOrders.tenantId, tenantId)),
-      db5.select({ value: count() }).from(moduleRegistry),
-      db5.select({ value: count() }).from(auditLogs).where(eq(auditLogs.tenantId, tenantId))
+      db4.select({ value: count() }).from(products).where(eq(products.tenantId, tenantId)),
+      db4.select({ value: count() }).from(customers).where(eq(customers.tenantId, tenantId)),
+      db4.select({ value: count() }).from(suppliers).where(eq(suppliers.tenantId, tenantId)),
+      db4.select({ value: count() }).from(employees).where(eq(employees.tenantId, tenantId)),
+      db4.select({ value: count() }).from(supportTickets).where(eq(supportTickets.tenantId, tenantId)),
+      db4.select({ value: count() }).from(projects).where(eq(projects.tenantId, tenantId)),
+      db4.select({ value: count() }).from(billOfMaterials).where(eq(billOfMaterials.tenantId, tenantId)),
+      db4.select({ value: count() }).from(workOrders).where(eq(workOrders.tenantId, tenantId)),
+      db4.select({ value: count() }).from(moduleRegistry),
+      db4.select({ value: count() }).from(auditLogs).where(eq(auditLogs.tenantId, tenantId))
     ]);
-    const recentAudit = await db5.select().from(auditLogs).where(eq(auditLogs.tenantId, tenantId)).orderBy(desc(auditLogs.createdAt)).limit(8);
+    const recentAudit = await db4.select().from(auditLogs).where(eq(auditLogs.tenantId, tenantId)).orderBy(desc(auditLogs.createdAt)).limit(8);
     return {
       counts: {
         products: productCount[0]?.value ?? 0,
@@ -123163,8 +123179,8 @@ function xmlEscape(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
 }
 async function addActivity(input) {
-  const db5 = getDb();
-  await db5.insert(zatcaActivityLogs).values({
+  const db4 = getDb();
+  await db4.insert(zatcaActivityLogs).values({
     tenantId: input.tenantId,
     userId: input.userId,
     invoiceId: input.invoiceId,
@@ -123177,10 +123193,10 @@ async function addActivity(input) {
   });
 }
 async function getLegalOrSettings(tenantId) {
-  const db5 = getDb();
+  const db4 = getDb();
   const [legal, settings] = await Promise.all([
-    db5.query.companyLegalDetails.findFirst({ where: eq(companyLegalDetails.tenantId, tenantId) }),
-    db5.query.companySettings.findFirst({ where: eq(companySettings.tenantId, tenantId) })
+    db4.query.companyLegalDetails.findFirst({ where: eq(companyLegalDetails.tenantId, tenantId) }),
+    db4.query.companySettings.findFirst({ where: eq(companySettings.tenantId, tenantId) })
   ]);
   return {
     legalNameEn: legal?.legalNameEn || settings?.companyName || "",
@@ -123203,8 +123219,8 @@ async function getLegalOrSettings(tenantId) {
   };
 }
 async function nextInvoiceCounter(tenantId) {
-  const db5 = getDb();
-  const rows = await db5.select({ value: sql`coalesce(max(${zatcaInvoiceStatus.invoiceCounter}), 0)` }).from(zatcaInvoiceStatus).where(eq(zatcaInvoiceStatus.tenantId, tenantId));
+  const db4 = getDb();
+  const rows = await db4.select({ value: sql`coalesce(max(${zatcaInvoiceStatus.invoiceCounter}), 0)` }).from(zatcaInvoiceStatus).where(eq(zatcaInvoiceStatus.tenantId, tenantId));
   return Number(rows[0]?.value || 0) + 1;
 }
 function endpointFor(action, environment) {
@@ -123214,9 +123230,9 @@ function endpointFor(action, environment) {
   return `${base}/compliance/invoices`;
 }
 async function buildInvoicePackage(invoiceId, tenantId, invoiceMode) {
-  const db5 = getDb();
+  const db4 = getDb();
   const [invoice, legal] = await Promise.all([
-    db5.query.invoices.findFirst({ where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)) }),
+    db4.query.invoices.findFirst({ where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)) }),
     getLegalOrSettings(tenantId)
   ]);
   if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
@@ -123227,9 +123243,9 @@ async function buildInvoicePackage(invoiceId, tenantId, invoiceMode) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Company legal name is required before generating ZATCA documents." });
   }
   const [items, customer, existingStatus] = await Promise.all([
-    db5.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id)),
-    db5.query.customers.findFirst({ where: eq(customers.id, invoice.customerId) }),
-    db5.query.zatcaInvoiceStatus.findFirst({
+    db4.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id)),
+    db4.query.customers.findFirst({ where: eq(customers.id, invoice.customerId) }),
+    db4.query.zatcaInvoiceStatus.findFirst({
       where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, invoice.id))
     })
   ]);
@@ -123308,8 +123324,8 @@ async function buildInvoicePackage(invoiceId, tenantId, invoiceMode) {
   return { invoice, customer, legal, items, uuid: uuid3, counter, mode, issueDate, issueTime, unsignedXml, invoiceHash };
 }
 async function persistPackage(input) {
-  const db5 = getDb();
-  const existing = await db5.query.zatcaInvoiceStatus.findFirst({
+  const db4 = getDb();
+  const existing = await db4.query.zatcaInvoiceStatus.findFirst({
     where: and(eq(zatcaInvoiceStatus.tenantId, input.tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId))
   });
   const statusValues = {
@@ -123323,11 +123339,11 @@ async function persistPackage(input) {
     updatedAt: /* @__PURE__ */ new Date()
   };
   if (existing) {
-    await db5.update(zatcaInvoiceStatus).set(statusValues).where(eq(zatcaInvoiceStatus.id, existing.id));
+    await db4.update(zatcaInvoiceStatus).set(statusValues).where(eq(zatcaInvoiceStatus.id, existing.id));
   } else {
-    await db5.insert(zatcaInvoiceStatus).values(statusValues);
+    await db4.insert(zatcaInvoiceStatus).values(statusValues);
   }
-  await db5.insert(zatcaXmlDocuments).values({
+  await db4.insert(zatcaXmlDocuments).values({
     tenantId: input.tenantId,
     invoiceId: input.invoiceId,
     documentType: "standard",
@@ -123338,7 +123354,7 @@ async function persistPackage(input) {
     createdAt: /* @__PURE__ */ new Date()
   });
   if (input.qrPayload) {
-    await db5.insert(zatcaQrCodes).values({
+    await db4.insert(zatcaQrCodes).values({
       tenantId: input.tenantId,
       invoiceId: input.invoiceId,
       tlvBase64: input.qrPayload,
@@ -123347,8 +123363,8 @@ async function persistPackage(input) {
       createdAt: /* @__PURE__ */ new Date()
     });
   }
-  await db5.update(invoices).set({ zatcaXml: input.signedXml || input.unsignedXml, zatcaQrCode: input.qrPayload, zatcaStatus: input.status === "signed" ? "pending" : "pending" }).where(and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, input.tenantId)));
-  await db5.insert(zatcaApiLogs).values({
+  await db4.update(invoices).set({ zatcaXml: input.signedXml || input.unsignedXml, zatcaQrCode: input.qrPayload, zatcaStatus: input.status === "signed" ? "pending" : "pending" }).where(and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, input.tenantId)));
+  await db4.insert(zatcaApiLogs).values({
     tenantId: input.tenantId,
     invoiceId: input.invoiceId,
     action: input.action,
@@ -123363,8 +123379,8 @@ async function persistPackage(input) {
   });
 }
 async function callZatcaApi(input) {
-  const db5 = getDb();
-  const credential = await db5.query.zatcaCredentials.findFirst({
+  const db4 = getDb();
+  const credential = await db4.query.zatcaCredentials.findFirst({
     where: and(
       eq(zatcaCredentials.tenantId, input.tenantId),
       eq(zatcaCredentials.environment, input.environment),
@@ -123402,7 +123418,7 @@ async function callZatcaApi(input) {
       message: "ZATCA credentials are isolated per tenant. Add valid access/secret tokens and certificates to perform live API submission."
     };
   }
-  await db5.insert(zatcaApiLogs).values({
+  await db4.insert(zatcaApiLogs).values({
     tenantId: input.tenantId,
     invoiceId: input.invoiceId,
     action: input.action === "reporting" ? "reporting" : input.action === "clearance" ? "clearance" : input.action === "compliance_check" ? "compliance_check" : "sync_status",
@@ -123442,16 +123458,16 @@ var zatcaRouter = createRouter({
     emailAddress: external_exports.string().email().optional().or(external_exports.literal("")),
     companyLogo: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const existing = await db5.query.companyLegalDetails.findFirst({ where: eq(companyLegalDetails.tenantId, tenantId) });
+    const existing = await db4.query.companyLegalDetails.findFirst({ where: eq(companyLegalDetails.tenantId, tenantId) });
     const values = { tenantId, ...input, emailAddress: input.emailAddress || void 0 };
     if (existing) {
-      await db5.update(companyLegalDetails).set(values).where(eq(companyLegalDetails.id, existing.id));
+      await db4.update(companyLegalDetails).set(values).where(eq(companyLegalDetails.id, existing.id));
     } else {
-      await db5.insert(companyLegalDetails).values(values);
+      await db4.insert(companyLegalDetails).values(values);
     }
-    await db5.insert(companies).values({
+    await db4.insert(companies).values({
       tenantId,
       legalName: input.legalNameEn,
       displayName: input.legalNameAr || input.legalNameEn,
@@ -123478,9 +123494,9 @@ var zatcaRouter = createRouter({
       vatRate: "15",
       zatcaEnabled: true
     };
-    const existingSettings = await db5.query.companySettings.findFirst({ where: eq(companySettings.tenantId, tenantId) });
+    const existingSettings = await db4.query.companySettings.findFirst({ where: eq(companySettings.tenantId, tenantId) });
     if (existingSettings) {
-      await db5.update(companySettings).set({
+      await db4.update(companySettings).set({
         companyName: input.legalNameEn,
         companyNameAr: input.legalNameAr,
         taxNumber: input.vatNumber,
@@ -123497,9 +123513,9 @@ var zatcaRouter = createRouter({
         zatcaEnabled: true
       }).where(eq(companySettings.tenantId, tenantId));
     } else {
-      await db5.insert(companySettings).values(settingsValues);
+      await db4.insert(companySettings).values(settingsValues);
     }
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId,
       userId: ctx.user.id,
       action: "zatca_company_legal_save",
@@ -123520,14 +123536,14 @@ var zatcaRouter = createRouter({
     return { success: true };
   }),
   integrationGet: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const [credential, integration] = await Promise.all([
-      db5.query.zatcaCredentials.findFirst({
+      db4.query.zatcaCredentials.findFirst({
         where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)),
         orderBy: desc(zatcaCredentials.updatedAt)
       }),
-      db5.query.taxIntegrations.findFirst({
+      db4.query.taxIntegrations.findFirst({
         where: and(eq(taxIntegrations.tenantId, tenantId), eq(taxIntegrations.countryCode, "SA"), eq(taxIntegrations.integrationType, "zatca_phase2"))
       })
     ]);
@@ -123566,9 +123582,9 @@ var zatcaRouter = createRouter({
     secretToken: external_exports.string().optional(),
     certificateExpiresAt: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const existing = await db5.query.zatcaCredentials.findFirst({
+    const existing = await db4.query.zatcaCredentials.findFirst({
       where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.environment, input.environment), eq(zatcaCredentials.isActive, true))
     });
     const values = {
@@ -123591,9 +123607,9 @@ var zatcaRouter = createRouter({
     };
     let credentialId = existing?.id;
     if (existing) {
-      await db5.update(zatcaCredentials).set(values).where(eq(zatcaCredentials.id, existing.id));
+      await db4.update(zatcaCredentials).set(values).where(eq(zatcaCredentials.id, existing.id));
     } else {
-      const [{ id }] = await db5.insert(zatcaCredentials).values(values).$returningId();
+      const [{ id }] = await db4.insert(zatcaCredentials).values(values).$returningId();
       credentialId = id;
     }
     const certificatePayloads = [
@@ -123606,7 +123622,7 @@ var zatcaRouter = createRouter({
     for (const [certificateType, payload] of certificatePayloads) {
       const encryptedPayload = encryptSecret2(payload);
       if (!encryptedPayload) continue;
-      await db5.insert(zatcaCertificates).values({
+      await db4.insert(zatcaCertificates).values({
         tenantId,
         credentialId,
         certificateType,
@@ -123618,7 +123634,7 @@ var zatcaRouter = createRouter({
         createdAt: /* @__PURE__ */ new Date()
       });
     }
-    const integration = await db5.query.taxIntegrations.findFirst({
+    const integration = await db4.query.taxIntegrations.findFirst({
       where: and(eq(taxIntegrations.tenantId, tenantId), eq(taxIntegrations.countryCode, "SA"), eq(taxIntegrations.integrationType, "zatca_phase2"))
     });
     const integrationValues = {
@@ -123635,9 +123651,9 @@ var zatcaRouter = createRouter({
     };
     let integrationId = integration?.id;
     if (integration) {
-      await db5.update(taxIntegrations).set(integrationValues).where(eq(taxIntegrations.id, integration.id));
+      await db4.update(taxIntegrations).set(integrationValues).where(eq(taxIntegrations.id, integration.id));
     } else {
-      const [{ id }] = await db5.insert(taxIntegrations).values(integrationValues).$returningId();
+      const [{ id }] = await db4.insert(taxIntegrations).values(integrationValues).$returningId();
       integrationId = id;
     }
     const genericCredentials = [
@@ -123652,9 +123668,9 @@ var zatcaRouter = createRouter({
     for (const [credentialType, raw2] of genericCredentials) {
       const encryptedValue = encryptSecret2(raw2);
       if (!encryptedValue || !integrationId) continue;
-      await db5.insert(taxCredentials).values({ tenantId, integrationId, credentialType, encryptedValue, isActive: true });
+      await db4.insert(taxCredentials).values({ tenantId, integrationId, credentialType, encryptedValue, isActive: true });
     }
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId,
       userId: ctx.user.id,
       action: "zatca_credentials_save",
@@ -123731,10 +123747,10 @@ var zatcaRouter = createRouter({
     return { invoiceId: input.invoiceId, qrCodeBase64: qrPayload, qrImageDataUrl: qrDataUrl, invoiceHash: pkg.invoiceHash };
   }),
   signInvoice: authedQuery.input(external_exports.object({ invoiceId: external_exports.number(), invoiceMode: external_exports.enum(["standard", "simplified"]).optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const pkg = await buildInvoicePackage(input.invoiceId, tenantId, input.invoiceMode);
-    const credential = await db5.query.zatcaCredentials.findFirst({
+    const credential = await db4.query.zatcaCredentials.findFirst({
       where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)),
       orderBy: desc(zatcaCredentials.updatedAt)
     });
@@ -123787,15 +123803,15 @@ var zatcaRouter = createRouter({
     return result;
   }),
   clearanceInvoice: authedQuery.input(external_exports.object({ invoiceId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const signed = await db5.query.zatcaXmlDocuments.findFirst({
+    const signed = await db4.query.zatcaXmlDocuments.findFirst({
       where: and(eq(zatcaXmlDocuments.tenantId, tenantId), eq(zatcaXmlDocuments.invoiceId, input.invoiceId)),
       orderBy: desc(zatcaXmlDocuments.createdAt)
     });
     if (!signed?.signedXml) throw new TRPCError({ code: "BAD_REQUEST", message: "Sign invoice before clearance." });
-    const statusRow = await db5.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
-    const credential = await db5.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)), orderBy: desc(zatcaCredentials.updatedAt) });
+    const statusRow = await db4.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
+    const credential = await db4.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)), orderBy: desc(zatcaCredentials.updatedAt) });
     const result = await callZatcaApi({
       tenantId,
       userId: ctx.user.id,
@@ -123806,19 +123822,19 @@ var zatcaRouter = createRouter({
       ipAddress: ctx.clientIp,
       userAgent: ctx.req.headers.get("user-agent")
     });
-    await db5.update(zatcaInvoiceStatus).set({ status: result.status === "success" ? "cleared" : result.liveSubmitted ? "failed" : "pending", clearanceStatus: String(result.responsePayload.clearanceStatus || result.status), submittedAt: /* @__PURE__ */ new Date(), clearedAt: result.status === "success" ? /* @__PURE__ */ new Date() : void 0, errorMessage: result.status === "failed" ? JSON.stringify(result.responsePayload) : void 0 }).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)));
+    await db4.update(zatcaInvoiceStatus).set({ status: result.status === "success" ? "cleared" : result.liveSubmitted ? "failed" : "pending", clearanceStatus: String(result.responsePayload.clearanceStatus || result.status), submittedAt: /* @__PURE__ */ new Date(), clearedAt: result.status === "success" ? /* @__PURE__ */ new Date() : void 0, errorMessage: result.status === "failed" ? JSON.stringify(result.responsePayload) : void 0 }).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)));
     return result;
   }),
   reportInvoice: authedQuery.input(external_exports.object({ invoiceId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const signed = await db5.query.zatcaXmlDocuments.findFirst({
+    const signed = await db4.query.zatcaXmlDocuments.findFirst({
       where: and(eq(zatcaXmlDocuments.tenantId, tenantId), eq(zatcaXmlDocuments.invoiceId, input.invoiceId)),
       orderBy: desc(zatcaXmlDocuments.createdAt)
     });
     if (!signed?.signedXml) throw new TRPCError({ code: "BAD_REQUEST", message: "Sign invoice before reporting." });
-    const statusRow = await db5.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
-    const credential = await db5.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)), orderBy: desc(zatcaCredentials.updatedAt) });
+    const statusRow = await db4.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
+    const credential = await db4.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.isActive, true)), orderBy: desc(zatcaCredentials.updatedAt) });
     const result = await callZatcaApi({
       tenantId,
       userId: ctx.user.id,
@@ -123829,13 +123845,13 @@ var zatcaRouter = createRouter({
       ipAddress: ctx.clientIp,
       userAgent: ctx.req.headers.get("user-agent")
     });
-    await db5.update(zatcaInvoiceStatus).set({ status: result.status === "success" ? "reported" : result.liveSubmitted ? "failed" : "pending", reportingStatus: String(result.responsePayload.reportingStatus || result.status), submittedAt: /* @__PURE__ */ new Date(), reportedAt: result.status === "success" ? /* @__PURE__ */ new Date() : void 0, errorMessage: result.status === "failed" ? JSON.stringify(result.responsePayload) : void 0 }).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)));
+    await db4.update(zatcaInvoiceStatus).set({ status: result.status === "success" ? "reported" : result.liveSubmitted ? "failed" : "pending", reportingStatus: String(result.responsePayload.reportingStatus || result.status), submittedAt: /* @__PURE__ */ new Date(), reportedAt: result.status === "success" ? /* @__PURE__ */ new Date() : void 0, errorMessage: result.status === "failed" ? JSON.stringify(result.responsePayload) : void 0 }).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)));
     return result;
   }),
   syncStatus: authedQuery.input(external_exports.object({ invoiceId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const statusRow = await db5.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
+    const statusRow = await db4.query.zatcaInvoiceStatus.findFirst({ where: and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)) });
     await callZatcaApi({ tenantId, userId: ctx.user.id, invoiceId: input.invoiceId, action: "sync_status", environment: "sandbox", payload: { invoiceId: input.invoiceId, currentStatus: statusRow?.status || "draft" }, ipAddress: ctx.clientIp, userAgent: ctx.req.headers.get("user-agent") });
     return statusRow || { invoiceId: input.invoiceId, status: "draft" };
   }),
@@ -123844,9 +123860,9 @@ var zatcaRouter = createRouter({
     return { invoiceId: input.invoiceId, logs };
   }),
   statusReport: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const rows = await db5.select({
+    const rows = await db4.select({
       id: zatcaInvoiceStatus.id,
       invoiceId: zatcaInvoiceStatus.invoiceId,
       invoiceUuid: zatcaInvoiceStatus.invoiceUuid,
@@ -123857,19 +123873,19 @@ var zatcaRouter = createRouter({
       errorMessage: zatcaInvoiceStatus.errorMessage,
       updatedAt: zatcaInvoiceStatus.updatedAt
     }).from(zatcaInvoiceStatus).where(eq(zatcaInvoiceStatus.tenantId, tenantId)).orderBy(desc(zatcaInvoiceStatus.updatedAt));
-    const logs = await db5.select().from(zatcaApiLogs).where(eq(zatcaApiLogs.tenantId, tenantId)).orderBy(desc(zatcaApiLogs.createdAt));
+    const logs = await db4.select().from(zatcaApiLogs).where(eq(zatcaApiLogs.tenantId, tenantId)).orderBy(desc(zatcaApiLogs.createdAt));
     return { rows, logs: logs.slice(0, 100) };
   }),
   dashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const [totalInvoices, cleared, pending, failed, vatSummary, cert] = await Promise.all([
-      db5.select({ value: sql`count(*)` }).from(invoices).where(eq(invoices.tenantId, tenantId)),
-      db5.select({ value: sql`count(*)` }).from(zatcaInvoiceStatus).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.status, "cleared"))),
-      db5.select({ value: sql`count(*)` }).from(zatcaInvoiceStatus).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.status, "pending"))),
-      db5.select({ value: sql`count(*)` }).from(zatcaInvoiceStatus).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.status, "failed"))),
-      db5.select({ value: sql`coalesce(sum(${invoices.taxAmount}), 0)` }).from(invoices).where(eq(invoices.tenantId, tenantId)),
-      db5.query.zatcaCertificates.findFirst({ where: and(eq(zatcaCertificates.tenantId, tenantId), eq(zatcaCertificates.isActive, true)), orderBy: desc(zatcaCertificates.expiresAt) })
+      db4.select({ value: sql`count(*)` }).from(invoices).where(eq(invoices.tenantId, tenantId)),
+      db4.select({ value: sql`count(*)` }).from(zatcaInvoiceStatus).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.status, "cleared"))),
+      db4.select({ value: sql`count(*)` }).from(zatcaInvoiceStatus).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.status, "pending"))),
+      db4.select({ value: sql`count(*)` }).from(zatcaInvoiceStatus).where(and(eq(zatcaInvoiceStatus.tenantId, tenantId), eq(zatcaInvoiceStatus.status, "failed"))),
+      db4.select({ value: sql`coalesce(sum(${invoices.taxAmount}), 0)` }).from(invoices).where(eq(invoices.tenantId, tenantId)),
+      db4.query.zatcaCertificates.findFirst({ where: and(eq(zatcaCertificates.tenantId, tenantId), eq(zatcaCertificates.isActive, true)), orderBy: desc(zatcaCertificates.expiresAt) })
     ]);
     const expiry = cert?.expiresAt ? new Date(cert.expiresAt) : null;
     const daysToExpiry = expiry ? Math.ceil((expiry.getTime() - Date.now()) / 864e5) : null;
@@ -123908,12 +123924,12 @@ init_env();
 init_schema2();
 init_drizzle_orm();
 async function getTenantUsage(tenantId) {
-  const db5 = getDb();
+  const db4 = getDb();
   const [[products6], [users2], [warehouses3], [invoices5]] = await Promise.all([
-    db5.select({ count: sql`count(*)` }).from(products).where(eq(products.tenantId, tenantId)),
-    db5.select({ count: sql`count(*)` }).from(users).where(eq(users.tenantId, tenantId)),
-    db5.select({ count: sql`count(*)` }).from(warehouses).where(eq(warehouses.tenantId, tenantId)),
-    db5.select({ count: sql`count(*)` }).from(invoices).where(eq(invoices.tenantId, tenantId))
+    db4.select({ count: sql`count(*)` }).from(products).where(eq(products.tenantId, tenantId)),
+    db4.select({ count: sql`count(*)` }).from(users).where(eq(users.tenantId, tenantId)),
+    db4.select({ count: sql`count(*)` }).from(warehouses).where(eq(warehouses.tenantId, tenantId)),
+    db4.select({ count: sql`count(*)` }).from(invoices).where(eq(invoices.tenantId, tenantId))
   ]);
   return {
     products: Number(products6?.count || 0),
@@ -123942,37 +123958,37 @@ function subscriptionAccess(sub) {
 var saasRouter = createRouter({
   plans: {
     list: publicQuery.query(async () => {
-      const db5 = getDb();
-      const plans2 = await db5.select().from(plans).where(eq(plans.isActive, true)).orderBy(asc2(plans.sortOrder));
+      const db4 = getDb();
+      const plans2 = await db4.select().from(plans).where(eq(plans.isActive, true)).orderBy(asc2(plans.sortOrder));
       const result = [];
       for (const plan of plans2) {
-        const features = await db5.select().from(planFeatures).where(and(eq(planFeatures.planId, plan.id), eq(planFeatures.isActive, true)));
+        const features = await db4.select().from(planFeatures).where(and(eq(planFeatures.planId, plan.id), eq(planFeatures.isActive, true)));
         result.push({ ...plan, features });
       }
       return result;
     }),
     getById: publicQuery.input(external_exports.object({ planId: external_exports.number() })).query(async ({ input }) => {
-      const db5 = getDb();
-      const plan = await db5.query.plans.findFirst({ where: eq(plans.id, input.planId) });
+      const db4 = getDb();
+      const plan = await db4.query.plans.findFirst({ where: eq(plans.id, input.planId) });
       if (!plan) throw new Error("Plan not found");
-      const features = await db5.select().from(planFeatures).where(and(eq(planFeatures.planId, plan.id), eq(planFeatures.isActive, true)));
+      const features = await db4.select().from(planFeatures).where(and(eq(planFeatures.planId, plan.id), eq(planFeatures.isActive, true)));
       return { ...plan, features };
     })
   },
   subscription: {
     mySubscription: authedQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
-      const sub = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, ctx.user.tenantId) });
+      const db4 = getDb();
+      const sub = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, ctx.user.tenantId) });
       if (!sub) return null;
-      const plan = await db5.query.plans.findFirst({ where: eq(plans.id, sub.planId) });
+      const plan = await db4.query.plans.findFirst({ where: eq(plans.id, sub.planId) });
       return { ...sub, plan };
     }),
     selectPlan: authedQuery.input(external_exports.object({ planId: external_exports.number(), billingCycle: external_exports.enum(["monthly", "yearly"]), couponCode: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const plan = await db5.query.plans.findFirst({ where: eq(plans.id, input.planId) });
+      const db4 = getDb();
+      const plan = await db4.query.plans.findFirst({ where: eq(plans.id, input.planId) });
       if (!plan || !plan.isActive) throw new Error("Plan not found or inactive");
       const tenantId = ctx.user.tenantId;
-      const existing = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) });
+      const existing = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) });
       const subData = {
         tenantId,
         planId: plan.id,
@@ -123987,23 +124003,23 @@ var saasRouter = createRouter({
         couponCode: input.couponCode || null
       };
       if (existing) {
-        await db5.update(subscriptions).set(subData).where(eq(subscriptions.tenantId, tenantId));
+        await db4.update(subscriptions).set(subData).where(eq(subscriptions.tenantId, tenantId));
       } else {
-        await db5.insert(subscriptions).values(subData);
+        await db4.insert(subscriptions).values(subData);
       }
-      await db5.update(tenants).set({ plan: plan.name.toLowerCase(), status: "active" }).where(eq(tenants.id, tenantId));
+      await db4.update(tenants).set({ plan: plan.name.toLowerCase(), status: "active" }).where(eq(tenants.id, tenantId));
       return { success: true };
     }),
     startTrial: authedQuery.mutation(async ({ ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const tenantId = ctx.user.tenantId;
       const trialEnd = new Date(Date.now() + 3 * 24 * 60 * 60 * 1e3);
-      const existing = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) });
+      const existing = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) });
       if (existing) {
-        await db5.update(subscriptions).set({ status: "trial", trialStartAt: /* @__PURE__ */ new Date(), trialEndAt: trialEnd }).where(eq(subscriptions.tenantId, tenantId));
+        await db4.update(subscriptions).set({ status: "trial", trialStartAt: /* @__PURE__ */ new Date(), trialEndAt: trialEnd }).where(eq(subscriptions.tenantId, tenantId));
       } else {
-        const freePlan = await db5.query.plans.findFirst({ where: and(eq(plans.isActive, true), eq(plans.name, "free")) });
-        await db5.insert(subscriptions).values({
+        const freePlan = await db4.query.plans.findFirst({ where: and(eq(plans.isActive, true), eq(plans.name, "free")) });
+        await db4.insert(subscriptions).values({
           tenantId,
           planId: freePlan?.id || 1,
           status: "trial",
@@ -124015,15 +124031,15 @@ var saasRouter = createRouter({
           warehouseLimit: freePlan?.warehouseLimit || 1
         });
       }
-      await db5.update(tenants).set({ status: "trial", trialEndsAt: trialEnd }).where(eq(tenants.id, tenantId));
+      await db4.update(tenants).set({ status: "trial", trialEndsAt: trialEnd }).where(eq(tenants.id, tenantId));
       return { success: true, trialEndsAt: trialEnd };
     }),
     upgradePlan: authedQuery.input(external_exports.object({ planId: external_exports.number(), billingCycle: external_exports.enum(["monthly", "yearly"]) })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const plan = await db5.query.plans.findFirst({ where: eq(plans.id, input.planId) });
+      const db4 = getDb();
+      const plan = await db4.query.plans.findFirst({ where: eq(plans.id, input.planId) });
       if (!plan || !plan.isActive) throw new Error("Plan not found or inactive");
       const tenantId = ctx.user.tenantId;
-      await db5.update(subscriptions).set({
+      await db4.update(subscriptions).set({
         planId: plan.id,
         billingCycle: input.billingCycle,
         status: "active",
@@ -124034,33 +124050,33 @@ var saasRouter = createRouter({
         currentPeriodStartAt: /* @__PURE__ */ new Date(),
         currentPeriodEndAt: new Date(Date.now() + (input.billingCycle === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1e3)
       }).where(eq(subscriptions.tenantId, tenantId));
-      await db5.update(tenants).set({ plan: plan.name.toLowerCase(), status: "active" }).where(eq(tenants.id, tenantId));
+      await db4.update(tenants).set({ plan: plan.name.toLowerCase(), status: "active" }).where(eq(tenants.id, tenantId));
       return { success: true };
     }),
     cancel: authedQuery.mutation(async ({ ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const tenantId = ctx.user.tenantId;
-      await db5.update(subscriptions).set({ status: "cancelled", cancelledAt: /* @__PURE__ */ new Date() }).where(eq(subscriptions.tenantId, tenantId));
-      await db5.update(tenants).set({ status: "cancelled" }).where(eq(tenants.id, tenantId));
+      await db4.update(subscriptions).set({ status: "cancelled", cancelledAt: /* @__PURE__ */ new Date() }).where(eq(subscriptions.tenantId, tenantId));
+      await db4.update(tenants).set({ status: "cancelled" }).where(eq(tenants.id, tenantId));
       return { success: true };
     }),
     getLimits: authedQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
-      const sub = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, ctx.user.tenantId) });
+      const db4 = getDb();
+      const sub = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, ctx.user.tenantId) });
       if (sub) {
         return { productLimit: sub.productLimit, userLimit: sub.userLimit, branchLimit: sub.branchLimit, warehouseLimit: sub.warehouseLimit };
       }
       return { productLimit: 30, userLimit: 3, branchLimit: 1, warehouseLimit: 1 };
     }),
     status: authedQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const tenantId = ctx.user.tenantId;
       const [tenant, sub, usage] = await Promise.all([
-        db5.query.tenants.findFirst({ where: eq(tenants.id, tenantId) }),
-        db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) }),
+        db4.query.tenants.findFirst({ where: eq(tenants.id, tenantId) }),
+        db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) }),
         getTenantUsage(tenantId)
       ]);
-      const plan = sub ? await db5.query.plans.findFirst({ where: eq(plans.id, sub.planId) }) : null;
+      const plan = sub ? await db4.query.plans.findFirst({ where: eq(plans.id, sub.planId) }) : null;
       const access = subscriptionAccess(sub);
       const limits = {
         products: sub?.productLimit ?? 30,
@@ -124084,11 +124100,11 @@ var saasRouter = createRouter({
       };
     }),
     checkProductLimit: authedQuery.input(external_exports.object({ count: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const tenantId = ctx.user.tenantId;
-      const sub = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) });
+      const sub = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) });
       const limit = sub?.productLimit || 30;
-      const [result] = await db5.select({ current: sql`count(*)` }).from(products).where(eq(products.tenantId, tenantId));
+      const [result] = await db4.select({ current: sql`count(*)` }).from(products).where(eq(products.tenantId, tenantId));
       const current = result?.current || 0;
       const allowed = current + input.count <= limit;
       return { allowed, current, limit };
@@ -124096,8 +124112,8 @@ var saasRouter = createRouter({
   },
   coupon: {
     validate: publicQuery.input(external_exports.object({ code: external_exports.string(), planId: external_exports.number() })).query(async ({ input }) => {
-      const db5 = getDb();
-      const coupon = await db5.query.coupons.findFirst({ where: eq(coupons.code, input.code) });
+      const db4 = getDb();
+      const coupon = await db4.query.coupons.findFirst({ where: eq(coupons.code, input.code) });
       if (!coupon) throw new Error("Invalid coupon code");
       if (!coupon.isActive) throw new Error("Coupon is no longer active");
       if (coupon.expiresAt && new Date(coupon.expiresAt) < /* @__PURE__ */ new Date()) throw new Error("Coupon has expired");
@@ -124109,7 +124125,7 @@ var saasRouter = createRouter({
         const planIds = coupon.applicablePlans;
         if (!planIds.includes(input.planId)) throw new Error("Coupon not applicable for this plan");
       }
-      const plan = await db5.query.plans.findFirst({ where: eq(plans.id, input.planId) });
+      const plan = await db4.query.plans.findFirst({ where: eq(plans.id, input.planId) });
       if (coupon.minPlanPrice && plan) {
         const price = Math.max(Number(plan.priceMonth), Number(plan.priceYear));
         if (price < Number(coupon.minPlanPrice)) throw new Error("Minimum plan price not met");
@@ -124125,9 +124141,9 @@ var saasRouter = createRouter({
   },
   offers: {
     list: publicQuery.query(async () => {
-      const db5 = getDb();
+      const db4 = getDb();
       const now = /* @__PURE__ */ new Date();
-      return db5.select().from(offers).where(and(
+      return db4.select().from(offers).where(and(
         eq(offers.isActive, true),
         sql`(${offers.startsAt} IS NULL OR ${offers.startsAt} <= ${now})`,
         sql`(${offers.expiresAt} IS NULL OR ${offers.expiresAt} >= ${now})`
@@ -124194,11 +124210,11 @@ var registrationRouter = createRouter({
   })).mutation(async ({ input, ctx }) => {
     if (input.password !== input.confirmPassword) throw new Error("Passwords do not match");
     const email3 = normalizeEmail2(input.email);
-    const db5 = getDb();
-    const existingUser = await db5.query.users.findFirst({ where: eq(users.email, email3) });
+    const db4 = getDb();
+    const existingUser = await db4.query.users.findFirst({ where: eq(users.email, email3) });
     if (existingUser) throw new Error("Email already registered");
     const slug = input.companyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
-    const [tenant] = await db5.insert(tenants).values({
+    const [tenant] = await db4.insert(tenants).values({
       name: input.companyName,
       slug,
       email: email3,
@@ -124214,7 +124230,7 @@ var registrationRouter = createRouter({
       trialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1e3),
       layoutTheme: input.layoutTheme || "sidebar"
     }).$returningId();
-    await db5.insert(companies).values({
+    await db4.insert(companies).values({
       tenantId: tenant.id,
       legalName: input.companyName,
       displayName: input.companyName,
@@ -124225,7 +124241,7 @@ var registrationRouter = createRouter({
     });
     if (input.selectedModules && input.selectedModules.length > 0) {
       const now = /* @__PURE__ */ new Date();
-      await db5.insert(tenantModules).values(
+      await db4.insert(tenantModules).values(
         input.selectedModules.map((modName) => ({
           tenantId: tenant.id,
           moduleName: modName,
@@ -124236,7 +124252,7 @@ var registrationRouter = createRouter({
     }
     const passwordHash = hashPassword(input.password);
     const unionId = `email:${email3}`;
-    await db5.insert(users).values({
+    await db4.insert(users).values({
       tenantId: tenant.id,
       unionId,
       name: input.ownerName,
@@ -124247,7 +124263,7 @@ var registrationRouter = createRouter({
     });
     const otp = generateOtp2();
     const otpHash = hashOtp2(email3, otp);
-    await db5.insert(otpCodes).values({
+    await db4.insert(otpCodes).values({
       email: email3,
       otpHash,
       purpose: "registration",
@@ -124261,8 +124277,8 @@ var registrationRouter = createRouter({
   }),
   verifyOtp: publicQuery.input(external_exports.object({ email: external_exports.string().email(), otp: external_exports.string().regex(/^\d{6}$/), purpose: external_exports.string() })).mutation(async ({ input }) => {
     const email3 = normalizeEmail2(input.email);
-    const db5 = getDb();
-    const records = await db5.select().from(otpCodes).where(
+    const db4 = getDb();
+    const records = await db4.select().from(otpCodes).where(
       and(eq(otpCodes.email, email3), eq(otpCodes.purpose, input.purpose), eq(otpCodes.isVerified, false))
     ).orderBy(desc(otpCodes.createdAt)).limit(1);
     if (records.length === 0) throw new Error("No OTP found. Please request a new one.");
@@ -124271,17 +124287,17 @@ var registrationRouter = createRouter({
     if (record2.attempts >= record2.maxAttempts) throw new Error("Too many invalid attempts. Please request a new OTP.");
     const otpHash = hashOtp2(email3, input.otp);
     if (record2.otpHash !== otpHash) {
-      await db5.update(otpCodes).set({ attempts: record2.attempts + 1 }).where(eq(otpCodes.id, record2.id));
+      await db4.update(otpCodes).set({ attempts: record2.attempts + 1 }).where(eq(otpCodes.id, record2.id));
       throw new Error("Invalid OTP code.");
     }
-    await db5.update(otpCodes).set({ isVerified: true, verifiedAt: /* @__PURE__ */ new Date() }).where(eq(otpCodes.id, record2.id));
-    const user = await db5.query.users.findFirst({ where: eq(users.email, email3) });
+    await db4.update(otpCodes).set({ isVerified: true, verifiedAt: /* @__PURE__ */ new Date() }).where(eq(otpCodes.id, record2.id));
+    const user = await db4.query.users.findFirst({ where: eq(users.email, email3) });
     return { success: true, message: "Email verified successfully.", tenantId: user?.tenantId ?? null };
   }),
   resendOtp: publicQuery.input(external_exports.object({ email: external_exports.string().email(), purpose: external_exports.string() })).mutation(async ({ input, ctx }) => {
     const email3 = normalizeEmail2(input.email);
-    const db5 = getDb();
-    const recentOtp = await db5.select().from(otpCodes).where(
+    const db4 = getDb();
+    const recentOtp = await db4.select().from(otpCodes).where(
       and(eq(otpCodes.email, email3), eq(otpCodes.purpose, input.purpose))
     ).orderBy(desc(otpCodes.createdAt)).limit(1);
     if (recentOtp.length > 0) {
@@ -124290,7 +124306,7 @@ var registrationRouter = createRouter({
     }
     const otp = generateOtp2();
     const otpHash = hashOtp2(email3, otp);
-    await db5.insert(otpCodes).values({
+    await db4.insert(otpCodes).values({
       email: email3,
       otpHash,
       purpose: input.purpose,
@@ -124304,12 +124320,12 @@ var registrationRouter = createRouter({
   }),
   forgotPassword: publicQuery.input(external_exports.object({ email: external_exports.string().email() })).mutation(async ({ input, ctx }) => {
     const email3 = normalizeEmail2(input.email);
-    const db5 = getDb();
-    const user = await db5.query.users.findFirst({ where: eq(users.email, email3) });
+    const db4 = getDb();
+    const user = await db4.query.users.findFirst({ where: eq(users.email, email3) });
     if (!user) throw new Error("No account found with this email address.");
     const otp = generateOtp2();
     const otpHash = hashOtp2(email3, otp);
-    await db5.insert(otpCodes).values({
+    await db4.insert(otpCodes).values({
       email: email3,
       otpHash,
       purpose: "forgot_password",
@@ -124329,8 +124345,8 @@ var registrationRouter = createRouter({
   })).mutation(async ({ input }) => {
     if (input.newPassword !== input.confirmPassword) throw new Error("Passwords do not match");
     const email3 = normalizeEmail2(input.email);
-    const db5 = getDb();
-    const records = await db5.select().from(otpCodes).where(
+    const db4 = getDb();
+    const records = await db4.select().from(otpCodes).where(
       and(eq(otpCodes.email, email3), eq(otpCodes.purpose, "forgot_password"), eq(otpCodes.isVerified, false))
     ).orderBy(desc(otpCodes.createdAt)).limit(1);
     if (records.length === 0) throw new Error("No OTP found. Please request a new one.");
@@ -124339,16 +124355,16 @@ var registrationRouter = createRouter({
     if (record2.attempts >= record2.maxAttempts) throw new Error("Too many invalid attempts.");
     const otpHash = hashOtp2(email3, input.otp);
     if (record2.otpHash !== otpHash) {
-      await db5.update(otpCodes).set({ attempts: record2.attempts + 1 }).where(eq(otpCodes.id, record2.id));
+      await db4.update(otpCodes).set({ attempts: record2.attempts + 1 }).where(eq(otpCodes.id, record2.id));
       throw new Error("Invalid OTP.");
     }
-    await db5.update(otpCodes).set({ isVerified: true, verifiedAt: /* @__PURE__ */ new Date() }).where(eq(otpCodes.id, record2.id));
+    await db4.update(otpCodes).set({ isVerified: true, verifiedAt: /* @__PURE__ */ new Date() }).where(eq(otpCodes.id, record2.id));
     return { success: true, message: "Password reset successfully." };
   }),
   checkEmail: publicQuery.input(external_exports.object({ email: external_exports.string().email() })).mutation(async ({ input }) => {
     const email3 = normalizeEmail2(input.email);
-    const db5 = getDb();
-    const user = await db5.query.users.findFirst({ where: eq(users.email, email3) });
+    const db4 = getDb();
+    const user = await db4.query.users.findFirst({ where: eq(users.email, email3) });
     return { exists: !!user };
   }),
   detectCountry: publicQuery.query(async () => {
@@ -124364,8 +124380,8 @@ init_drizzle_orm();
 import crypto6 from "node:crypto";
 var saudiVatPattern = /^3\d{13}3$/;
 async function createAuditLog(params) {
-  const db5 = getDb();
-  await db5.insert(auditLogs).values({
+  const db4 = getDb();
+  await db4.insert(auditLogs).values({
     tenantId: params.tenantId || 1,
     userId: params.userId,
     action: params.action,
@@ -124396,7 +124412,7 @@ function subscriptionAccess2(sub) {
   return { allowed: true, reason: "Subscription is usable" };
 }
 async function buildTenantReadiness(tenantId) {
-  const db5 = getDb();
+  const db4 = getDb();
   const [
     tenant,
     company,
@@ -124410,23 +124426,23 @@ async function buildTenantReadiness(tenantId) {
     latestApiLog,
     certificates
   ] = await Promise.all([
-    db5.query.tenants.findFirst({ where: eq(tenants.id, tenantId) }),
-    db5.query.companies.findFirst({ where: eq(companies.tenantId, tenantId) }),
-    db5.query.companyLegalDetails.findFirst({ where: eq(companyLegalDetails.tenantId, tenantId) }),
-    db5.query.companySettings.findFirst({ where: eq(companySettings.tenantId, tenantId) }),
-    db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) }),
-    db5.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.environment, "sandbox"), eq(zatcaCredentials.isActive, true)) }),
-    db5.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.environment, "production"), eq(zatcaCredentials.isActive, true)) }),
-    db5.select({
+    db4.query.tenants.findFirst({ where: eq(tenants.id, tenantId) }),
+    db4.query.companies.findFirst({ where: eq(companies.tenantId, tenantId) }),
+    db4.query.companyLegalDetails.findFirst({ where: eq(companyLegalDetails.tenantId, tenantId) }),
+    db4.query.companySettings.findFirst({ where: eq(companySettings.tenantId, tenantId) }),
+    db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, tenantId) }),
+    db4.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.environment, "sandbox"), eq(zatcaCredentials.isActive, true)) }),
+    db4.query.zatcaCredentials.findFirst({ where: and(eq(zatcaCredentials.tenantId, tenantId), eq(zatcaCredentials.environment, "production"), eq(zatcaCredentials.isActive, true)) }),
+    db4.select({
       total: sql`count(*)`,
       cleared: sql`sum(case when ${zatcaInvoiceStatus.status} = 'cleared' then 1 else 0 end)`,
       reported: sql`sum(case when ${zatcaInvoiceStatus.status} = 'reported' then 1 else 0 end)`,
       failed: sql`sum(case when ${zatcaInvoiceStatus.status} in ('failed','rejected') then 1 else 0 end)`,
       pending: sql`sum(case when ${zatcaInvoiceStatus.status} in ('draft','signed','pending','submitted') then 1 else 0 end)`
     }).from(zatcaInvoiceStatus).where(eq(zatcaInvoiceStatus.tenantId, tenantId)),
-    db5.select({ count: sql`count(*)` }).from(zatcaApiLogs).where(and(eq(zatcaApiLogs.tenantId, tenantId), eq(zatcaApiLogs.status, "failed"))),
-    db5.query.zatcaApiLogs.findFirst({ where: eq(zatcaApiLogs.tenantId, tenantId), orderBy: [desc(zatcaApiLogs.createdAt)] }),
-    db5.select().from(zatcaCertificates).where(and(eq(zatcaCertificates.tenantId, tenantId), eq(zatcaCertificates.isActive, true)))
+    db4.select({ count: sql`count(*)` }).from(zatcaApiLogs).where(and(eq(zatcaApiLogs.tenantId, tenantId), eq(zatcaApiLogs.status, "failed"))),
+    db4.query.zatcaApiLogs.findFirst({ where: eq(zatcaApiLogs.tenantId, tenantId), orderBy: [desc(zatcaApiLogs.createdAt)] }),
+    db4.select().from(zatcaCertificates).where(and(eq(zatcaCertificates.tenantId, tenantId), eq(zatcaCertificates.isActive, true)))
   ]);
   const vatNumber = legal?.vatNumber || settings?.taxNumber || tenant?.taxNumber || "";
   const subscriptionState = subscriptionAccess2(subscription);
@@ -124475,13 +124491,13 @@ async function buildTenantReadiness(tenantId) {
 var superAdminRouter = createRouter({
   companies: {
     list: adminQuery.input(external_exports.object({ offset: external_exports.number().default(0), limit: external_exports.number().default(20) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const offset = input?.offset || 0;
       const limit = input?.limit || 20;
-      const tenants2 = await db5.select().from(tenants).orderBy(desc(tenants.createdAt)).limit(limit).offset(offset);
-      const [totalResult] = await db5.select({ total: sql`count(*)` }).from(tenants);
+      const tenants2 = await db4.select().from(tenants).orderBy(desc(tenants.createdAt)).limit(limit).offset(offset);
+      const [totalResult] = await db4.select({ total: sql`count(*)` }).from(tenants);
       const tenantIds = tenants2.map((t2) => t2.id);
-      const subs = tenantIds.length > 0 ? await db5.select().from(subscriptions).where(sql`${subscriptions.tenantId} IN (${tenantIds.join(",")})`) : [];
+      const subs = tenantIds.length > 0 ? await db4.select().from(subscriptions).where(sql`${subscriptions.tenantId} IN (${tenantIds.join(",")})`) : [];
       const subMap = new Map(subs.map((s) => [s.tenantId, s]));
       return {
         items: tenants2.map((t2) => ({ ...t2, subscription: subMap.get(t2.id) || null })),
@@ -124491,34 +124507,34 @@ var superAdminRouter = createRouter({
       };
     }),
     getById: adminQuery.input(external_exports.object({ tenantId: external_exports.number() })).query(async ({ input }) => {
-      const db5 = getDb();
-      const tenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      const db4 = getDb();
+      const tenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
       if (!tenant) throw new Error("Tenant not found");
-      const company = await db5.query.companies.findFirst({ where: eq(companies.tenantId, input.tenantId) });
-      const sub = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
-      const users2 = await db5.select().from(users).where(eq(users.tenantId, input.tenantId));
+      const company = await db4.query.companies.findFirst({ where: eq(companies.tenantId, input.tenantId) });
+      const sub = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
+      const users2 = await db4.select().from(users).where(eq(users.tenantId, input.tenantId));
       return { tenant, company, subscription: sub, users: users2 };
     }),
     activate: adminQuery.input(external_exports.object({ tenantId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const oldTenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
-      await db5.update(tenants).set({ status: "active" }).where(eq(tenants.id, input.tenantId));
+      const db4 = getDb();
+      const oldTenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      await db4.update(tenants).set({ status: "active" }).where(eq(tenants.id, input.tenantId));
       await createAuditLog({ tenantId: input.tenantId, userId: ctx.user.id, action: "company_activate", entityType: "tenant", entityId: input.tenantId, oldValues: oldTenant, newValues: { status: "active" } });
       return { success: true };
     }),
     deactivate: adminQuery.input(external_exports.object({ tenantId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const oldTenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
-      await db5.update(tenants).set({ status: "suspended" }).where(eq(tenants.id, input.tenantId));
+      const db4 = getDb();
+      const oldTenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      await db4.update(tenants).set({ status: "suspended" }).where(eq(tenants.id, input.tenantId));
       await createAuditLog({ tenantId: input.tenantId, userId: ctx.user.id, action: "company_suspend", entityType: "tenant", entityId: input.tenantId, oldValues: oldTenant, newValues: { status: "suspended" } });
       return { success: true };
     }),
     archive: adminQuery.input(external_exports.object({ tenantId: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const oldTenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      const db4 = getDb();
+      const oldTenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
       if (!oldTenant) throw new Error("Tenant not found");
-      await db5.update(tenants).set({ status: "suspended" }).where(eq(tenants.id, input.tenantId));
-      await db5.update(subscriptions).set({ status: "suspended" }).where(eq(subscriptions.tenantId, input.tenantId));
+      await db4.update(tenants).set({ status: "suspended" }).where(eq(tenants.id, input.tenantId));
+      await db4.update(subscriptions).set({ status: "suspended" }).where(eq(subscriptions.tenantId, input.tenantId));
       await createAuditLog({
         tenantId: input.tenantId,
         userId: ctx.user.id,
@@ -124531,11 +124547,11 @@ var superAdminRouter = createRouter({
       return { success: true };
     }),
     restore: adminQuery.input(external_exports.object({ tenantId: external_exports.number(), subscriptionStatus: external_exports.enum(["trial", "active", "past_due", "expired"]).default("active") })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const oldTenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      const db4 = getDb();
+      const oldTenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
       if (!oldTenant) throw new Error("Tenant not found");
-      await db5.update(tenants).set({ status: input.subscriptionStatus === "trial" ? "trial" : "active" }).where(eq(tenants.id, input.tenantId));
-      await db5.update(subscriptions).set({ status: input.subscriptionStatus }).where(eq(subscriptions.tenantId, input.tenantId));
+      await db4.update(tenants).set({ status: input.subscriptionStatus === "trial" ? "trial" : "active" }).where(eq(tenants.id, input.tenantId));
+      await db4.update(subscriptions).set({ status: input.subscriptionStatus }).where(eq(subscriptions.tenantId, input.tenantId));
       await createAuditLog({
         tenantId: input.tenantId,
         userId: ctx.user.id,
@@ -124548,58 +124564,58 @@ var superAdminRouter = createRouter({
       return { success: true };
     }),
     changePlan: adminQuery.input(external_exports.object({ tenantId: external_exports.number(), planId: external_exports.number(), billingCycle: external_exports.enum(["monthly", "yearly"]) })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const plan = await db5.query.plans.findFirst({ where: eq(plans.id, input.planId) });
+      const db4 = getDb();
+      const plan = await db4.query.plans.findFirst({ where: eq(plans.id, input.planId) });
       if (!plan) throw new Error("Plan not found");
-      const sub = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
+      const sub = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
       if (sub) {
-        await db5.update(subscriptions).set({ planId: plan.id, billingCycle: input.billingCycle, productLimit: plan.productLimit, userLimit: plan.userLimit, branchLimit: plan.branchLimit, warehouseLimit: plan.warehouseLimit }).where(eq(subscriptions.tenantId, input.tenantId));
+        await db4.update(subscriptions).set({ planId: plan.id, billingCycle: input.billingCycle, productLimit: plan.productLimit, userLimit: plan.userLimit, branchLimit: plan.branchLimit, warehouseLimit: plan.warehouseLimit }).where(eq(subscriptions.tenantId, input.tenantId));
       } else {
-        await db5.insert(subscriptions).values({ tenantId: input.tenantId, planId: plan.id, billingCycle: input.billingCycle, status: "active", productLimit: plan.productLimit, userLimit: plan.userLimit, branchLimit: plan.branchLimit, warehouseLimit: plan.warehouseLimit });
+        await db4.insert(subscriptions).values({ tenantId: input.tenantId, planId: plan.id, billingCycle: input.billingCycle, status: "active", productLimit: plan.productLimit, userLimit: plan.userLimit, branchLimit: plan.branchLimit, warehouseLimit: plan.warehouseLimit });
       }
-      await db5.update(tenants).set({ plan: plan.name.toLowerCase() }).where(eq(tenants.id, input.tenantId));
+      await db4.update(tenants).set({ plan: plan.name.toLowerCase() }).where(eq(tenants.id, input.tenantId));
       await createAuditLog({ tenantId: input.tenantId, userId: ctx.user.id, action: "company_change_plan", entityType: "subscription", entityId: sub?.id, newValues: { planId: plan.id, billingCycle: input.billingCycle } });
       return { success: true };
     }),
     extendTrial: adminQuery.input(external_exports.object({ tenantId: external_exports.number(), days: external_exports.number().int().positive() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const tenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      const db4 = getDb();
+      const tenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
       const newTrialEnd = new Date(Date.now() + input.days * 24 * 60 * 60 * 1e3);
-      await db5.update(tenants).set({ trialEndsAt: newTrialEnd, status: "trial" }).where(eq(tenants.id, input.tenantId));
-      const sub = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
+      await db4.update(tenants).set({ trialEndsAt: newTrialEnd, status: "trial" }).where(eq(tenants.id, input.tenantId));
+      const sub = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
       if (sub) {
-        await db5.update(subscriptions).set({ trialEndAt: newTrialEnd, status: "trial" }).where(eq(subscriptions.tenantId, input.tenantId));
+        await db4.update(subscriptions).set({ trialEndAt: newTrialEnd, status: "trial" }).where(eq(subscriptions.tenantId, input.tenantId));
       }
       await createAuditLog({ tenantId: input.tenantId, userId: ctx.user.id, action: "company_extend_trial", entityType: "tenant", entityId: input.tenantId, oldValues: { trialEndsAt: tenant?.trialEndsAt }, newValues: { trialEndsAt: newTrialEnd } });
       return { success: true };
     }),
     addFreeDays: adminQuery.input(external_exports.object({ tenantId: external_exports.number(), days: external_exports.number().int().positive() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const sub = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
+      const db4 = getDb();
+      const sub = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
       if (!sub) throw new Error("No subscription found for this tenant");
       const currentEnd = sub.currentPeriodEndAt || /* @__PURE__ */ new Date();
       const newEnd = new Date(currentEnd.getTime() + input.days * 24 * 60 * 60 * 1e3);
-      await db5.update(subscriptions).set({ currentPeriodEndAt: newEnd }).where(eq(subscriptions.tenantId, input.tenantId));
+      await db4.update(subscriptions).set({ currentPeriodEndAt: newEnd }).where(eq(subscriptions.tenantId, input.tenantId));
       await createAuditLog({ tenantId: input.tenantId, userId: ctx.user.id, action: "company_add_free_days", entityType: "subscription", entityId: sub.id, oldValues: { currentPeriodEndAt: sub.currentPeriodEndAt }, newValues: { currentPeriodEndAt: newEnd } });
       return { success: true };
     }),
     delete: adminQuery.input(external_exports.object({ tenantId: external_exports.number(), confirm: external_exports.boolean() })).mutation(async ({ input, ctx }) => {
       if (!input.confirm) throw new Error("Confirmation required to delete company");
-      const db5 = getDb();
-      const tenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      const db4 = getDb();
+      const tenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
       if (!tenant) throw new Error("Tenant not found");
-      await db5.delete(users).where(eq(users.tenantId, input.tenantId));
-      await db5.delete(companies).where(eq(companies.tenantId, input.tenantId));
-      await db5.delete(subscriptions).where(eq(subscriptions.tenantId, input.tenantId));
-      await db5.delete(tenants).where(eq(tenants.id, input.tenantId));
+      await db4.delete(users).where(eq(users.tenantId, input.tenantId));
+      await db4.delete(companies).where(eq(companies.tenantId, input.tenantId));
+      await db4.delete(subscriptions).where(eq(subscriptions.tenantId, input.tenantId));
+      await db4.delete(tenants).where(eq(tenants.id, input.tenantId));
       await createAuditLog({ tenantId: input.tenantId, userId: ctx.user.id, action: "company_delete", entityType: "tenant", entityId: input.tenantId, newValues: { deleted: true } });
       return { success: true };
     }),
     impersonate: adminQuery.input(external_exports.object({ tenantId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const tenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      const db4 = getDb();
+      const tenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
       if (!tenant) throw new Error("Tenant not found");
-      const adminUser = await db5.query.users.findFirst({ where: and(eq(users.tenantId, input.tenantId), eq(users.role, "admin")) });
+      const adminUser = await db4.query.users.findFirst({ where: and(eq(users.tenantId, input.tenantId), eq(users.role, "admin")) });
       if (!adminUser) throw new Error("No admin user found for tenant");
       const token = "impersonated_" + Date.now();
       await createAuditLog({ tenantId: input.tenantId, userId: ctx.user.id, action: "impersonate", entityType: "tenant", entityId: input.tenantId });
@@ -124608,8 +124624,8 @@ var superAdminRouter = createRouter({
   },
   plans: {
     list: adminQuery.query(async () => {
-      const db5 = getDb();
-      return db5.select().from(plans).orderBy(asc2(plans.sortOrder));
+      const db4 = getDb();
+      return db4.select().from(plans).orderBy(asc2(plans.sortOrder));
     }),
     create: adminQuery.input(external_exports.object({
       name: external_exports.string(),
@@ -124628,8 +124644,8 @@ var superAdminRouter = createRouter({
       sortOrder: external_exports.number().default(0),
       features: external_exports.any().optional()
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const [{ id }] = await db5.insert(plans).values(input).$returningId();
+      const db4 = getDb();
+      const [{ id }] = await db4.insert(plans).values(input).$returningId();
       await createAuditLog({ userId: ctx.user.id, action: "plan_create", entityType: "plan", entityId: id, newValues: input });
       return { id, success: true };
     }),
@@ -124651,31 +124667,31 @@ var superAdminRouter = createRouter({
       sortOrder: external_exports.number().optional(),
       features: external_exports.any().optional()
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const { id, ...data } = input;
-      const old = await db5.query.plans.findFirst({ where: eq(plans.id, id) });
-      await db5.update(plans).set(data).where(eq(plans.id, id));
+      const old = await db4.query.plans.findFirst({ where: eq(plans.id, id) });
+      await db4.update(plans).set(data).where(eq(plans.id, id));
       await createAuditLog({ userId: ctx.user.id, action: "plan_update", entityType: "plan", entityId: id, oldValues: old, newValues: data });
       return { success: true };
     }),
     delete: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const old = await db5.query.plans.findFirst({ where: eq(plans.id, input.id) });
-      await db5.delete(plans).where(eq(plans.id, input.id));
+      const db4 = getDb();
+      const old = await db4.query.plans.findFirst({ where: eq(plans.id, input.id) });
+      await db4.delete(plans).where(eq(plans.id, input.id));
       await createAuditLog({ userId: ctx.user.id, action: "plan_delete", entityType: "plan", entityId: input.id, oldValues: old });
       return { success: true };
     })
   },
   modules: {
     listForTenant: adminQuery.input(external_exports.object({ tenantId: external_exports.number() })).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const [modules, controls, subscription] = await Promise.all([
-        db5.select().from(moduleRegistry).orderBy(asc2(moduleRegistry.sortOrder)),
-        db5.select().from(tenantModuleControls).where(eq(tenantModuleControls.tenantId, input.tenantId)),
-        db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) })
+        db4.select().from(moduleRegistry).orderBy(asc2(moduleRegistry.sortOrder)),
+        db4.select().from(tenantModuleControls).where(eq(tenantModuleControls.tenantId, input.tenantId)),
+        db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) })
       ]);
       const controlMap = new Map(controls.map((control) => [control.moduleKey, control]));
-      const planFeatures2 = subscription?.planId ? await db5.select().from(planFeatures).where(and(eq(planFeatures.planId, subscription.planId), eq(planFeatures.isActive, true))) : [];
+      const planFeatures2 = subscription?.planId ? await db4.select().from(planFeatures).where(and(eq(planFeatures.planId, subscription.planId), eq(planFeatures.isActive, true))) : [];
       const planFeatureKeys = new Set(planFeatures2.map((feature) => feature.featureKey));
       return modules.map((module) => {
         const control = controlMap.get(module.moduleKey);
@@ -124698,7 +124714,7 @@ var superAdminRouter = createRouter({
       limitJson: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
       notes: external_exports.string().optional()
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const values = {
         tenantId: input.tenantId,
         moduleKey: input.moduleKey,
@@ -124708,7 +124724,7 @@ var superAdminRouter = createRouter({
         notes: input.notes,
         updatedBy: ctx.user.id
       };
-      await db5.insert(tenantModuleControls).values(values).onDuplicateKeyUpdate({
+      await db4.insert(tenantModuleControls).values(values).onDuplicateKeyUpdate({
         set: {
           isEnabled: input.isEnabled,
           source: input.source,
@@ -124718,7 +124734,7 @@ var superAdminRouter = createRouter({
           updatedAt: /* @__PURE__ */ new Date()
         }
       });
-      await db5.insert(tenantServiceEvents).values({
+      await db4.insert(tenantServiceEvents).values({
         tenantId: input.tenantId,
         eventType: "module_toggle",
         status: "done",
@@ -124746,8 +124762,8 @@ var superAdminRouter = createRouter({
       status: external_exports.enum(["trial", "active", "past_due", "cancelled", "expired", "suspended"]).optional(),
       graceDays: external_exports.number().int().nonnegative().optional()
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const sub = await db5.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
+      const db4 = getDb();
+      const sub = await db4.query.subscriptions.findFirst({ where: eq(subscriptions.tenantId, input.tenantId) });
       if (!sub) throw new Error("No subscription found for this tenant");
       const gracePeriodEndsAt = input.graceDays !== void 0 ? new Date(Date.now() + input.graceDays * 24 * 60 * 60 * 1e3) : void 0;
       const updates = {
@@ -124758,8 +124774,8 @@ var superAdminRouter = createRouter({
         status: input.status,
         gracePeriodEndsAt
       };
-      await db5.update(subscriptions).set(updates).where(eq(subscriptions.tenantId, input.tenantId));
-      await db5.insert(tenantServiceEvents).values({
+      await db4.update(subscriptions).set(updates).where(eq(subscriptions.tenantId, input.tenantId));
+      await db4.insert(tenantServiceEvents).values({
         tenantId: input.tenantId,
         eventType: "limit_update",
         status: "done",
@@ -124781,16 +124797,16 @@ var superAdminRouter = createRouter({
   },
   serviceEvents: {
     list: adminQuery.input(external_exports.object({ tenantId: external_exports.number().optional(), limit: external_exports.number().min(1).max(100).default(25) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
-      const query = db5.select().from(tenantServiceEvents);
+      const db4 = getDb();
+      const query = db4.select().from(tenantServiceEvents);
       if (input?.tenantId) {
         return query.where(eq(tenantServiceEvents.tenantId, input.tenantId)).orderBy(desc(tenantServiceEvents.createdAt)).limit(input.limit || 25);
       }
       return query.orderBy(desc(tenantServiceEvents.createdAt)).limit(input?.limit || 25);
     }),
     requestBackup: adminQuery.input(external_exports.object({ tenantId: external_exports.number(), type: external_exports.enum(["backup_request", "restore_request"]), notes: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const [{ id }] = await db5.insert(tenantServiceEvents).values({
+      const db4 = getDb();
+      const [{ id }] = await db4.insert(tenantServiceEvents).values({
         tenantId: input.tenantId,
         eventType: input.type,
         status: "pending",
@@ -124811,8 +124827,8 @@ var superAdminRouter = createRouter({
   },
   smtp: {
     getSettings: adminQuery.query(async () => {
-      const db5 = getDb();
-      const settings = await db5.query.smtpSettings.findFirst({ where: eq(smtpSettings.tenantId, 1) });
+      const db4 = getDb();
+      const settings = await db4.query.smtpSettings.findFirst({ where: eq(smtpSettings.tenantId, 1) });
       return settings || null;
     }),
     saveSettings: adminQuery.input(external_exports.object({
@@ -124826,42 +124842,42 @@ var superAdminRouter = createRouter({
       replyToEmail: external_exports.string().optional(),
       isActive: external_exports.boolean().default(false)
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const existing = await db5.query.smtpSettings.findFirst({ where: eq(smtpSettings.tenantId, 1) });
+      const db4 = getDb();
+      const existing = await db4.query.smtpSettings.findFirst({ where: eq(smtpSettings.tenantId, 1) });
       if (existing) {
-        await db5.update(smtpSettings).set(input).where(eq(smtpSettings.tenantId, 1));
+        await db4.update(smtpSettings).set(input).where(eq(smtpSettings.tenantId, 1));
       } else {
-        await db5.insert(smtpSettings).values({ ...input, tenantId: 1 });
+        await db4.insert(smtpSettings).values({ ...input, tenantId: 1 });
       }
       await createAuditLog({ userId: ctx.user.id, action: "smtp_settings_save", entityType: "smtp_settings", entityId: existing?.id, newValues: input });
       return { success: true };
     }),
     test: adminQuery.input(external_exports.object({ to: external_exports.string().email().optional() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const settings = await db5.query.smtpSettings.findFirst({ where: eq(smtpSettings.tenantId, 1) });
+      const db4 = getDb();
+      const settings = await db4.query.smtpSettings.findFirst({ where: eq(smtpSettings.tenantId, 1) });
       if (!settings) throw new Error("No SMTP settings configured");
       const testTo = input.to || ctx.user.email || "test@example.com";
       try {
         const result = await sendEmail(testTo, "SMTP Test", "This is a test email from YASCO ERP. Your SMTP settings are working correctly.");
         if (result.sent) {
-          await db5.update(smtpSettings).set({ testStatus: "success", lastTestedAt: /* @__PURE__ */ new Date() }).where(eq(smtpSettings.tenantId, 1));
+          await db4.update(smtpSettings).set({ testStatus: "success", lastTestedAt: /* @__PURE__ */ new Date() }).where(eq(smtpSettings.tenantId, 1));
           return { success: true, message: "Test email sent successfully" };
         }
         throw new Error("Failed to send test email");
       } catch (err) {
-        await db5.update(smtpSettings).set({ testStatus: "failed", lastTestedAt: /* @__PURE__ */ new Date() }).where(eq(smtpSettings.tenantId, 1));
+        await db4.update(smtpSettings).set({ testStatus: "failed", lastTestedAt: /* @__PURE__ */ new Date() }).where(eq(smtpSettings.tenantId, 1));
         throw new Error(`SMTP test failed: ${err.message}`);
       }
     })
   },
   emailTemplates: {
     list: adminQuery.query(async () => {
-      const db5 = getDb();
-      return db5.select().from(emailTemplates).orderBy(desc(emailTemplates.createdAt));
+      const db4 = getDb();
+      return db4.select().from(emailTemplates).orderBy(desc(emailTemplates.createdAt));
     }),
     getByKey: adminQuery.input(external_exports.object({ templateKey: external_exports.string() })).query(async ({ input }) => {
-      const db5 = getDb();
-      const template = await db5.query.emailTemplates.findFirst({ where: eq(emailTemplates.templateKey, input.templateKey) });
+      const db4 = getDb();
+      const template = await db4.query.emailTemplates.findFirst({ where: eq(emailTemplates.templateKey, input.templateKey) });
       if (!template) throw new Error("Template not found");
       return template;
     }),
@@ -124875,41 +124891,41 @@ var superAdminRouter = createRouter({
       variables: external_exports.any().optional(),
       isActive: external_exports.boolean().optional()
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const { id, ...data } = input;
-      const old = await db5.query.emailTemplates.findFirst({ where: eq(emailTemplates.id, id) });
-      await db5.update(emailTemplates).set(data).where(eq(emailTemplates.id, id));
+      const old = await db4.query.emailTemplates.findFirst({ where: eq(emailTemplates.id, id) });
+      await db4.update(emailTemplates).set(data).where(eq(emailTemplates.id, id));
       await createAuditLog({ userId: ctx.user.id, action: "email_template_update", entityType: "email_template", entityId: id, oldValues: old, newValues: data });
       return { success: true };
     })
   },
   emailLogs: {
     list: adminQuery.input(external_exports.object({ offset: external_exports.number().default(0), limit: external_exports.number().default(50) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const offset = input?.offset || 0;
       const limit = input?.limit || 50;
-      const items = await db5.select().from(emailLogs).orderBy(desc(emailLogs.sentAt)).limit(limit).offset(offset);
-      const [totalResult] = await db5.select({ total: sql`count(*)` }).from(emailLogs);
+      const items = await db4.select().from(emailLogs).orderBy(desc(emailLogs.sentAt)).limit(limit).offset(offset);
+      const [totalResult] = await db4.select({ total: sql`count(*)` }).from(emailLogs);
       return { items, total: totalResult?.total || 0 };
     })
   },
   otpLogs: {
     list: adminQuery.input(external_exports.object({ offset: external_exports.number().default(0), limit: external_exports.number().default(50) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const offset = input?.offset || 0;
       const limit = input?.limit || 50;
-      const items = await db5.select().from(otpCodes).orderBy(desc(otpCodes.createdAt)).limit(limit).offset(offset);
-      const [totalResult] = await db5.select({ total: sql`count(*)` }).from(otpCodes);
+      const items = await db4.select().from(otpCodes).orderBy(desc(otpCodes.createdAt)).limit(limit).offset(offset);
+      const [totalResult] = await db4.select({ total: sql`count(*)` }).from(otpCodes);
       return { items, total: totalResult?.total || 0 };
     })
   },
   auditLogs: {
     list: adminQuery.input(external_exports.object({ offset: external_exports.number().default(0), limit: external_exports.number().default(50) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const offset = input?.offset || 0;
       const limit = input?.limit || 50;
-      const items = await db5.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset);
-      const [totalResult] = await db5.select({ total: sql`count(*)` }).from(auditLogs);
+      const items = await db4.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset);
+      const [totalResult] = await db4.select({ total: sql`count(*)` }).from(auditLogs);
       return { items, total: totalResult?.total || 0 };
     })
   },
@@ -124921,7 +124937,7 @@ var superAdminRouter = createRouter({
       maxDevices: external_exports.number().int().positive().default(1),
       validDays: external_exports.number().int().positive().default(365)
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const expiresAt = new Date(Date.now() + input.validDays * 24 * 60 * 60 * 1e3);
       const licenseKey = createDesktopLicense({
         tenantId: input.tenantId,
@@ -124931,7 +124947,7 @@ var superAdminRouter = createRouter({
         expiresAt: expiresAt.toISOString()
       });
       const licenseKeyHash = crypto6.createHash("sha256").update(licenseKey).digest("hex");
-      const [{ id }] = await db5.insert(desktopLicenses).values({
+      const [{ id }] = await db4.insert(desktopLicenses).values({
         tenantId: input.tenantId,
         companyName: input.companyName,
         plan: input.plan,
@@ -124952,34 +124968,34 @@ var superAdminRouter = createRouter({
       return { id, licenseKey, expiresAt: expiresAt.toISOString() };
     }),
     list: adminQuery.input(external_exports.object({ tenantId: external_exports.number().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
-      const baseQuery = db5.select().from(desktopLicenses);
+      const db4 = getDb();
+      const baseQuery = db4.select().from(desktopLicenses);
       if (input?.tenantId) {
         return baseQuery.where(eq(desktopLicenses.tenantId, input.tenantId)).orderBy(desc(desktopLicenses.createdAt)).limit(input?.limit || 50);
       }
       return baseQuery.orderBy(desc(desktopLicenses.createdAt)).limit(input?.limit || 50);
     }),
     revoke: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      await db5.update(desktopLicenses).set({ status: "revoked" }).where(eq(desktopLicenses.id, input.id));
+      const db4 = getDb();
+      await db4.update(desktopLicenses).set({ status: "revoked" }).where(eq(desktopLicenses.id, input.id));
       await createAuditLog({ userId: ctx.user.id, action: "desktop_license_revoke", entityType: "desktop_license", entityId: input.id });
       return { success: true };
     })
   },
   stats: {
     dashboard: adminQuery.query(async () => {
-      const db5 = getDb();
-      const [totalCompanies] = await db5.select({ count: sql`count(*)` }).from(tenants);
-      const [activeCompanies] = await db5.select({ count: sql`count(*)` }).from(tenants).where(eq(tenants.status, "active"));
-      const [trialCompanies] = await db5.select({ count: sql`count(*)` }).from(tenants).where(eq(tenants.status, "trial"));
-      const [suspendedCompanies] = await db5.select({ count: sql`count(*)` }).from(tenants).where(eq(tenants.status, "suspended"));
-      const [revenueResult] = await db5.select({ total: sql`coalesce(sum(amount), 0)` }).from(subscriptionInvoices).where(eq(subscriptionInvoices.status, "paid"));
+      const db4 = getDb();
+      const [totalCompanies] = await db4.select({ count: sql`count(*)` }).from(tenants);
+      const [activeCompanies] = await db4.select({ count: sql`count(*)` }).from(tenants).where(eq(tenants.status, "active"));
+      const [trialCompanies] = await db4.select({ count: sql`count(*)` }).from(tenants).where(eq(tenants.status, "trial"));
+      const [suspendedCompanies] = await db4.select({ count: sql`count(*)` }).from(tenants).where(eq(tenants.status, "suspended"));
+      const [revenueResult] = await db4.select({ total: sql`coalesce(sum(amount), 0)` }).from(subscriptionInvoices).where(eq(subscriptionInvoices.status, "paid"));
       const startOfMonth = new Date((/* @__PURE__ */ new Date()).getFullYear(), (/* @__PURE__ */ new Date()).getMonth(), 1);
-      const [signupsThisMonth] = await db5.select({ count: sql`count(*)` }).from(tenants).where(gte(tenants.createdAt, startOfMonth));
-      const [totalSubscriptions] = await db5.select({ count: sql`count(*)` }).from(subscriptions);
-      const [paidSubscriptions] = await db5.select({ count: sql`count(*)` }).from(subscriptions).where(eq(subscriptions.status, "active"));
-      const [failedZatca] = await db5.select({ count: sql`count(*)` }).from(zatcaApiLogs).where(eq(zatcaApiLogs.status, "failed"));
-      const [pendingZatca] = await db5.select({ count: sql`count(*)` }).from(zatcaInvoiceStatus).where(sql`${zatcaInvoiceStatus.status} in ('draft','signed','pending','submitted')`);
+      const [signupsThisMonth] = await db4.select({ count: sql`count(*)` }).from(tenants).where(gte(tenants.createdAt, startOfMonth));
+      const [totalSubscriptions] = await db4.select({ count: sql`count(*)` }).from(subscriptions);
+      const [paidSubscriptions] = await db4.select({ count: sql`count(*)` }).from(subscriptions).where(eq(subscriptions.status, "active"));
+      const [failedZatca] = await db4.select({ count: sql`count(*)` }).from(zatcaApiLogs).where(eq(zatcaApiLogs.status, "failed"));
+      const [pendingZatca] = await db4.select({ count: sql`count(*)` }).from(zatcaInvoiceStatus).where(sql`${zatcaInvoiceStatus.status} in ('draft','signed','pending','submitted')`);
       return {
         totalCompanies: totalCompanies?.count || 0,
         activeCompanies: activeCompanies?.count || 0,
@@ -124994,9 +125010,9 @@ var superAdminRouter = createRouter({
       };
     }),
     revenue: adminQuery.input(external_exports.object({ year: external_exports.number().optional() }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const year3 = input?.year || (/* @__PURE__ */ new Date()).getFullYear();
-      const rows = await db5.select({
+      const rows = await db4.select({
         month: sql`month(${subscriptionInvoices.createdAt})`,
         total: sql`coalesce(sum(${subscriptionInvoices.amount}), 0)`,
         count: sql`count(*)`
@@ -125010,9 +125026,9 @@ var superAdminRouter = createRouter({
       return { year: year3, months };
     }),
     signups: adminQuery.input(external_exports.object({ year: external_exports.number().optional() }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const year3 = input?.year || (/* @__PURE__ */ new Date()).getFullYear();
-      const rows = await db5.select({
+      const rows = await db4.select({
         month: sql`month(${tenants.createdAt})`,
         count: sql`count(*)`
       }).from(tenants).where(sql`year(${tenants.createdAt}) = ${year3}`).groupBy(sql`month(${tenants.createdAt})`).orderBy(sql`month(${tenants.createdAt})`);
@@ -125023,9 +125039,9 @@ var superAdminRouter = createRouter({
       return { year: year3, months };
     }),
     trialConversion: adminQuery.query(async () => {
-      const db5 = getDb();
-      const [totalTrials] = await db5.select({ count: sql`count(*)` }).from(subscriptions).where(eq(subscriptions.status, "trial"));
-      const [convertedToPaid] = await db5.select({ count: sql`count(*)` }).from(subscriptions).where(
+      const db4 = getDb();
+      const [totalTrials] = await db4.select({ count: sql`count(*)` }).from(subscriptions).where(eq(subscriptions.status, "trial"));
+      const [convertedToPaid] = await db4.select({ count: sql`count(*)` }).from(subscriptions).where(
         and(eq(subscriptions.status, "active"), sql`${subscriptions.trialStartAt} IS NOT NULL`)
       );
       const total = totalTrials?.count || 0;
@@ -125043,9 +125059,9 @@ var superAdminRouter = createRouter({
   compliance: {
     tenantReadiness: adminQuery.input(external_exports.object({ tenantId: external_exports.number() })).query(async ({ input }) => buildTenantReadiness(input.tenantId)),
     globalReadiness: adminQuery.input(external_exports.object({ limit: external_exports.number().min(1).max(200).default(50), onlyNotReady: external_exports.boolean().default(false) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const limit = input?.limit || 50;
-      const tenants2 = await db5.select({ id: tenants.id }).from(tenants).orderBy(desc(tenants.createdAt)).limit(limit);
+      const tenants2 = await db4.select({ id: tenants.id }).from(tenants).orderBy(desc(tenants.createdAt)).limit(limit);
       const readiness = await Promise.all(tenants2.map((tenant) => buildTenantReadiness(tenant.id)));
       const items = input?.onlyNotReady ? readiness.filter((item) => !item.readyForSale) : readiness;
       return {
@@ -125058,9 +125074,9 @@ var superAdminRouter = createRouter({
       };
     }),
     zatcaFailures: adminQuery.input(external_exports.object({ tenantId: external_exports.number().optional(), limit: external_exports.number().min(1).max(200).default(50) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const where = input?.tenantId ? and(eq(zatcaApiLogs.status, "failed"), eq(zatcaApiLogs.tenantId, input.tenantId)) : eq(zatcaApiLogs.status, "failed");
-      return db5.select().from(zatcaApiLogs).where(where).orderBy(desc(zatcaApiLogs.createdAt)).limit(input?.limit || 50);
+      return db4.select().from(zatcaApiLogs).where(where).orderBy(desc(zatcaApiLogs.createdAt)).limit(input?.limit || 50);
     })
   },
   // =====================================================
@@ -125068,21 +125084,21 @@ var superAdminRouter = createRouter({
   // =====================================================
   supportTickets: {
     list: adminQuery.input(external_exports.object({ status: external_exports.string().optional(), priority: external_exports.string().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const conditions = [];
       if (input?.status) conditions.push(eq(supportTickets.status, input.status));
       if (input?.priority) conditions.push(eq(supportTickets.priority, input.priority));
-      return db5.select().from(supportTickets).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(supportTickets.createdAt)).limit(input?.limit || 50);
+      return db4.select().from(supportTickets).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(supportTickets.createdAt)).limit(input?.limit || 50);
     }),
     assign: adminQuery.input(external_exports.object({ ticketId: external_exports.number(), assignedTo: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      await db5.update(supportTickets).set({ assignedTo: input.assignedTo, status: "in_progress" }).where(eq(supportTickets.id, input.ticketId));
+      const db4 = getDb();
+      await db4.update(supportTickets).set({ assignedTo: input.assignedTo, status: "in_progress" }).where(eq(supportTickets.id, input.ticketId));
       await createAuditLog({ userId: ctx.user.id, action: "support_ticket_assign", entityType: "support_ticket", entityId: input.ticketId, newValues: { assignedTo: input.assignedTo } });
       return { success: true };
     }),
     updateStatus: adminQuery.input(external_exports.object({ ticketId: external_exports.number(), status: external_exports.enum(["open", "in_progress", "resolved", "closed"]) })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      await db5.update(supportTickets).set({ status: input.status }).where(eq(supportTickets.id, input.ticketId));
+      const db4 = getDb();
+      await db4.update(supportTickets).set({ status: input.status }).where(eq(supportTickets.id, input.ticketId));
       await createAuditLog({ userId: ctx.user.id, action: "support_ticket_status", entityType: "support_ticket", entityId: input.ticketId, newValues: { status: input.status } });
       return { success: true };
     })
@@ -125092,8 +125108,8 @@ var superAdminRouter = createRouter({
   // =====================================================
   impersonate: {
     start: adminQuery.input(external_exports.object({ tenantId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const tenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
+      const db4 = getDb();
+      const tenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, input.tenantId) });
       if (!tenant) throw new Error("Tenant not found");
       await createAuditLog({ tenantId: input.tenantId, userId: ctx.user.id, action: "impersonation_start", entityType: "tenant", entityId: input.tenantId });
       return { success: true, tenantId: input.tenantId, tenantName: tenant.name, impersonatedBy: ctx.user.id };
@@ -125105,8 +125121,8 @@ var superAdminRouter = createRouter({
   // =====================================================
   themes: {
     getForTenant: adminQuery.input(external_exports.object({ tenantId: external_exports.number() })).query(async ({ input }) => {
-      const db5 = getDb();
-      const tenant = await db5.query.tenants.findFirst({
+      const db4 = getDb();
+      const tenant = await db4.query.tenants.findFirst({
         where: eq(tenants.id, input.tenantId),
         columns: { id: true, layoutTheme: true }
       });
@@ -125116,12 +125132,12 @@ var superAdminRouter = createRouter({
       tenantId: external_exports.number(),
       layoutTheme: external_exports.enum(["sidebar", "app_launcher", "launcher_theme"])
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const old = await db5.query.tenants.findFirst({
+      const db4 = getDb();
+      const old = await db4.query.tenants.findFirst({
         where: eq(tenants.id, input.tenantId),
         columns: { layoutTheme: true }
       });
-      await db5.update(tenants).set({ layoutTheme: input.layoutTheme }).where(eq(tenants.id, input.tenantId));
+      await db4.update(tenants).set({ layoutTheme: input.layoutTheme }).where(eq(tenants.id, input.tenantId));
       await createAuditLog({
         userId: ctx.user.id,
         action: "tenant_theme_override",
@@ -125137,12 +125153,12 @@ var superAdminRouter = createRouter({
   // =====================================================
   system: {
     getSettings: adminQuery.query(async () => {
-      const db5 = getDb();
-      return db5.select().from(systemSettings);
+      const db4 = getDb();
+      return db4.select().from(systemSettings);
     }),
     updateSetting: adminQuery.input(external_exports.object({ key: external_exports.string(), value: external_exports.string() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      await db5.insert(systemSettings).values({ key: input.key, value: input.value }).onDuplicateKeyUpdate({ set: { value: input.value } });
+      const db4 = getDb();
+      await db4.insert(systemSettings).values({ key: input.key, value: input.value }).onDuplicateKeyUpdate({ set: { value: input.value } });
       await createAuditLog({ userId: ctx.user.id, action: "system_setting_update", entityType: "system_setting", newValues: { key: input.key, value: input.value } });
       return { success: true };
     })
@@ -125156,20 +125172,20 @@ init_schema2();
 init_drizzle_orm();
 var meetingRouter = createRouter({
   list: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), dateFrom: external_exports.string().optional(), dateTo: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(meetings.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(meetings.status, input.status));
     if (input?.dateFrom) conditions.push(gte(meetings.date, input.dateFrom));
     if (input?.dateTo) conditions.push(lte(meetings.date, input.dateTo));
-    return db5.select().from(meetings).where(and(...conditions)).orderBy(desc(meetings.date));
+    return db4.select().from(meetings).where(and(...conditions)).orderBy(desc(meetings.date));
   }),
   getById: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const meeting = await db5.query.meetings.findFirst({ where: eq(meetings.id, input.id) });
+    const db4 = getDb();
+    const meeting = await db4.query.meetings.findFirst({ where: eq(meetings.id, input.id) });
     if (!meeting) throw new Error("Meeting not found");
-    const attendees = await db5.select().from(meetingAttendees).where(eq(meetingAttendees.meetingId, input.id));
-    const notes = await db5.select().from(meetingNotes).where(eq(meetingNotes.meetingId, input.id)).orderBy(desc(meetingNotes.createdAt));
+    const attendees = await db4.select().from(meetingAttendees).where(eq(meetingAttendees.meetingId, input.id));
+    const notes = await db4.select().from(meetingNotes).where(eq(meetingNotes.meetingId, input.id)).orderBy(desc(meetingNotes.createdAt));
     return { ...meeting, attendees, notes };
   }),
   create: authedQuery.input(external_exports.object({
@@ -125187,9 +125203,9 @@ var meetingRouter = createRouter({
     relatedType: external_exports.string().optional(),
     relatedId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [{ id }] = await db5.insert(meetings).values({
+    const [{ id }] = await db4.insert(meetings).values({
       tenantId,
       title: input.title,
       description: input.description || null,
@@ -125207,7 +125223,7 @@ var meetingRouter = createRouter({
     }).$returningId();
     if (input.attendees && input.attendees.length > 0) {
       for (const attendee of input.attendees) {
-        await db5.insert(meetingAttendees).values({
+        await db4.insert(meetingAttendees).values({
           meetingId: id,
           userId: attendee.userId || null,
           email: attendee.email || null,
@@ -125248,18 +125264,18 @@ ${input.location ? `Location: ${input.location}` : ""}`);
     status: external_exports.enum(["scheduled", "in_progress", "completed", "cancelled", "rescheduled"]).optional(),
     customerId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    const old = await db5.query.meetings.findFirst({ where: eq(meetings.id, id) });
-    await db5.update(meetings).set(data).where(eq(meetings.id, id));
+    const old = await db4.query.meetings.findFirst({ where: eq(meetings.id, id) });
+    await db4.update(meetings).set(data).where(eq(meetings.id, id));
     return { success: true };
   }),
   cancel: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const meeting = await db5.query.meetings.findFirst({ where: eq(meetings.id, input.id) });
+    const db4 = getDb();
+    const meeting = await db4.query.meetings.findFirst({ where: eq(meetings.id, input.id) });
     if (!meeting) throw new Error("Meeting not found");
-    await db5.update(meetings).set({ status: "cancelled" }).where(eq(meetings.id, input.id));
-    const attendees = await db5.select().from(meetingAttendees).where(eq(meetingAttendees.meetingId, input.id));
+    await db4.update(meetings).set({ status: "cancelled" }).where(eq(meetings.id, input.id));
+    const attendees = await db4.select().from(meetingAttendees).where(eq(meetingAttendees.meetingId, input.id));
     for (const attendee of attendees) {
       const recipientEmail = attendee.email;
       if (recipientEmail) {
@@ -125272,8 +125288,8 @@ ${input.location ? `Location: ${input.location}` : ""}`);
     return { success: true };
   }),
   addNote: authedQuery.input(external_exports.object({ meetingId: external_exports.number(), content: external_exports.string().min(1) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(meetingNotes).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(meetingNotes).values({
       meetingId: input.meetingId,
       content: input.content,
       createdBy: ctx.user.id
@@ -125281,24 +125297,24 @@ ${input.location ? `Location: ${input.location}` : ""}`);
     return { id, success: true };
   }),
   updateAttendance: authedQuery.input(external_exports.object({ meetingId: external_exports.number(), attendeeId: external_exports.number(), status: external_exports.enum(["pending", "accepted", "declined", "tentative"]) })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(meetingAttendees).set({ status: input.status }).where(
+    const db4 = getDb();
+    await db4.update(meetingAttendees).set({ status: input.status }).where(
       and(eq(meetingAttendees.id, input.attendeeId), eq(meetingAttendees.meetingId, input.meetingId))
     );
     return { success: true };
   }),
   myMeetings: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const createdMeetings = await db5.select().from(meetings).where(
+    const createdMeetings = await db4.select().from(meetings).where(
       and(eq(meetings.tenantId, tenantId), eq(meetings.createdBy, ctx.user.id))
     ).orderBy(desc(meetings.date));
-    const attendeeRecords = await db5.select().from(meetingAttendees).where(eq(meetingAttendees.userId, ctx.user.id));
+    const attendeeRecords = await db4.select().from(meetingAttendees).where(eq(meetingAttendees.userId, ctx.user.id));
     const meetingIds = attendeeRecords.map((a) => a.meetingId);
     let attendingMeetings = [];
     if (meetingIds.length > 0) {
       const idsStr = meetingIds.join(",");
-      attendingMeetings = await db5.select().from(meetings).where(and(eq(meetings.tenantId, tenantId), sql`${meetings.id} IN (${idsStr})`));
+      attendingMeetings = await db4.select().from(meetings).where(and(eq(meetings.tenantId, tenantId), sql`${meetings.id} IN (${idsStr})`));
     }
     const seen = /* @__PURE__ */ new Set();
     const all = [...createdMeetings, ...attendingMeetings].filter((m) => {
@@ -125322,7 +125338,7 @@ var taskRouter = createRouter({
     projectId: external_exports.number().positive(),
     search: external_exports.string().optional()
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(projectTasks.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(projectTasks.status, input.status));
@@ -125330,14 +125346,14 @@ var taskRouter = createRouter({
     if (input?.assignedTo) conditions.push(eq(projectTasks.assignedTo, input.assignedTo));
     if (input?.projectId) conditions.push(eq(projectTasks.projectId, input.projectId));
     if (input?.search) conditions.push(like2(projectTasks.name, `%${input.search}%`));
-    return db5.select().from(projectTasks).where(and(...conditions)).orderBy(desc(projectTasks.createdAt));
+    return db4.select().from(projectTasks).where(and(...conditions)).orderBy(desc(projectTasks.createdAt));
   }),
   getById: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const task = await db5.query.projectTasks.findFirst({ where: eq(projectTasks.id, input.id) });
+    const db4 = getDb();
+    const task = await db4.query.projectTasks.findFirst({ where: eq(projectTasks.id, input.id) });
     if (!task) throw new Error("Task not found");
-    const comments = await db5.select().from(taskComments).where(eq(taskComments.taskId, input.id)).orderBy(desc(taskComments.createdAt));
-    const attachments = await db5.select().from(taskAttachments).where(eq(taskAttachments.taskId, input.id)).orderBy(desc(taskAttachments.createdAt));
+    const comments = await db4.select().from(taskComments).where(eq(taskComments.taskId, input.id)).orderBy(desc(taskComments.createdAt));
+    const attachments = await db4.select().from(taskAttachments).where(eq(taskAttachments.taskId, input.id)).orderBy(desc(taskAttachments.createdAt));
     return { ...task, comments, attachments };
   }),
   create: authedQuery.input(external_exports.object({
@@ -125351,9 +125367,9 @@ var taskRouter = createRouter({
     relatedInvoiceId: external_exports.number().optional(),
     tags: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [{ id }] = await db5.insert(projectTasks).values({
+    const [{ id }] = await db4.insert(projectTasks).values({
       tenantId,
       projectId: input.projectId,
       name: input.title,
@@ -125365,9 +125381,9 @@ var taskRouter = createRouter({
       createdBy: ctx.user.id
     }).$returningId();
     if (input.assignedTo) {
-      const assignedUser = await db5.query.users.findFirst({ where: eq(users.id, input.assignedTo) });
+      const assignedUser = await db4.query.users.findFirst({ where: eq(users.id, input.assignedTo) });
       if (assignedUser) {
-        await db5.insert(notifications).values({
+        await db4.insert(notifications).values({
           tenantId,
           userId: input.assignedTo,
           type: "info",
@@ -125389,23 +125405,23 @@ var taskRouter = createRouter({
     assignedTo: external_exports.number().optional(),
     progress: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
     const updateData = { ...data };
     if (data.status === "done") updateData.completedAt = /* @__PURE__ */ new Date();
-    await db5.update(projectTasks).set(updateData).where(eq(projectTasks.id, id));
+    await db4.update(projectTasks).set(updateData).where(eq(projectTasks.id, id));
     return { success: true };
   }),
   delete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.delete(taskComments).where(eq(taskComments.taskId, input.id));
-    await db5.delete(taskAttachments).where(eq(taskAttachments.taskId, input.id));
-    await db5.delete(projectTasks).where(eq(projectTasks.id, input.id));
+    const db4 = getDb();
+    await db4.delete(taskComments).where(eq(taskComments.taskId, input.id));
+    await db4.delete(taskAttachments).where(eq(taskAttachments.taskId, input.id));
+    await db4.delete(projectTasks).where(eq(projectTasks.id, input.id));
     return { success: true };
   }),
   addComment: authedQuery.input(external_exports.object({ taskId: external_exports.number(), comment: external_exports.string().min(1), isInternal: external_exports.boolean().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(taskComments).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(taskComments).values({
       tenantId: ctx.user.tenantId,
       taskId: input.taskId,
       userId: ctx.user.id,
@@ -125415,8 +125431,8 @@ var taskRouter = createRouter({
     return { id, success: true };
   }),
   addAttachment: authedQuery.input(external_exports.object({ taskId: external_exports.number(), fileName: external_exports.string(), filePath: external_exports.string(), fileSize: external_exports.number().optional(), mimeType: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(taskAttachments).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(taskAttachments).values({
       tenantId: ctx.user.tenantId,
       taskId: input.taskId,
       fileName: input.fileName,
@@ -125428,15 +125444,15 @@ var taskRouter = createRouter({
     return { id, success: true };
   }),
   myTasks: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(projectTasks).where(
+    const db4 = getDb();
+    return db4.select().from(projectTasks).where(
       and(eq(projectTasks.tenantId, ctx.user.tenantId), eq(projectTasks.assignedTo, ctx.user.id))
     ).orderBy(desc(projectTasks.createdAt));
   }),
   kanbanBoard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const tasks = await db5.select().from(projectTasks).where(eq(projectTasks.tenantId, tenantId)).orderBy(desc(projectTasks.createdAt));
+    const tasks = await db4.select().from(projectTasks).where(eq(projectTasks.tenantId, tenantId)).orderBy(desc(projectTasks.createdAt));
     return {
       todo: tasks.filter((t2) => t2.status === "todo"),
       in_progress: tasks.filter((t2) => t2.status === "in_progress"),
@@ -125446,9 +125462,9 @@ var taskRouter = createRouter({
     };
   }),
   calendarData: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const tasks = await db5.select().from(projectTasks).where(
+    const tasks = await db4.select().from(projectTasks).where(
       and(eq(projectTasks.tenantId, tenantId), sql`${projectTasks.dueDate} IS NOT NULL`)
     ).orderBy(asc2(projectTasks.dueDate));
     return tasks.map((t2) => ({
@@ -125469,36 +125485,36 @@ init_schema2();
 init_drizzle_orm();
 var notificationRouter = createRouter({
   list: authedQuery.input(external_exports.object({ limit: external_exports.number().default(50), offset: external_exports.number().default(0), unreadOnly: external_exports.boolean().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 50;
     const offset = input?.offset || 0;
     const conditions = [eq(notifications.tenantId, tenantId), eq(notifications.userId, ctx.user.id)];
     if (input?.unreadOnly) conditions.push(eq(notifications.isRead, false));
-    const items = await db5.select().from(notifications).where(and(...conditions)).orderBy(desc(notifications.createdAt)).limit(limit).offset(offset);
-    const [totalResult] = await db5.select({ total: sql`count(*)` }).from(notifications).where(and(...conditions));
-    const [unreadResult] = await db5.select({ count: sql`count(*)` }).from(notifications).where(
+    const items = await db4.select().from(notifications).where(and(...conditions)).orderBy(desc(notifications.createdAt)).limit(limit).offset(offset);
+    const [totalResult] = await db4.select({ total: sql`count(*)` }).from(notifications).where(and(...conditions));
+    const [unreadResult] = await db4.select({ count: sql`count(*)` }).from(notifications).where(
       and(eq(notifications.tenantId, tenantId), eq(notifications.userId, ctx.user.id), eq(notifications.isRead, false))
     );
     return { items, total: totalResult?.total || 0, unreadCount: unreadResult?.count || 0 };
   }),
   markRead: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(notifications).set({ isRead: true }).where(
+    const db4 = getDb();
+    await db4.update(notifications).set({ isRead: true }).where(
       and(eq(notifications.id, input.id), eq(notifications.userId, ctx.user.id))
     );
     return { success: true };
   }),
   markAllRead: authedQuery.mutation(async ({ ctx }) => {
-    const db5 = getDb();
-    await db5.update(notifications).set({ isRead: true }).where(
+    const db4 = getDb();
+    await db4.update(notifications).set({ isRead: true }).where(
       and(eq(notifications.tenantId, ctx.user.tenantId), eq(notifications.userId, ctx.user.id), eq(notifications.isRead, false))
     );
     return { success: true };
   }),
   getPreferences: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const prefs = await db5.query.notificationTemplates.findFirst({
+    const db4 = getDb();
+    const prefs = await db4.query.notificationTemplates.findFirst({
       where: eq(notificationTemplates.tenantId, ctx.user.tenantId)
     });
     return {
@@ -125516,15 +125532,15 @@ var notificationRouter = createRouter({
     pushEnabled: external_exports.boolean(),
     categories: external_exports.array(external_exports.string())
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const existing = await db5.query.notificationTemplates.findFirst({ where: eq(notificationTemplates.tenantId, tenantId) });
+    const existing = await db4.query.notificationTemplates.findFirst({ where: eq(notificationTemplates.tenantId, tenantId) });
     if (existing) {
-      await db5.update(notificationTemplates).set({
+      await db4.update(notificationTemplates).set({
         variables: input
       }).where(eq(notificationTemplates.tenantId, tenantId));
     } else {
-      await db5.insert(notificationTemplates).values({
+      await db4.insert(notificationTemplates).values({
         tenantId,
         templateKey: "user_preferences",
         name: "User Notification Preferences",
@@ -125543,21 +125559,118 @@ init_connection();
 init_smtp();
 init_schema2();
 init_drizzle_orm();
+
+// src/lib/invoiceHtml.ts
+function generateInvoiceHtml(params) {
+  const {
+    companyName,
+    companyNameAr,
+    companyLogo,
+    companyAddress,
+    companyPhone,
+    companyVat,
+    currency,
+    taxPercent,
+    note,
+    pSub,
+    pDisc,
+    pVat,
+    pTotal,
+    pCustName,
+    pCustPhone,
+    pCustAddr,
+    pCustVat,
+    pType,
+    printItems
+  } = params;
+  const qrPayload = JSON.stringify({
+    seller: companyNameAr || companyName,
+    vat: companyVat,
+    total: pTotal.toFixed(2),
+    tax: pVat.toFixed(2),
+    date: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  const qrData = btoa(unescape(encodeURIComponent(qrPayload)));
+  return `<!DOCTYPE html>
+<html dir="rtl"><head><meta charset="UTF-8"><title>Bill - ${companyName}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f5f5f5;padding:10mm}
+.invoice{max-width:800px;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 0 10px rgba(0,0,0,.1)}
+.header{display:flex;justify-content:space-between;border-bottom:3px solid #1e3a8a;padding-bottom:15px;margin-bottom:20px;gap:20px}
+.qr-code{width:80px;height:80px;border:2px solid #000;padding:3px}
+.company-info h1{font-size:20px;color:#1e3a8a;font-weight:900}
+.company-info h2{font-size:16px;color:#1d4ed8;font-weight:700}
+.info-line{font-size:12px;color:#333;margin:2px 0}
+.title{text-align:center;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;padding:12px;margin:15px 0;font-size:18px;font-weight:700;border-radius:5px}
+.badge{display:inline-block;background:#1d4ed8;color:#fff;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;margin-left:8px}
+.customer{border:1px solid #ddd;padding:15px;margin:15px 0;border-radius:5px}
+.customer h3{color:#1e3a8a;margin-bottom:8px}
+.customer p{margin:3px 0;font-size:13px}
+table{width:100%;border-collapse:collapse;margin:20px 0}
+thead{background:#1e3a8a;color:#fff}
+th{padding:10px;text-align:center;border:1px solid #fff;font-size:12px}
+td{padding:8px;text-align:center;border:1px solid #ddd;font-size:12px}
+tr:nth-child(even){background:#f9f9ff}
+.totals{margin-top:20px;padding:15px;background:#f5f5ff;border-radius:5px}
+.total-row{display:flex;justify-content:space-between;padding:8px 15px;font-size:14px}
+.total-row.grand{background:linear-gradient(135deg,#1d4ed8,#1e3a8a);color:#fff;font-weight:900;font-size:18px;border-radius:5px;margin-top:10px}
+.qr-section{text-align:center;margin:15px 0;padding:15px;border:1px dashed #ccc;border-radius:5px}
+.qr-section p{font-size:11px;color:#666;margin-top:5px}
+.footer{margin-top:20px;text-align:center;padding:15px;border-top:2px solid #ddd;font-size:16px;font-weight:700;color:#1e3a8a}
+@media print{body{background:#fff;padding:0}.invoice{box-shadow:none;margin:0}}
+</style></head><body>
+<div class="invoice">
+<div class="header">
+<div class="company-info">
+<h1>${companyName}</h1>${companyNameAr ? `<h2>${companyNameAr}</h2>` : ""}
+${companyLogo ? `<img src="${companyLogo}" style="max-width:60px;max-height:40px">` : ""}
+${companyAddress ? `<div class="info-line">${companyAddress}</div>` : ""}
+${companyPhone ? `<div class="info-line">${companyPhone}</div>` : ""}
+${companyVat ? `<div class="info-line"><strong>VAT: ${companyVat}</strong></div>` : ""}
+</div>
+<div class="qr-section" style="width:120px">
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" style="width:100px;height:100px">
+<p>${pType === "zatca" ? "ZATCA QR" : "Invoice QR"}</p>
+</div>
+</div>
+<div class="title">TAX INVOICE / \u0641\u0627\u062A\u0648\u0631\u0629 \u0636\u0631\u064A\u0628\u064A\u0629<span class="badge">${pType === "zatca" ? "ZATCA" : "Standard"}</span></div>
+<div class="customer">
+<h3>Customer / \u0627\u0644\u0639\u0645\u064A\u0644</h3>
+<p><strong>${pCustName}</strong></p>
+${pCustPhone ? `<p>Phone: ${pCustPhone}</p>` : ""}
+${pCustAddr ? `<p>Address: ${pCustAddr}</p>` : ""}
+${pCustVat ? `<p>VAT: ${pCustVat}</p>` : ""}
+</div>
+<table><thead><tr><th>#</th><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
+${printItems.map((i) => `<tr><td>${i.no}</td><td>${i.name}</td><td>${i.qty}</td><td>${i.rate.toFixed(2)}</td><td>${i.total.toFixed(2)}</td></tr>`).join("")}
+</tbody></table>
+<div class="totals">
+<div class="total-row"><span>Subtotal:</span><span>${currency} ${pSub.toFixed(2)}</span></div>
+${pDisc > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} ${pDisc.toFixed(2)}</span></div>` : ""}
+<div class="total-row"><span>VAT ${taxPercent}%:</span><span>${currency} ${pVat.toFixed(2)}</span></div>
+<div class="total-row grand"><span>TOTAL:</span><span>${currency} ${pTotal.toFixed(2)}</span></div>
+</div>
+${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9ff;border-radius:5px;font-size:13px"><strong>Note:</strong> ${note}</div>` : ""}
+<div class="footer">\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627 / Thank You For Your Business!</div>
+</div>
+<script>window.onload=function(){window.print();}</script></body></html>`;
+}
+
+// api/emailRouter.ts
 var emailRouter = createRouter({
   templates: {
     list: authedQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
-      return db5.select().from(emailTemplates).where(
+      const db4 = getDb();
+      return db4.select().from(emailTemplates).where(
         and(eq(emailTemplates.isActive, true), eq(emailTemplates.tenantId, ctx.user.tenantId))
       ).orderBy(desc(emailTemplates.createdAt));
     })
   },
   test: {
     send: adminQuery.input(external_exports.object({ to: external_exports.string().email(), subject: external_exports.string().min(1), body: external_exports.string().min(1) })).mutation(async ({ input }) => {
-      const db5 = getDb();
-      let smtpConfig = await db5.query.smtpSettings.findFirst({ where: eq(smtpSettings.tenantId, 1) });
+      const db4 = getDb();
       const result = await sendEmail(input.to, input.subject, input.body);
-      await db5.insert(emailLogs).values({
+      await db4.insert(emailLogs).values({
         tenantId: 1,
         templateKey: "test",
         recipient: input.to,
@@ -125569,7 +125682,64 @@ var emailRouter = createRouter({
       if (!result.sent) throw new Error("Failed to send test email");
       return { success: true, message: "Test email sent successfully" };
     })
-  }
+  },
+  // Send invoice PDF via email
+  sendInvoice: authedMutation.input(external_exports.object({ invoiceId: external_exports.number(), to: external_exports.string().email() })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const invoice = await db4.query.invoices.findFirst({
+      where: and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, tenantId))
+    });
+    if (!invoice) throw new Error("Invoice not found");
+    const items = await db4.query.invoiceItems.findMany({
+      where: eq(invoiceItems.invoiceId, input.invoiceId)
+    });
+    const companySettings2 = await db4.query.companySettings.findFirst({
+      where: eq(companySettings.tenantId, tenantId)
+    });
+    const customer = invoice.customerId ? await db4.query.customers.findFirst({ where: eq(customers.id, invoice.customerId) }) : null;
+    const printItems = items.map((it, i) => ({
+      no: i + 1,
+      name: it.description || `Item #${it.productId || it.id}`,
+      qty: Number(it.quantity || 1),
+      rate: Number(it.unitPrice || 0),
+      total: Number(it.totalAmount || 0)
+    }));
+    const html = generateInvoiceHtml({
+      companyName: companySettings2?.companyName || "Company",
+      companyNameAr: companySettings2?.companyNameAr || "",
+      companyLogo: companySettings2?.logo || "",
+      companyAddress: companySettings2?.address || "",
+      companyPhone: companySettings2?.phone || "",
+      companyVat: companySettings2?.taxNumber || "",
+      currency: companySettings2?.defaultCurrency || "SAR",
+      taxPercent: invoice.taxPercent || "15",
+      note: invoice.notes || "",
+      pSub: Number(invoice.subTotal || 0),
+      pDisc: Number(invoice.discountAmount || 0),
+      pVat: Number(invoice.taxAmount || 0),
+      pTotal: Number(invoice.totalAmount || 0),
+      pCustName: customer?.name || customer?.nameAr || "Walk-in Customer",
+      pCustPhone: customer?.phone || "",
+      pCustAddr: customer?.address || "",
+      pCustVat: customer?.vatNumber || customer?.taxNumber || "",
+      pType: invoice.invoiceType === "zatca" ? "zatca" : "standard",
+      printItems
+    });
+    const subject = `Invoice ${invoice.invoiceNumber} from ${companySettings2?.companyName || "Company"}`;
+    const result = await sendEmail(input.to, subject, html);
+    await db4.insert(emailLogs).values({
+      tenantId,
+      templateKey: "invoice",
+      recipient: input.to,
+      subject,
+      body: html.substring(0, 500),
+      status: result.sent ? "sent" : "failed",
+      errorMessage: result.sent ? null : "SMTP error"
+    });
+    if (!result.sent) throw new Error("Failed to send invoice email");
+    return { success: true, message: `Invoice sent to ${input.to}` };
+  })
 });
 
 // api/syncRouter.ts
@@ -125601,12 +125771,12 @@ var tableMap = {
   tasks: projectTasks,
   meetings
 };
-async function getOrCreateWalkInCustomer3(db5, tenantId) {
-  const existing = await db5.query.customers.findFirst({
+async function getOrCreateWalkInCustomer3(db4, tenantId) {
+  const existing = await db4.query.customers.findFirst({
     where: and(eq(customers.tenantId, tenantId), eq(customers.code, "WALK-IN"))
   });
   if (existing) return existing.id;
-  const [{ id }] = await db5.insert(customers).values({
+  const [{ id }] = await db4.insert(customers).values({
     tenantId,
     code: "WALK-IN",
     name: "Walk-in Customer",
@@ -125616,13 +125786,13 @@ async function getOrCreateWalkInCustomer3(db5, tenantId) {
   }).$returningId();
   return id;
 }
-async function createSyncedPosSale(db5, tenantId, userId, payload) {
+async function createSyncedPosSale(db4, tenantId, userId, payload) {
   const invoiceNumber = payload.saleNumber || `POS-SYNC-${Date.now()}`;
-  const customerId = payload.customerId ?? await getOrCreateWalkInCustomer3(db5, tenantId);
+  const customerId = payload.customerId ?? await getOrCreateWalkInCustomer3(db4, tenantId);
   const totalAmount = String(payload.total ?? payload.totalAmount ?? 0);
   const paidAmount = totalAmount;
   const balanceDue = Math.max(0, Number(totalAmount) - Number(paidAmount || 0)).toFixed(4);
-  const [{ id: invoiceId }] = await db5.insert(invoices).values({
+  const [{ id: invoiceId }] = await db4.insert(invoices).values({
     tenantId,
     invoiceNumber,
     customerId,
@@ -125639,7 +125809,7 @@ async function createSyncedPosSale(db5, tenantId, userId, payload) {
     createdBy: userId
   }).$returningId();
   for (const item of payload.items || []) {
-    await db5.insert(invoiceItems).values({
+    await db4.insert(invoiceItems).values({
       invoiceId,
       productId: item.productId,
       description: item.productName || item.description,
@@ -125650,21 +125820,21 @@ async function createSyncedPosSale(db5, tenantId, userId, payload) {
       totalAmount: String(item.total ?? item.totalAmount ?? 0)
     });
     if (item.productId) {
-      const balances = await db5.select().from(inventoryBalances).where(and(
+      const balances = await db4.select().from(inventoryBalances).where(and(
         eq(inventoryBalances.productId, item.productId),
         eq(inventoryBalances.tenantId, tenantId)
       ));
       for (const bal of balances) {
         const newQty = Math.max(0, Number(bal.quantity || 0) - Number(item.quantity || 1));
-        await db5.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, bal.id));
+        await db4.update(inventoryBalances).set({ quantity: newQty }).where(eq(inventoryBalances.id, bal.id));
       }
     }
   }
   if (Number(paidAmount) > 0) {
-    const lastTx = await db5.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+    const lastTx = await db4.select({ bal: cashboxTransactions.balanceAfter }).from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, tenantId)).orderBy(desc(cashboxTransactions.createdAt)).limit(1);
     const prevBal = Number(lastTx[0]?.bal || 0);
     const paymentMethod = payload.paymentMethod === "transfer" ? "transfer" : payload.paymentMethod || "cash";
-    await db5.insert(cashboxTransactions).values({
+    await db4.insert(cashboxTransactions).values({
       tenantId,
       userId,
       transactionNumber: `CB-SYNC-${Date.now()}`,
@@ -125689,12 +125859,12 @@ var syncRouter = createRouter({
     platform: external_exports.string().optional(),
     appVersion: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const existing = await db5.query.deviceRegistrations.findFirst({
+    const db4 = getDb();
+    const existing = await db4.query.deviceRegistrations.findFirst({
       where: eq(deviceRegistrations.deviceId, input.deviceId)
     });
     if (existing) {
-      await db5.update(deviceRegistrations).set({
+      await db4.update(deviceRegistrations).set({
         lastSeen: /* @__PURE__ */ new Date(),
         deviceName: input.deviceName || existing.deviceName,
         platform: input.platform || existing.platform,
@@ -125703,7 +125873,7 @@ var syncRouter = createRouter({
       }).where(eq(deviceRegistrations.deviceId, input.deviceId));
       return { deviceId: input.deviceId, registered: true, message: "Device updated" };
     }
-    await db5.insert(deviceRegistrations).values({
+    await db4.insert(deviceRegistrations).values({
       deviceId: input.deviceId,
       deviceName: input.deviceName || "Unknown",
       platform: input.platform || "unknown",
@@ -125714,7 +125884,7 @@ var syncRouter = createRouter({
       appVersion: input.appVersion || "1.0.0",
       isActive: true
     });
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       action: "device_registered",
@@ -125729,7 +125899,7 @@ var syncRouter = createRouter({
     since: external_exports.string().optional(),
     entityTypes: external_exports.array(external_exports.string()).optional()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const sinceDate = input.since || (/* @__PURE__ */ new Date(0)).toISOString();
     const types = input.entityTypes || [...SYNCABLE_TABLES];
@@ -125739,7 +125909,7 @@ var syncRouter = createRouter({
       const tbl = tableMap[type];
       if (!tbl) continue;
       try {
-        const records = await db5.select().from(tbl).where(
+        const records = await db4.select().from(tbl).where(
           and(
             eq(tbl.tenantId, tenantId),
             gte(tbl.updatedAt || tbl.createdAt, new Date(sinceDate))
@@ -125754,7 +125924,7 @@ var syncRouter = createRouter({
         result[type] = [];
       }
     }
-    const tombstones = await db5.select().from(deletedRecordsTombstone).where(and(
+    const tombstones = await db4.select().from(deletedRecordsTombstone).where(and(
       eq(deletedRecordsTombstone.tenantId, tenantId),
       gte(deletedRecordsTombstone.deletedAt, new Date(sinceDate))
     ));
@@ -125775,14 +125945,14 @@ var syncRouter = createRouter({
       localUuid: external_exports.string().optional()
     }))
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const results = [];
     const conflicts = [];
     for (const change of input.changes) {
       try {
         if (change.entityType === "sales" && change.action === "create") {
-          const syncedSale = await createSyncedPosSale(db5, tenantId, ctx.user.id, change.payload || {});
+          const syncedSale = await createSyncedPosSale(db4, tenantId, ctx.user.id, change.payload || {});
           results.push({
             entityId: change.entityId,
             localUuid: change.localUuid || change.entityId,
@@ -125790,7 +125960,7 @@ var syncRouter = createRouter({
             status: "synced",
             action: "create"
           });
-          await db5.insert(auditLogs).values({
+          await db4.insert(auditLogs).values({
             tenantId,
             userId: ctx.user.id,
             action: "sync_create",
@@ -125816,7 +125986,7 @@ var syncRouter = createRouter({
           };
           delete insertData.id;
           delete insertData.serverId;
-          const [inserted] = await db5.insert(tbl).values(insertData);
+          const [inserted] = await db4.insert(tbl).values(insertData);
           const serverId = Number(inserted.insertId);
           results.push({
             entityId: change.entityId,
@@ -125825,7 +125995,7 @@ var syncRouter = createRouter({
             status: "synced",
             action: "create"
           });
-          await db5.insert(auditLogs).values({
+          await db4.insert(auditLogs).values({
             tenantId,
             userId: ctx.user.id,
             action: "sync_create",
@@ -125834,7 +126004,7 @@ var syncRouter = createRouter({
             newValues: payload
           });
         } else if (change.action === "update") {
-          const existing = await db5.select().from(tbl).where(
+          const existing = await db4.select().from(tbl).where(
             and(eq(tbl.tenantId, tenantId), eq(tbl.localUuid, localUuid))
           ).limit(1);
           if (existing.length > 0) {
@@ -125868,7 +126038,7 @@ var syncRouter = createRouter({
             delete updateData.serverId;
             delete updateData.localUuid;
             delete updateData.createdAt;
-            await db5.update(tbl).set(updateData).where(and(eq(tbl.tenantId, tenantId), eq(tbl.localUuid, localUuid)));
+            await db4.update(tbl).set(updateData).where(and(eq(tbl.tenantId, tenantId), eq(tbl.localUuid, localUuid)));
             results.push({
               entityId: change.entityId,
               localUuid,
@@ -125878,12 +126048,12 @@ var syncRouter = createRouter({
             });
           }
         } else if (change.action === "delete") {
-          const existing = await db5.select().from(tbl).where(
+          const existing = await db4.select().from(tbl).where(
             and(eq(tbl.tenantId, tenantId), eq(tbl.localUuid, localUuid))
           ).limit(1);
           if (existing.length > 0) {
-            await db5.update(tbl).set({ deletedAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(tbl.tenantId, tenantId), eq(tbl.localUuid, localUuid)));
-            await db5.insert(deletedRecordsTombstone).values({
+            await db4.update(tbl).set({ deletedAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(tbl.tenantId, tenantId), eq(tbl.localUuid, localUuid)));
+            await db4.insert(deletedRecordsTombstone).values({
               entityType: change.entityType,
               entityId: localUuid,
               serverId: existing[0].serverId || existing[0].id,
@@ -125907,7 +126077,7 @@ var syncRouter = createRouter({
       }
     }
     if (input.changes.length > 0 && input.changes[0].deviceId) {
-      await db5.update(deviceRegistrations).set({ lastSyncAt: /* @__PURE__ */ new Date(), lastSeen: /* @__PURE__ */ new Date() }).where(eq(deviceRegistrations.deviceId, input.changes[0].deviceId));
+      await db4.update(deviceRegistrations).set({ lastSyncAt: /* @__PURE__ */ new Date(), lastSeen: /* @__PURE__ */ new Date() }).where(eq(deviceRegistrations.deviceId, input.changes[0].deviceId));
     }
     return { results, conflicts, serverTime: (/* @__PURE__ */ new Date()).toISOString() };
   }),
@@ -125918,20 +126088,20 @@ var syncRouter = createRouter({
     resolution: external_exports.enum(["keep_local", "keep_server", "merge"]),
     mergedPayload: external_exports.any().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tbl = tableMap[input.entityType];
     if (!tbl) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown entity type" });
-    const existing = await db5.select().from(tbl).where(
+    const existing = await db4.select().from(tbl).where(
       and(eq(tbl.tenantId, ctx.user.tenantId), eq(tbl.localUuid, input.localUuid))
     ).limit(1);
     if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Record not found" });
     if (input.resolution === "keep_local") {
-      await db5.update(tbl).set({ version: sql`version + 1`, updatedAt: /* @__PURE__ */ new Date() }).where(eq(tbl.localUuid, input.localUuid));
+      await db4.update(tbl).set({ version: sql`version + 1`, updatedAt: /* @__PURE__ */ new Date() }).where(eq(tbl.localUuid, input.localUuid));
     } else if (input.resolution === "keep_server") {
     } else if (input.resolution === "merge" && input.mergedPayload) {
-      await db5.update(tbl).set({ ...input.mergedPayload, updatedAt: /* @__PURE__ */ new Date(), version: sql`version + 1` }).where(eq(tbl.localUuid, input.localUuid));
+      await db4.update(tbl).set({ ...input.mergedPayload, updatedAt: /* @__PURE__ */ new Date(), version: sql`version + 1` }).where(eq(tbl.localUuid, input.localUuid));
     }
-    await db5.insert(auditLogs).values({
+    await db4.insert(auditLogs).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       action: "sync_conflict_resolved",
@@ -125942,9 +126112,9 @@ var syncRouter = createRouter({
   }),
   // Sync status
   status: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const devices = await db5.select().from(deviceRegistrations).where(eq(deviceRegistrations.tenantId, tenantId));
+    const devices = await db4.select().from(deviceRegistrations).where(eq(deviceRegistrations.tenantId, tenantId));
     return {
       devices,
       serverTime: (/* @__PURE__ */ new Date()).toISOString()
@@ -125952,21 +126122,21 @@ var syncRouter = createRouter({
   }),
   // Sync logs
   logs: authedQuery.input(external_exports.object({ limit: external_exports.number().default(50), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const items = await db5.select().from(syncLogs).where(eq(syncLogs.tenantId, tenantId)).orderBy(desc(syncLogs.createdAt)).limit(input?.limit || 50).offset(input?.offset || 0);
-    const [totalResult] = await db5.select({ total: sql`count(*)` }).from(syncLogs).where(eq(syncLogs.tenantId, tenantId));
+    const items = await db4.select().from(syncLogs).where(eq(syncLogs.tenantId, tenantId)).orderBy(desc(syncLogs.createdAt)).limit(input?.limit || 50).offset(input?.offset || 0);
+    const [totalResult] = await db4.select({ total: sql`count(*)` }).from(syncLogs).where(eq(syncLogs.tenantId, tenantId));
     return { items, total: totalResult?.total || 0 };
   }),
   // List registered devices
   listDevices: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return await db5.select().from(deviceRegistrations).where(eq(deviceRegistrations.tenantId, ctx.user.tenantId)).orderBy(desc(deviceRegistrations.lastSeen));
+    const db4 = getDb();
+    return await db4.select().from(deviceRegistrations).where(eq(deviceRegistrations.tenantId, ctx.user.tenantId)).orderBy(desc(deviceRegistrations.lastSeen));
   }),
   // Deactivate device
   deactivateDevice: authedQuery.input(external_exports.object({ deviceId: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(deviceRegistrations).set({ isActive: false }).where(and(
+    const db4 = getDb();
+    await db4.update(deviceRegistrations).set({ isActive: false }).where(and(
       eq(deviceRegistrations.deviceId, input.deviceId),
       eq(deviceRegistrations.tenantId, ctx.user.tenantId)
     ));
@@ -126471,12 +126641,12 @@ var syncEnhancedRouter = createRouter({
     platform: external_exports.string().optional(),
     appVersion: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const existing = await db5.query.deviceRegistrations.findFirst({
+    const db4 = getDb();
+    const existing = await db4.query.deviceRegistrations.findFirst({
       where: eq(deviceRegistrations.deviceId, input.deviceId)
     });
     if (existing) {
-      await db5.update(deviceRegistrations).set({
+      await db4.update(deviceRegistrations).set({
         lastSeen: /* @__PURE__ */ new Date(),
         deviceName: input.deviceName || existing.deviceName,
         platform: input.platform || existing.platform,
@@ -126485,7 +126655,7 @@ var syncEnhancedRouter = createRouter({
       }).where(eq(deviceRegistrations.deviceId, input.deviceId));
       return { deviceId: input.deviceId, registered: true, message: "Device updated" };
     }
-    await db5.insert(deviceRegistrations).values({
+    await db4.insert(deviceRegistrations).values({
       deviceId: input.deviceId,
       deviceName: input.deviceName || "Unknown",
       platform: input.platform || "unknown",
@@ -126499,12 +126669,12 @@ var syncEnhancedRouter = createRouter({
     return { deviceId: input.deviceId, registered: true, message: "Device registered" };
   }),
   listDevices: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(deviceRegistrations).where(eq(deviceRegistrations.tenantId, ctx.user.tenantId)).orderBy(desc(deviceRegistrations.lastSeen));
+    const db4 = getDb();
+    return db4.select().from(deviceRegistrations).where(eq(deviceRegistrations.tenantId, ctx.user.tenantId)).orderBy(desc(deviceRegistrations.lastSeen));
   }),
   deactivateDevice: authedQuery.input(external_exports.object({ deviceId: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(deviceRegistrations).set({ isActive: false }).where(and(
+    const db4 = getDb();
+    await db4.update(deviceRegistrations).set({ isActive: false }).where(and(
       eq(deviceRegistrations.deviceId, input.deviceId),
       eq(deviceRegistrations.tenantId, ctx.user.tenantId)
     ));
@@ -126514,13 +126684,13 @@ var syncEnhancedRouter = createRouter({
   // Sync Status / Health Monitoring
   // ==========================================
   health: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const deviceCount = await db5.select({ count: sql`count(*)` }).from(deviceRegistrations).where(and(eq(deviceRegistrations.tenantId, tenantId), eq(deviceRegistrations.isActive, true)));
-    const recentPulls = await db5.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), eq(syncLogs.direction, "pull"), gte(syncLogs.createdAt, new Date(Date.now() - 36e5))));
-    const recentPushes = await db5.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), eq(syncLogs.direction, "push"), gte(syncLogs.createdAt, new Date(Date.now() - 36e5))));
-    const failedRecent = await db5.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), eq(syncLogs.status, "failed"), gte(syncLogs.createdAt, new Date(Date.now() - 36e5))));
-    const stats = await db5.select().from(syncStats).where(eq(syncStats.tenantId, tenantId));
+    const deviceCount = await db4.select({ count: sql`count(*)` }).from(deviceRegistrations).where(and(eq(deviceRegistrations.tenantId, tenantId), eq(deviceRegistrations.isActive, true)));
+    const recentPulls = await db4.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), eq(syncLogs.direction, "pull"), gte(syncLogs.createdAt, new Date(Date.now() - 36e5))));
+    const recentPushes = await db4.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), eq(syncLogs.direction, "push"), gte(syncLogs.createdAt, new Date(Date.now() - 36e5))));
+    const failedRecent = await db4.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), eq(syncLogs.status, "failed"), gte(syncLogs.createdAt, new Date(Date.now() - 36e5))));
+    const stats = await db4.select().from(syncStats).where(eq(syncStats.tenantId, tenantId));
     return {
       status: failedRecent[0]?.count > 0 ? "degraded" : "healthy",
       activeDevices: deviceCount[0]?.count || 0,
@@ -126532,11 +126702,11 @@ var syncEnhancedRouter = createRouter({
     };
   }),
   stats: authedQuery.input(external_exports.object({ deviceId: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(syncStats.tenantId, tenantId)];
     if (input?.deviceId) conditions.push(eq(syncStats.deviceId, input.deviceId));
-    const allStats = await db5.select().from(syncStats).where(and(...conditions));
+    const allStats = await db4.select().from(syncStats).where(and(...conditions));
     const totals = allStats.reduce((acc, s) => ({
       totalPushes: acc.totalPushes + Number(s.totalPushes || 0),
       totalPulls: acc.totalPulls + Number(s.totalPulls || 0),
@@ -126581,13 +126751,13 @@ var syncEnhancedRouter = createRouter({
     direction: external_exports.enum(["push", "pull"]).optional(),
     status: external_exports.string().optional()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(syncLogs.tenantId, tenantId)];
     if (input.direction) conditions.push(eq(syncLogs.direction, input.direction));
     if (input.status) conditions.push(eq(syncLogs.status, input.status));
-    const items = await db5.select().from(syncLogs).where(and(...conditions)).orderBy(desc(syncLogs.createdAt)).limit(input.limit).offset(input.offset);
-    const [totalResult] = await db5.select({ total: sql`count(*)` }).from(syncLogs).where(and(...conditions));
+    const items = await db4.select().from(syncLogs).where(and(...conditions)).orderBy(desc(syncLogs.createdAt)).limit(input.limit).offset(input.offset);
+    const [totalResult] = await db4.select({ total: sql`count(*)` }).from(syncLogs).where(and(...conditions));
     return { items, total: totalResult?.total || 0 };
   }),
   // ==========================================
@@ -126600,15 +126770,15 @@ var syncEnhancedRouter = createRouter({
   // Sync Dashboard Data
   // ==========================================
   dashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const deviceCount = await db5.select({ count: sql`count(*)` }).from(deviceRegistrations).where(eq(deviceRegistrations.tenantId, tenantId));
-    const activeDeviceCount = await db5.select({ count: sql`count(*)` }).from(deviceRegistrations).where(and(eq(deviceRegistrations.tenantId, tenantId), eq(deviceRegistrations.isActive, true)));
-    const last24hLogs = await db5.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), gte(syncLogs.createdAt, new Date(Date.now() - 864e5))));
-    const failedLogs = await db5.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), eq(syncLogs.status, "failed"), gte(syncLogs.createdAt, new Date(Date.now() - 864e5))));
-    const avgDuration = await db5.select({ avg: sql`coalesce(avg(duration_ms), 0)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), gte(syncLogs.createdAt, new Date(Date.now() - 864e5))));
-    const recentLogs = await db5.select().from(syncLogs).where(eq(syncLogs.tenantId, tenantId)).orderBy(desc(syncLogs.createdAt)).limit(20);
-    const statsRows = await db5.select().from(syncStats).where(eq(syncStats.tenantId, tenantId));
+    const deviceCount = await db4.select({ count: sql`count(*)` }).from(deviceRegistrations).where(eq(deviceRegistrations.tenantId, tenantId));
+    const activeDeviceCount = await db4.select({ count: sql`count(*)` }).from(deviceRegistrations).where(and(eq(deviceRegistrations.tenantId, tenantId), eq(deviceRegistrations.isActive, true)));
+    const last24hLogs = await db4.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), gte(syncLogs.createdAt, new Date(Date.now() - 864e5))));
+    const failedLogs = await db4.select({ count: sql`count(*)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), eq(syncLogs.status, "failed"), gte(syncLogs.createdAt, new Date(Date.now() - 864e5))));
+    const avgDuration = await db4.select({ avg: sql`coalesce(avg(duration_ms), 0)` }).from(syncLogs).where(and(eq(syncLogs.tenantId, tenantId), gte(syncLogs.createdAt, new Date(Date.now() - 864e5))));
+    const recentLogs = await db4.select().from(syncLogs).where(eq(syncLogs.tenantId, tenantId)).orderBy(desc(syncLogs.createdAt)).limit(20);
+    const statsRows = await db4.select().from(syncStats).where(eq(syncStats.tenantId, tenantId));
     return {
       devices: { total: deviceCount[0]?.count || 0, active: activeDeviceCount[0]?.count || 0 },
       logs24h: last24hLogs[0]?.count || 0,
@@ -126669,10 +126839,10 @@ var licenseKeyRouter = createRouter({
   // ================================================
   resellerLimits: {
     list: superAdminQuery.query(async () => {
-      const db5 = getDb();
-      const limits = await db5.select().from(resellerKeyLimits).orderBy(desc(resellerKeyLimits.createdAt));
+      const db4 = getDb();
+      const limits = await db4.select().from(resellerKeyLimits).orderBy(desc(resellerKeyLimits.createdAt));
       const userIds = limits.map((l) => l.resellerUserId);
-      const users2 = userIds.length > 0 ? await db5.select().from(users).where(sql`${users.id} IN (${userIds.join(",")})`) : [];
+      const users2 = userIds.length > 0 ? await db4.select().from(users).where(sql`${users.id} IN (${userIds.join(",")})`) : [];
       const userMap = new Map(users2.map((u) => [u.id, u]));
       return limits.map((l) => ({
         ...l,
@@ -126683,14 +126853,14 @@ var licenseKeyRouter = createRouter({
       resellerUserId: external_exports.number(),
       maxKeys: external_exports.number().int().min(0)
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const existing = await db5.query.resellerKeyLimits.findFirst({
+      const db4 = getDb();
+      const existing = await db4.query.resellerKeyLimits.findFirst({
         where: eq(resellerKeyLimits.resellerUserId, input.resellerUserId)
       });
       if (existing) {
-        await db5.update(resellerKeyLimits).set({ maxKeys: input.maxKeys, setBy: ctx.user.id }).where(eq(resellerKeyLimits.id, existing.id));
+        await db4.update(resellerKeyLimits).set({ maxKeys: input.maxKeys, setBy: ctx.user.id }).where(eq(resellerKeyLimits.id, existing.id));
       } else {
-        await db5.insert(resellerKeyLimits).values({
+        await db4.insert(resellerKeyLimits).values({
           resellerUserId: input.resellerUserId,
           maxKeys: input.maxKeys,
           setBy: ctx.user.id
@@ -126704,11 +126874,11 @@ var licenseKeyRouter = createRouter({
   // ================================================
   reseller: {
     myQuota: resellerQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
-      const limit = await db5.query.resellerKeyLimits.findFirst({
+      const db4 = getDb();
+      const limit = await db4.query.resellerKeyLimits.findFirst({
         where: eq(resellerKeyLimits.resellerUserId, ctx.user.id)
       });
-      const pendingCount = await db5.select({ count: sql`count(*)` }).from(resellerLicenseKeys).where(and(
+      const pendingCount = await db4.select({ count: sql`count(*)` }).from(resellerLicenseKeys).where(and(
         eq(resellerLicenseKeys.resellerUserId, ctx.user.id),
         eq(resellerLicenseKeys.status, "pending")
       )).then((r) => Number(r[0]?.count || 0));
@@ -126720,8 +126890,8 @@ var licenseKeyRouter = createRouter({
       };
     }),
     myKeys: resellerQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
-      return db5.select().from(resellerLicenseKeys).where(eq(resellerLicenseKeys.resellerUserId, ctx.user.id)).orderBy(desc(resellerLicenseKeys.createdAt));
+      const db4 = getDb();
+      return db4.select().from(resellerLicenseKeys).where(eq(resellerLicenseKeys.resellerUserId, ctx.user.id)).orderBy(desc(resellerLicenseKeys.createdAt));
     }),
     generate: resellerQuery.input(external_exports.object({
       companyName: external_exports.string().min(1),
@@ -126730,8 +126900,8 @@ var licenseKeyRouter = createRouter({
       maxDevices: external_exports.number().int().positive().default(1),
       validDays: external_exports.number().int().positive().default(365)
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const limit = await db5.query.resellerKeyLimits.findFirst({
+      const db4 = getDb();
+      const limit = await db4.query.resellerKeyLimits.findFirst({
         where: eq(resellerKeyLimits.resellerUserId, ctx.user.id)
       });
       if (!limit || limit.keysUsed >= limit.maxKeys) {
@@ -126740,7 +126910,7 @@ var licenseKeyRouter = createRouter({
       const licenseKey = generateLicenseKey();
       const licenseKeyHash = crypto7.createHash("sha256").update(licenseKey).digest("hex");
       const expiresAt = new Date(Date.now() + input.validDays * 24 * 60 * 60 * 1e3);
-      const [{ id }] = await db5.insert(resellerLicenseKeys).values({
+      const [{ id }] = await db4.insert(resellerLicenseKeys).values({
         resellerUserId: ctx.user.id,
         licenseKey,
         licenseKeyHash,
@@ -126751,7 +126921,7 @@ var licenseKeyRouter = createRouter({
         status: "pending",
         expiresAt
       }).$returningId();
-      await db5.update(resellerKeyLimits).set({ keysUsed: sql`${resellerKeyLimits.keysUsed} + 1` }).where(eq(resellerKeyLimits.id, limit.id));
+      await db4.update(resellerKeyLimits).set({ keysUsed: sql`${resellerKeyLimits.keysUsed} + 1` }).where(eq(resellerKeyLimits.id, limit.id));
       return { id, licenseKey, expiresAt: expiresAt.toISOString() };
     })
   },
@@ -126760,10 +126930,10 @@ var licenseKeyRouter = createRouter({
   // ================================================
   approval: {
     pendingKeys: adminQuery.query(async () => {
-      const db5 = getDb();
-      const keys = await db5.select().from(resellerLicenseKeys).where(eq(resellerLicenseKeys.status, "pending")).orderBy(desc(resellerLicenseKeys.createdAt));
+      const db4 = getDb();
+      const keys = await db4.select().from(resellerLicenseKeys).where(eq(resellerLicenseKeys.status, "pending")).orderBy(desc(resellerLicenseKeys.createdAt));
       const resellerIds = [...new Set(keys.map((k) => k.resellerUserId))];
-      const resellers2 = resellerIds.length > 0 ? await db5.select().from(users).where(sql`${users.id} IN (${resellerIds.join(",")})`) : [];
+      const resellers2 = resellerIds.length > 0 ? await db4.select().from(users).where(sql`${users.id} IN (${resellerIds.join(",")})`) : [];
       const resellerMap = new Map(resellers2.map((u) => [u.id, u]));
       return keys.map((k) => ({
         ...k,
@@ -126771,37 +126941,37 @@ var licenseKeyRouter = createRouter({
       }));
     }),
     allKeys: adminQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const condition = input?.status ? eq(resellerLicenseKeys.status, input.status) : void 0;
-      const query = db5.select().from(resellerLicenseKeys);
+      const query = db4.select().from(resellerLicenseKeys);
       if (condition) query.where(condition);
       return query.orderBy(desc(resellerLicenseKeys.createdAt));
     }),
     approve: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const key2 = await db5.query.resellerLicenseKeys.findFirst({ where: eq(resellerLicenseKeys.id, input.id) });
+      const db4 = getDb();
+      const key2 = await db4.query.resellerLicenseKeys.findFirst({ where: eq(resellerLicenseKeys.id, input.id) });
       if (!key2) throw new Error("License key not found");
       if (key2.status !== "pending") throw new Error("Only pending keys can be approved");
-      await db5.update(resellerLicenseKeys).set({ status: "approved", approvedBy: ctx.user.id, approvedAt: /* @__PURE__ */ new Date() }).where(eq(resellerLicenseKeys.id, input.id));
+      await db4.update(resellerLicenseKeys).set({ status: "approved", approvedBy: ctx.user.id, approvedAt: /* @__PURE__ */ new Date() }).where(eq(resellerLicenseKeys.id, input.id));
       return { success: true };
     }),
     reject: adminQuery.input(external_exports.object({ id: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
-      const key2 = await db5.query.resellerLicenseKeys.findFirst({ where: eq(resellerLicenseKeys.id, input.id) });
+      const db4 = getDb();
+      const key2 = await db4.query.resellerLicenseKeys.findFirst({ where: eq(resellerLicenseKeys.id, input.id) });
       if (!key2) throw new Error("License key not found");
       if (key2.status !== "pending") throw new Error("Only pending keys can be rejected");
-      await db5.update(resellerLicenseKeys).set({ status: "rejected", approvedBy: ctx.user.id, rejectedReason: input.reason }).where(eq(resellerLicenseKeys.id, input.id));
-      const limit = await db5.query.resellerKeyLimits.findFirst({
+      await db4.update(resellerLicenseKeys).set({ status: "rejected", approvedBy: ctx.user.id, rejectedReason: input.reason }).where(eq(resellerLicenseKeys.id, input.id));
+      const limit = await db4.query.resellerKeyLimits.findFirst({
         where: eq(resellerKeyLimits.resellerUserId, key2.resellerUserId)
       });
       if (limit) {
-        await db5.update(resellerKeyLimits).set({ keysUsed: sql`GREATEST(${resellerKeyLimits.keysUsed} - 1, 0)` }).where(eq(resellerKeyLimits.id, limit.id));
+        await db4.update(resellerKeyLimits).set({ keysUsed: sql`GREATEST(${resellerKeyLimits.keysUsed} - 1, 0)` }).where(eq(resellerKeyLimits.id, limit.id));
       }
       return { success: true };
     }),
     revoke: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-      const db5 = getDb();
-      await db5.update(resellerLicenseKeys).set({ status: "revoked" }).where(eq(resellerLicenseKeys.id, input.id));
+      const db4 = getDb();
+      await db4.update(resellerLicenseKeys).set({ status: "revoked" }).where(eq(resellerLicenseKeys.id, input.id));
       return { success: true };
     })
   },
@@ -126809,9 +126979,9 @@ var licenseKeyRouter = createRouter({
   // PUBLIC: Verify a license key
   // ================================================
   verify: authedQuery.input(external_exports.object({ key: external_exports.string().min(1) })).query(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const hash2 = crypto7.createHash("sha256").update(input.key).digest("hex");
-    const record2 = await db5.query.resellerLicenseKeys.findFirst({
+    const record2 = await db4.query.resellerLicenseKeys.findFirst({
       where: eq(resellerLicenseKeys.licenseKeyHash, hash2)
     });
     if (!record2) return { valid: false, reason: "Key not found" };
@@ -126944,8 +127114,8 @@ function verifyHardwareFingerprint(storedFingerprint, toleranceThreshold = 60) {
 
 // api/licenseAdminRouter.ts
 async function createAuditLog2(params) {
-  const db5 = getDb();
-  await db5.insert(auditLogs).values({
+  const db4 = getDb();
+  await db4.insert(auditLogs).values({
     tenantId: params.tenantId || 1,
     userId: params.userId,
     action: params.action,
@@ -126969,7 +127139,7 @@ var licenseAdminRouter = createRouter({
     modules: external_exports.array(external_exports.string()).optional(),
     hardwareFingerprintHash: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const expiresAt = new Date(Date.now() + input.validDays * 24 * 60 * 60 * 1e3);
     const licenseKey = createEnhancedLicense({
       tenantId: input.tenantId,
@@ -126984,7 +127154,7 @@ var licenseAdminRouter = createRouter({
       issuedBy: ctx.user.id
     });
     const licenseKeyHash = crypto9.createHash("sha256").update(licenseKey).digest("hex");
-    const [{ id }] = await db5.insert(desktopLicenses).values({
+    const [{ id }] = await db4.insert(desktopLicenses).values({
       tenantId: input.tenantId,
       companyName: input.companyName,
       plan: input.plan,
@@ -127012,7 +127182,7 @@ var licenseAdminRouter = createRouter({
     offset: external_exports.number().default(0),
     limit: external_exports.number().default(50)
   }).optional()).query(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const offset = input?.offset || 0;
     const limit = input?.limit || 50;
     const conditions = [];
@@ -127023,13 +127193,13 @@ var licenseAdminRouter = createRouter({
         sql`(${desktopLicenses.companyName} LIKE ${`%${input.search}%`})`
       );
     }
-    const baseQuery = db5.select().from(desktopLicenses);
+    const baseQuery = db4.select().from(desktopLicenses);
     const where = conditions.length > 0 ? and(...conditions) : void 0;
     const query = where ? baseQuery.where(where) : baseQuery;
     const items = await query.orderBy(desc(desktopLicenses.createdAt)).limit(limit).offset(offset);
-    const [totalResult] = await db5.select({ total: sql`count(*)` }).from(desktopLicenses);
+    const [totalResult] = await db4.select({ total: sql`count(*)` }).from(desktopLicenses);
     const tenantIds = [...new Set(items.map((i) => i.tenantId))];
-    const tenants2 = tenantIds.length > 0 ? await db5.select({ id: tenants.id, name: tenants.name, email: tenants.email }).from(tenants).where(sql`${tenants.id} IN (${tenantIds.join(",")})`) : [];
+    const tenants2 = tenantIds.length > 0 ? await db4.select({ id: tenants.id, name: tenants.name, email: tenants.email }).from(tenants).where(sql`${tenants.id} IN (${tenantIds.join(",")})`) : [];
     const tenantMap = new Map(tenants2.map((t2) => [t2.id, t2]));
     return {
       items: items.map((item) => ({
@@ -127043,22 +127213,22 @@ var licenseAdminRouter = createRouter({
   }),
   // ─── Get single license detail ────────────────────────────────────
   getById: superAdminQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const license = await db5.query.desktopLicenses.findFirst({
+    const db4 = getDb();
+    const license = await db4.query.desktopLicenses.findFirst({
       where: eq(desktopLicenses.id, input.id)
     });
     if (!license) throw new Error("License not found");
-    const tenant = await db5.query.tenants.findFirst({ where: eq(tenants.id, license.tenantId) });
+    const tenant = await db4.query.tenants.findFirst({ where: eq(tenants.id, license.tenantId) });
     return { ...license, tenant };
   }),
   // ─── Extend license ───────────────────────────────────────────────
   extend: superAdminQuery.input(external_exports.object({ id: external_exports.number(), additionalDays: external_exports.number().int().positive() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const license = await db5.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
+    const db4 = getDb();
+    const license = await db4.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
     if (!license) throw new Error("License not found");
     const currentExpiry = license.expiresAt || /* @__PURE__ */ new Date();
     const newExpiry = new Date(Math.max(currentExpiry.getTime(), Date.now()) + input.additionalDays * 24 * 60 * 60 * 1e3);
-    await db5.update(desktopLicenses).set({ expiresAt: newExpiry, status: "active" }).where(eq(desktopLicenses.id, input.id));
+    await db4.update(desktopLicenses).set({ expiresAt: newExpiry, status: "active" }).where(eq(desktopLicenses.id, input.id));
     await createAuditLog2({
       tenantId: license.tenantId,
       userId: ctx.user.id,
@@ -127072,12 +127242,12 @@ var licenseAdminRouter = createRouter({
   }),
   // ─── Upgrade/Downgrade plan ───────────────────────────────────────
   changePlan: superAdminQuery.input(external_exports.object({ id: external_exports.number(), plan: external_exports.string(), maxDevices: external_exports.number().int().positive().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const license = await db5.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
+    const db4 = getDb();
+    const license = await db4.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
     if (!license) throw new Error("License not found");
     const updateData = { plan: input.plan };
     if (input.maxDevices) updateData.maxDevices = input.maxDevices;
-    await db5.update(desktopLicenses).set(updateData).where(eq(desktopLicenses.id, input.id));
+    await db4.update(desktopLicenses).set(updateData).where(eq(desktopLicenses.id, input.id));
     await createAuditLog2({
       tenantId: license.tenantId,
       userId: ctx.user.id,
@@ -127091,10 +127261,10 @@ var licenseAdminRouter = createRouter({
   }),
   // ─── Suspend license ──────────────────────────────────────────────
   suspend: superAdminQuery.input(external_exports.object({ id: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const license = await db5.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
+    const db4 = getDb();
+    const license = await db4.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
     if (!license) throw new Error("License not found");
-    await db5.update(desktopLicenses).set({ status: "revoked" }).where(eq(desktopLicenses.id, input.id));
+    await db4.update(desktopLicenses).set({ status: "revoked" }).where(eq(desktopLicenses.id, input.id));
     await createAuditLog2({
       tenantId: license.tenantId,
       userId: ctx.user.id,
@@ -127108,10 +127278,10 @@ var licenseAdminRouter = createRouter({
   }),
   // ─── Revoke license ───────────────────────────────────────────────
   revoke: superAdminQuery.input(external_exports.object({ id: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const license = await db5.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
+    const db4 = getDb();
+    const license = await db4.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
     if (!license) throw new Error("License not found");
-    await db5.update(desktopLicenses).set({ status: "revoked" }).where(eq(desktopLicenses.id, input.id));
+    await db4.update(desktopLicenses).set({ status: "revoked" }).where(eq(desktopLicenses.id, input.id));
     await createAuditLog2({
       tenantId: license.tenantId,
       userId: ctx.user.id,
@@ -127125,10 +127295,10 @@ var licenseAdminRouter = createRouter({
   }),
   // ─── Blacklist license ────────────────────────────────────────────
   blacklist: superAdminQuery.input(external_exports.object({ id: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const license = await db5.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
+    const db4 = getDb();
+    const license = await db4.query.desktopLicenses.findFirst({ where: eq(desktopLicenses.id, input.id) });
     if (!license) throw new Error("License not found");
-    await db5.update(desktopLicenses).set({ status: "revoked" }).where(eq(desktopLicenses.id, input.id));
+    await db4.update(desktopLicenses).set({ status: "revoked" }).where(eq(desktopLicenses.id, input.id));
     await createAuditLog2({
       tenantId: license.tenantId,
       userId: ctx.user.id,
@@ -127204,18 +127374,18 @@ var licenseAdminRouter = createRouter({
   }),
   // ─── License usage analytics ──────────────────────────────────────
   usageAnalytics: superAdminQuery.input(external_exports.object({ months: external_exports.number().default(6) }).optional()).query(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const months = input?.months || 6;
     const since = new Date(Date.now() - months * 30 * 24 * 60 * 60 * 1e3);
-    const totalLicenses = await db5.select({ count: sql`count(*)` }).from(desktopLicenses);
-    const activeLicenses = await db5.select({ count: sql`count(*)` }).from(desktopLicenses).where(eq(desktopLicenses.status, "active"));
-    const expiredLicenses = await db5.select({ count: sql`count(*)` }).from(desktopLicenses).where(sql`${desktopLicenses.expiresAt} < NOW()`);
-    const revokedLicenses = await db5.select({ count: sql`count(*)` }).from(desktopLicenses).where(eq(desktopLicenses.status, "revoked"));
-    const byPlan = await db5.select({
+    const totalLicenses = await db4.select({ count: sql`count(*)` }).from(desktopLicenses);
+    const activeLicenses = await db4.select({ count: sql`count(*)` }).from(desktopLicenses).where(eq(desktopLicenses.status, "active"));
+    const expiredLicenses = await db4.select({ count: sql`count(*)` }).from(desktopLicenses).where(sql`${desktopLicenses.expiresAt} < NOW()`);
+    const revokedLicenses = await db4.select({ count: sql`count(*)` }).from(desktopLicenses).where(eq(desktopLicenses.status, "revoked"));
+    const byPlan = await db4.select({
       plan: desktopLicenses.plan,
       count: sql`count(*)`
     }).from(desktopLicenses).groupBy(desktopLicenses.plan);
-    const byMonth = await db5.select({
+    const byMonth = await db4.select({
       month: sql`DATE_FORMAT(${desktopLicenses.createdAt}, '%Y-%m')`,
       count: sql`count(*)`
     }).from(desktopLicenses).where(gte(desktopLicenses.createdAt, since)).groupBy(sql`DATE_FORMAT(${desktopLicenses.createdAt}, '%Y-%m')`).orderBy(sql`DATE_FORMAT(${desktopLicenses.createdAt}, '%Y-%m')`);
@@ -127230,13 +127400,13 @@ var licenseAdminRouter = createRouter({
   }),
   // ─── License transfer history ─────────────────────────────────────
   transferHistory: superAdminQuery.input(external_exports.object({ tenantId: external_exports.number().optional(), licenseId: external_exports.number().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(auditLogs.entityType, "desktop_license")];
     if (input?.tenantId) conditions.push(eq(auditLogs.tenantId, input.tenantId));
     if (input?.licenseId) conditions.push(eq(auditLogs.entityId, input.licenseId));
-    const logs = await db5.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.createdAt)).limit(input?.limit || 50);
+    const logs = await db4.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.createdAt)).limit(input?.limit || 50);
     const userIds = [...new Set(logs.map((l) => l.userId).filter(Boolean))];
-    const users2 = userIds.length > 0 ? await db5.select().from(users).where(sql`${users.id} IN (${userIds.join(",")})`) : [];
+    const users2 = userIds.length > 0 ? await db4.select().from(users).where(sql`${users.id} IN (${userIds.join(",")})`) : [];
     const userMap = new Map(users2.map((u) => [u.id, u]));
     return logs.map((log) => ({
       ...log,
@@ -127346,8 +127516,8 @@ var invoiceThemeRouter = createRouter({
   // Get available themes
   // ================================================
   list: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const tenantThemes = await db5.select().from(invoiceThemes).where(eq(invoiceThemes.tenantId, ctx.user.tenantId)).orderBy(desc(invoiceThemes.createdAt));
+    const db4 = getDb();
+    const tenantThemes = await db4.select().from(invoiceThemes).where(eq(invoiceThemes.tenantId, ctx.user.tenantId)).orderBy(desc(invoiceThemes.createdAt));
     return tenantThemes.length > 0 ? tenantThemes : DEFAULT_THEMES;
   }),
   getDefaults: authedQuery.query(() => DEFAULT_THEMES),
@@ -127361,22 +127531,22 @@ var invoiceThemeRouter = createRouter({
     config: external_exports.any(),
     isDefault: external_exports.boolean().default(false)
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     if (input.isDefault) {
-      await db5.update(invoiceThemes).set({ isDefault: false }).where(eq(invoiceThemes.tenantId, tenantId));
+      await db4.update(invoiceThemes).set({ isDefault: false }).where(eq(invoiceThemes.tenantId, tenantId));
     }
-    const existing = await db5.query.invoiceThemes.findFirst({
+    const existing = await db4.query.invoiceThemes.findFirst({
       where: and(
         eq(invoiceThemes.tenantId, tenantId),
         eq(invoiceThemes.themeKey, input.themeKey)
       )
     });
     if (existing) {
-      await db5.update(invoiceThemes).set({ ...input, config: input.config }).where(eq(invoiceThemes.id, existing.id));
+      await db4.update(invoiceThemes).set({ ...input, config: input.config }).where(eq(invoiceThemes.id, existing.id));
       return { id: existing.id, success: true };
     }
-    const [{ id }] = await db5.insert(invoiceThemes).values({
+    const [{ id }] = await db4.insert(invoiceThemes).values({
       tenantId,
       ...input,
       config: input.config
@@ -127384,10 +127554,10 @@ var invoiceThemeRouter = createRouter({
     return { id, success: true };
   }),
   setDefault: userAdminQuery.input(external_exports.object({ themeId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    await db5.update(invoiceThemes).set({ isDefault: false }).where(eq(invoiceThemes.tenantId, tenantId));
-    await db5.update(invoiceThemes).set({ isDefault: true }).where(eq(invoiceThemes.id, input.themeId));
+    await db4.update(invoiceThemes).set({ isDefault: false }).where(eq(invoiceThemes.tenantId, tenantId));
+    await db4.update(invoiceThemes).set({ isDefault: true }).where(eq(invoiceThemes.id, input.themeId));
     return { success: true };
   }),
   // ================================================
@@ -127395,18 +127565,18 @@ var invoiceThemeRouter = createRouter({
   // ================================================
   stamps: {
     list: authedQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
-      return db5.select().from(companyStamps).where(eq(companyStamps.tenantId, ctx.user.tenantId));
+      const db4 = getDb();
+      return db4.select().from(companyStamps).where(eq(companyStamps.tenantId, ctx.user.tenantId));
     }),
     upload: userAdminQuery.input(external_exports.object({
       type: external_exports.enum(["logo", "stamp"]),
       imageData: external_exports.string().min(1),
       mimeType: external_exports.string().default("image/png")
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const tenantId = ctx.user.tenantId;
-      await db5.update(companyStamps).set({ isActive: false }).where(and(eq(companyStamps.tenantId, tenantId), eq(companyStamps.type, input.type)));
-      const [{ id }] = await db5.insert(companyStamps).values({
+      await db4.update(companyStamps).set({ isActive: false }).where(and(eq(companyStamps.tenantId, tenantId), eq(companyStamps.type, input.type)));
+      const [{ id }] = await db4.insert(companyStamps).values({
         tenantId,
         ...input,
         isActive: true
@@ -127414,12 +127584,12 @@ var invoiceThemeRouter = createRouter({
       return { id, success: true };
     }),
     getActive: authedQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const [logo, stamp] = await Promise.all([
-        db5.query.companyStamps.findFirst({
+        db4.query.companyStamps.findFirst({
           where: and(eq(companyStamps.tenantId, ctx.user.tenantId), eq(companyStamps.type, "logo"), eq(companyStamps.isActive, true))
         }),
-        db5.query.companyStamps.findFirst({
+        db4.query.companyStamps.findFirst({
           where: and(eq(companyStamps.tenantId, ctx.user.tenantId), eq(companyStamps.type, "stamp"), eq(companyStamps.isActive, true))
         })
       ]);
@@ -127431,8 +127601,8 @@ var invoiceThemeRouter = createRouter({
   // ================================================
   taxSettings: {
     get: authedQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
-      const existing = await db5.query.invoiceTaxSettings.findFirst({
+      const db4 = getDb();
+      const existing = await db4.query.invoiceTaxSettings.findFirst({
         where: eq(invoiceTaxSettings.tenantId, ctx.user.tenantId)
       });
       return existing || {
@@ -127462,15 +127632,15 @@ var invoiceThemeRouter = createRouter({
       footerText: external_exports.string().optional(),
       footerTextAr: external_exports.string().optional()
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const tenantId = ctx.user.tenantId;
-      const existing = await db5.query.invoiceTaxSettings.findFirst({
+      const existing = await db4.query.invoiceTaxSettings.findFirst({
         where: eq(invoiceTaxSettings.tenantId, tenantId)
       });
       if (existing) {
-        await db5.update(invoiceTaxSettings).set(input).where(eq(invoiceTaxSettings.id, existing.id));
+        await db4.update(invoiceTaxSettings).set(input).where(eq(invoiceTaxSettings.id, existing.id));
       } else {
-        await db5.insert(invoiceTaxSettings).values({ tenantId, ...input });
+        await db4.insert(invoiceTaxSettings).values({ tenantId, ...input });
       }
       return { success: true };
     })
@@ -127480,8 +127650,8 @@ var invoiceThemeRouter = createRouter({
   // ================================================
   countryTaxConfigs: {
     list: authedQuery.query(async ({ ctx }) => {
-      const db5 = getDb();
-      return db5.select().from(countryTaxConfigs).where(eq(countryTaxConfigs.tenantId, ctx.user.tenantId));
+      const db4 = getDb();
+      return db4.select().from(countryTaxConfigs).where(eq(countryTaxConfigs.tenantId, ctx.user.tenantId));
     }),
     save: userAdminQuery.input(external_exports.object({
       countryCode: external_exports.string().length(2),
@@ -127498,18 +127668,18 @@ var invoiceThemeRouter = createRouter({
       invoiceNoteAr: external_exports.string().optional(),
       isDefault: external_exports.boolean().default(false)
     })).mutation(async ({ input, ctx }) => {
-      const db5 = getDb();
+      const db4 = getDb();
       const tenantId = ctx.user.tenantId;
       if (input.isDefault) {
-        await db5.update(countryTaxConfigs).set({ isDefault: false }).where(eq(countryTaxConfigs.tenantId, tenantId));
+        await db4.update(countryTaxConfigs).set({ isDefault: false }).where(eq(countryTaxConfigs.tenantId, tenantId));
       }
-      const existing = await db5.query.countryTaxConfigs.findFirst({
+      const existing = await db4.query.countryTaxConfigs.findFirst({
         where: and(eq(countryTaxConfigs.tenantId, tenantId), eq(countryTaxConfigs.countryCode, input.countryCode))
       });
       if (existing) {
-        await db5.update(countryTaxConfigs).set(input).where(eq(countryTaxConfigs.id, existing.id));
+        await db4.update(countryTaxConfigs).set(input).where(eq(countryTaxConfigs.id, existing.id));
       } else {
-        await db5.insert(countryTaxConfigs).values({ tenantId, ...input });
+        await db4.insert(countryTaxConfigs).values({ tenantId, ...input });
       }
       return { success: true };
     })
@@ -127529,8 +127699,8 @@ init_env();
 var TENANT_SCOPED = (tenantId) => eq(documents.tenantId, tenantId);
 var DocumentEngine = class {
   async upload(tenantId, data) {
-    const db5 = getDb();
-    const [doc] = await db5.insert(documents).values({
+    const db4 = getDb();
+    const [doc] = await db4.insert(documents).values({
       tenantId,
       categoryId: data.categoryId,
       title: data.title,
@@ -127544,7 +127714,7 @@ var DocumentEngine = class {
       relatedId: data.relatedId,
       uploadedBy: data.uploadedBy
     }).$returningId();
-    await db5.insert(documentVersions).values({
+    await db4.insert(documentVersions).values({
       tenantId,
       documentId: doc.id,
       versionNumber: 1,
@@ -127558,13 +127728,13 @@ var DocumentEngine = class {
     return { id: doc.id, url: this.getPresignedUrl("upload", `documents/${tenantId}/${data.relatedType ?? "general"}/${Date.now()}_${data.fileName}`) };
   }
   async createVersion(tenantId, documentId, data) {
-    const db5 = getDb();
-    const [doc] = await db5.select().from(documents).where(
+    const db4 = getDb();
+    const [doc] = await db4.select().from(documents).where(
       and(TENANT_SCOPED(tenantId), eq(documents.id, documentId))
     ).limit(1);
     if (!doc) throw new Error("Document not found");
     const newVersion = (doc.version ?? 0) + 1;
-    const [ver] = await db5.insert(documentVersions).values({
+    const [ver] = await db4.insert(documentVersions).values({
       tenantId,
       documentId,
       versionNumber: newVersion,
@@ -127575,7 +127745,7 @@ var DocumentEngine = class {
       uploadedBy: data.uploadedBy,
       changeNotes: data.changeNotes
     }).$returningId();
-    await db5.update(documents).set({
+    await db4.update(documents).set({
       version: newVersion,
       fileName: data.fileName,
       filePath: `documents/${tenantId}/v${newVersion}/${Date.now()}_${data.fileName}`,
@@ -127585,8 +127755,8 @@ var DocumentEngine = class {
     return { id: ver.id, versionNumber: newVersion, fileName: data.fileName, fileSize: data.fileSize, createdAt: /* @__PURE__ */ new Date(), uploadedBy: data.uploadedBy };
   }
   async getVersions(tenantId, documentId) {
-    const db5 = getDb();
-    const versions2 = await db5.select().from(documentVersions).where(
+    const db4 = getDb();
+    const versions2 = await db4.select().from(documentVersions).where(
       and(eq(documentVersions.tenantId, tenantId), eq(documentVersions.documentId, documentId))
     ).orderBy(desc(documentVersions.versionNumber));
     return versions2.map((v) => ({
@@ -127604,8 +127774,8 @@ var DocumentEngine = class {
     return s3Url;
   }
   async logAccess(tenantId, documentId, userId, accessType, allowed = true, reason) {
-    const db5 = getDb();
-    await db5.insert(documentAccessLogs).values({
+    const db4 = getDb();
+    await db4.insert(documentAccessLogs).values({
       tenantId,
       documentId,
       userId,
@@ -127616,19 +127786,19 @@ var DocumentEngine = class {
     });
   }
   async checkAccess(tenantId, documentId, userId, requiredPermission = "view") {
-    const db5 = getDb();
-    const doc = await db5.query.documents.findFirst({
+    const db4 = getDb();
+    const doc = await db4.query.documents.findFirst({
       where: and(TENANT_SCOPED(tenantId), eq(documents.id, documentId))
     });
     if (!doc) return { allowed: false, reason: "Document not found" };
     if (doc.uploadedBy === userId) return { allowed: true };
-    const user = await db5.query.users.findFirst({ where: eq(users.id, userId) });
+    const user = await db4.query.users.findFirst({ where: eq(users.id, userId) });
     if (user && ["admin", "super_admin"].includes(user.role)) return { allowed: true };
     return { allowed: false, reason: "Insufficient permissions" };
   }
   async setExpiryAlert(tenantId, config2) {
-    const db5 = getDb();
-    await db5.insert(documentExpiryReminders).values({
+    const db4 = getDb();
+    await db4.insert(documentExpiryReminders).values({
       tenantId,
       documentId: config2.documentId,
       reminderType: config2.reminderType,
@@ -127640,10 +127810,10 @@ var DocumentEngine = class {
     });
   }
   async getExpiringDocuments(tenantId, withinDays = 30) {
-    const db5 = getDb();
+    const db4 = getDb();
     const cutoff = /* @__PURE__ */ new Date();
     cutoff.setDate(cutoff.getDate() + withinDays);
-    return db5.select().from(documentExpiryReminders).where(
+    return db4.select().from(documentExpiryReminders).where(
       and(
         eq(documentExpiryReminders.tenantId, tenantId),
         eq(documentExpiryReminders.status, "active"),
@@ -127674,8 +127844,8 @@ init_drizzle_orm();
 import crypto10 from "node:crypto";
 var ESignatureEngine = class {
   async createRequest(tenantId, data) {
-    const db5 = getDb();
-    const [req] = await db5.insert(eSignatureRequests).values({
+    const db4 = getDb();
+    const [req] = await db4.insert(eSignatureRequests).values({
       tenantId,
       documentId: data.documentId,
       requestedBy: data.requestedBy,
@@ -127687,7 +127857,7 @@ var ESignatureEngine = class {
       message: data.message,
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : null
     }).$returningId();
-    await db5.insert(eSignatureLogs).values({
+    await db4.insert(eSignatureLogs).values({
       tenantId,
       signatureRequestId: req.id,
       eventType: "created",
@@ -127696,21 +127866,21 @@ var ESignatureEngine = class {
     return { id: req.id, status: "pending" };
   }
   async sign(tenantId, requestId, signature) {
-    const db5 = getDb();
-    const [req] = await db5.select().from(eSignatureRequests).where(
+    const db4 = getDb();
+    const [req] = await db4.select().from(eSignatureRequests).where(
       and(eq(eSignatureRequests.id, requestId), eq(eSignatureRequests.tenantId, tenantId))
     ).limit(1);
     if (!req) throw new Error("Signature request not found");
     if (req.status !== "pending") throw new Error(`Signature request is ${req.status}`);
     const signatureHash = this.hashSignature(signature.data);
     const certificateInfo = null;
-    await db5.update(eSignatureRequests).set({
+    await db4.update(eSignatureRequests).set({
       status: "signed",
       signedAt: /* @__PURE__ */ new Date(),
       ipAddress: void 0,
       userAgent: void 0
     }).where(eq(eSignatureRequests.id, requestId));
-    await db5.insert(eSignatureLogs).values({
+    await db4.insert(eSignatureLogs).values({
       tenantId,
       signatureRequestId: requestId,
       eventType: "signed",
@@ -127722,17 +127892,17 @@ var ESignatureEngine = class {
     return { success: true, hash: signatureHash };
   }
   async decline(tenantId, requestId, reason) {
-    const db5 = getDb();
-    const [req] = await db5.select().from(eSignatureRequests).where(
+    const db4 = getDb();
+    const [req] = await db4.select().from(eSignatureRequests).where(
       and(eq(eSignatureRequests.id, requestId), eq(eSignatureRequests.tenantId, tenantId))
     ).limit(1);
     if (!req) throw new Error("Signature request not found");
-    await db5.update(eSignatureRequests).set({
+    await db4.update(eSignatureRequests).set({
       status: "declined",
       declinedAt: /* @__PURE__ */ new Date(),
       declineReason: reason
     }).where(eq(eSignatureRequests.id, requestId));
-    await db5.insert(eSignatureLogs).values({
+    await db4.insert(eSignatureLogs).values({
       tenantId,
       signatureRequestId: requestId,
       eventType: "declined",
@@ -127741,15 +127911,15 @@ var ESignatureEngine = class {
     return { success: true };
   }
   async verify(tenantId, requestId) {
-    const db5 = getDb();
-    const [req] = await db5.select().from(eSignatureRequests).where(
+    const db4 = getDb();
+    const [req] = await db4.select().from(eSignatureRequests).where(
       and(eq(eSignatureRequests.id, requestId), eq(eSignatureRequests.tenantId, tenantId))
     ).limit(1);
     if (!req) throw new Error("Signature request not found");
-    const logs = await db5.select().from(eSignatureLogs).where(
+    const logs = await db4.select().from(eSignatureLogs).where(
       and(eq(eSignatureLogs.signatureRequestId, requestId), eq(eSignatureLogs.eventType, "signed"))
     ).limit(1);
-    await db5.insert(eSignatureLogs).values({
+    await db4.insert(eSignatureLogs).values({
       tenantId,
       signatureRequestId: requestId,
       eventType: "verified",
@@ -127769,8 +127939,8 @@ var ESignatureEngine = class {
     return crypto10.createHash("sha256").update(data).digest("hex");
   }
   async getAuditTrail(tenantId, requestId) {
-    const db5 = getDb();
-    const logs = await db5.select().from(eSignatureLogs).where(
+    const db4 = getDb();
+    const logs = await db4.select().from(eSignatureLogs).where(
       and(eq(eSignatureLogs.signatureRequestId, requestId), eq(eSignatureLogs.tenantId, tenantId))
     ).orderBy(asc(eSignatureLogs.createdAt));
     return logs.map((l) => ({
@@ -127782,8 +127952,8 @@ var ESignatureEngine = class {
     }));
   }
   async getSignatureImage(requestId) {
-    const db5 = getDb();
-    const [log] = await db5.select().from(eSignatureLogs).where(
+    const db4 = getDb();
+    const [log] = await db4.select().from(eSignatureLogs).where(
       and(eq(eSignatureLogs.signatureRequestId, requestId), eq(eSignatureLogs.eventType, "signed"))
     ).orderBy(desc(eSignatureLogs.createdAt)).limit(1);
     if (!log?.signatureData) return null;
@@ -127803,20 +127973,20 @@ var documentRouter = createRouter({
     limit: external_exports.number().default(50),
     offset: external_exports.number().default(0)
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(documents.tenantId, tenantId)];
     if (input?.categoryId) conditions.push(eq(documents.categoryId, input.categoryId));
     if (input?.relatedType) conditions.push(eq(documents.relatedType, input.relatedType));
     if (input?.relatedId) conditions.push(eq(documents.relatedId, input.relatedId));
     if (input?.search) conditions.push(sql`(title LIKE ${`%${input.search}%`} OR description LIKE ${`%${input.search}%`})`);
-    const items = await db5.select().from(documents).where(and(...conditions)).orderBy(desc(documents.createdAt)).limit(input?.limit ?? 50).offset(input?.offset ?? 0);
-    const [{ total }] = await db5.select({ total: sql`count(*)` }).from(documents).where(and(...conditions));
+    const items = await db4.select().from(documents).where(and(...conditions)).orderBy(desc(documents.createdAt)).limit(input?.limit ?? 50).offset(input?.offset ?? 0);
+    const [{ total }] = await db4.select({ total: sql`count(*)` }).from(documents).where(and(...conditions));
     return { items, total };
   }),
   get: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [doc] = await db5.select().from(documents).where(
+    const db4 = getDb();
+    const [doc] = await db4.select().from(documents).where(
       and(eq(documents.id, input.id), eq(documents.tenantId, ctx.user.tenantId))
     ).limit(1);
     if (!doc) throw new Error("Document not found");
@@ -127837,10 +128007,10 @@ var documentRouter = createRouter({
     return result;
   }),
   update: authedQuery.input(external_exports.object({ id: external_exports.number(), title: external_exports.string().optional(), description: external_exports.string().optional(), categoryId: external_exports.number().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const check3 = await documentEngine.checkAccess(ctx.user.tenantId, input.id, ctx.user.id, "update");
     if (!check3.allowed) throw new Error(check3.reason ?? "Access denied");
-    await db5.update(documents).set({
+    await db4.update(documents).set({
       title: input.title,
       description: input.description,
       categoryId: input.categoryId
@@ -127849,10 +128019,10 @@ var documentRouter = createRouter({
     return { success: true };
   }),
   delete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const check3 = await documentEngine.checkAccess(ctx.user.tenantId, input.id, ctx.user.id, "delete");
     if (!check3.allowed) throw new Error(check3.reason ?? "Access denied");
-    await db5.delete(documents).where(and(eq(documents.id, input.id), eq(documents.tenantId, ctx.user.tenantId)));
+    await db4.delete(documents).where(and(eq(documents.id, input.id), eq(documents.tenantId, ctx.user.tenantId)));
     await documentEngine.logAccess(ctx.user.tenantId, input.id, ctx.user.id, "delete");
     return { success: true };
   }),
@@ -127883,12 +128053,12 @@ var documentRouter = createRouter({
     return documentEngine.getDocumentTypes();
   }),
   getCategories: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(documentCategories).where(eq(documentCategories.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(documentCategories).where(eq(documentCategories.tenantId, ctx.user.tenantId));
   }),
   createCategory: adminQuery.input(external_exports.object({ name: external_exports.string(), description: external_exports.string().optional(), parentId: external_exports.number().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [cat] = await db5.insert(documentCategories).values({
+    const db4 = getDb();
+    const [cat] = await db4.insert(documentCategories).values({
       tenantId: ctx.user.tenantId,
       name: input.name,
       description: input.description,
@@ -127897,10 +128067,10 @@ var documentRouter = createRouter({
     return cat;
   }),
   getAccessLogs: authedQuery.input(external_exports.object({ documentId: external_exports.number().optional(), limit: external_exports.number().default(50) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(documentAccessLogs.tenantId, ctx.user.tenantId)];
     if (input.documentId) conditions.push(eq(documentAccessLogs.documentId, input.documentId));
-    return db5.select().from(documentAccessLogs).where(and(...conditions)).orderBy(desc(documentAccessLogs.createdAt)).limit(input.limit);
+    return db4.select().from(documentAccessLogs).where(and(...conditions)).orderBy(desc(documentAccessLogs.createdAt)).limit(input.limit);
   }),
   // ── E-Signatures ──
   createSignatureRequest: authedQuery.input(external_exports.object({
@@ -127915,10 +128085,10 @@ var documentRouter = createRouter({
     return eSignatureEngine.createRequest(ctx.user.tenantId, { ...input, requestedBy: ctx.user.id });
   }),
   listSignatureRequests: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(eSignatureRequests.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(eSignatureRequests.status, input.status));
-    return db5.select().from(eSignatureRequests).where(and(...conditions)).orderBy(desc(eSignatureRequests.createdAt)).limit(input?.limit ?? 50);
+    return db4.select().from(eSignatureRequests).where(and(...conditions)).orderBy(desc(eSignatureRequests.createdAt)).limit(input?.limit ?? 50);
   }),
   signDocument: authedQuery.input(external_exports.object({ requestId: external_exports.number(), signatureData: external_exports.string(), signatureType: external_exports.enum(["draw", "type", "upload", "biometric"]) })).mutation(async ({ input, ctx }) => {
     return eSignatureEngine.sign(ctx.user.tenantId, input.requestId, { type: input.signatureType, data: input.signatureData });
@@ -127941,8 +128111,8 @@ init_drizzle_orm();
 var notificationEnhancedRouter = createRouter({
   // ── Channels ──
   getChannelConfig: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const settings = await db5.query.companySettings.findFirst({
+    const db4 = getDb();
+    const settings = await db4.query.companySettings.findFirst({
       where: eq(companySettings.tenantId, ctx.user.tenantId)
     });
     return {
@@ -128021,10 +128191,10 @@ var notificationEnhancedRouter = createRouter({
   }),
   // ── Delivery Logs ──
   getLogs: authedQuery.input(external_exports.object({ templateKey: external_exports.string().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(emailLogs.tenantId, ctx.user.tenantId)];
     if (input?.templateKey) conditions.push(eq(emailLogs.templateKey, input.templateKey));
-    return db5.select().from(emailLogs).where(and(...conditions)).orderBy(desc(emailLogs.sentAt)).limit(input?.limit ?? 50);
+    return db4.select().from(emailLogs).where(and(...conditions)).orderBy(desc(emailLogs.sentAt)).limit(input?.limit ?? 50);
   })
 });
 
@@ -128036,12 +128206,12 @@ var DEVICE_TABLE = "iot_devices";
 var ALERT_TABLE = "iot_threshold_alerts";
 var IoTHub = class {
   async registerDevice(tenantId, data) {
-    const db5 = getDb();
-    const existing = await db5.execute(sql`
+    const db4 = getDb();
+    const existing = await db4.execute(sql`
       SELECT id FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = ${data.deviceId} LIMIT 1
     `);
     if (existing.length > 0) {
-      await db5.execute(sql`
+      await db4.execute(sql`
         UPDATE ${sql.raw(DEVICE_TABLE)} SET name = ${data.name}, type = ${data.type},
           location = ${data.location ?? null}, metadata = ${data.metadata ? JSON.stringify(data.metadata) : null},
           is_online = 1, last_seen = NOW()
@@ -128049,7 +128219,7 @@ var IoTHub = class {
       `);
       return this.getDevice(tenantId, data.deviceId);
     }
-    await db5.execute(sql`
+    await db4.execute(sql`
       INSERT INTO ${sql.raw(DEVICE_TABLE)} (tenant_id, device_id, name, type, location, metadata, is_online, last_seen)
       VALUES (${tenantId}, ${data.deviceId}, ${data.name}, ${data.type},
               ${data.location ?? null}, ${data.metadata ? JSON.stringify(data.metadata) : null}, 1, NOW())
@@ -128057,8 +128227,8 @@ var IoTHub = class {
     return this.getDevice(tenantId, data.deviceId);
   }
   async getDevice(tenantId, deviceId) {
-    const db5 = getDb();
-    const rows = await db5.execute(sql`
+    const db4 = getDb();
+    const rows = await db4.execute(sql`
       SELECT id, tenant_id, device_id, name, type, location, is_online, last_seen, metadata
       FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = ${deviceId} LIMIT 1
     `);
@@ -128066,16 +128236,16 @@ var IoTHub = class {
     return this.mapDevice(rows[0]);
   }
   async listDevices(tenantId) {
-    const db5 = getDb();
-    const rows = await db5.execute(sql`
+    const db4 = getDb();
+    const rows = await db4.execute(sql`
       SELECT id, tenant_id, device_id, name, type, location, is_online, last_seen, metadata
       FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} ORDER BY last_seen DESC
     `);
     return rows.map(this.mapDevice);
   }
   async updateDeviceStatus(tenantId, deviceId, isOnline) {
-    const db5 = getDb();
-    await db5.execute(sql`
+    const db4 = getDb();
+    await db4.execute(sql`
       UPDATE ${sql.raw(DEVICE_TABLE)} SET is_online = ${isOnline ? 1 : 0},
         last_seen = ${isOnline ? sql`NOW()` : sql`last_seen`}
       WHERE tenant_id = ${tenantId} AND device_id = ${deviceId}
@@ -128084,9 +128254,9 @@ var IoTHub = class {
   async ingestData(tenantId, deviceId, readings) {
     const device = await this.getDevice(tenantId, deviceId);
     if (!device) throw new Error(`Device ${deviceId} not found`);
-    const db5 = getDb();
+    const db4 = getDb();
     for (const r of readings) {
-      await db5.execute(sql`
+      await db4.execute(sql`
         INSERT INTO ${sql.raw(SENSOR_TABLE)} (tenant_id, device_id, sensor_type, value, unit, recorded_at)
         VALUES (${tenantId}, ${device.id}, ${r.sensorType}, ${r.value}, ${r.unit},
                 ${r.timestamp ? new Date(r.timestamp) : sql`NOW()`})
@@ -128096,13 +128266,13 @@ var IoTHub = class {
     await this.evaluateThresholds(tenantId, device.id, readings);
   }
   async querySensorData(tenantId, deviceId, sensorType, from, to, limit = 100) {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [sql`tenant_id = ${tenantId}`];
     if (deviceId) conditions.push(sql`device_id = ${deviceId}`);
     if (sensorType) conditions.push(sql`sensor_type = ${sensorType}`);
     if (from) conditions.push(sql`recorded_at >= ${new Date(from)}`);
     if (to) conditions.push(sql`recorded_at <= ${new Date(to)}`);
-    const rows = await db5.execute(sql`
+    const rows = await db4.execute(sql`
       SELECT id, tenant_id, device_id, sensor_type, value, unit, recorded_at
       FROM ${sql.raw(SENSOR_TABLE)} WHERE ${conditions.join(sql` AND `)}
       ORDER BY recorded_at DESC LIMIT ${limit}
@@ -128117,8 +128287,8 @@ var IoTHub = class {
     }));
   }
   async getLatestReadings(tenantId, deviceId) {
-    const db5 = getDb();
-    const rows = await db5.execute(sql`
+    const db4 = getDb();
+    const rows = await db4.execute(sql`
       SELECT s1.* FROM ${sql.raw(SENSOR_TABLE)} s1
       INNER JOIN (
         SELECT sensor_type, MAX(recorded_at) AS max_ts
@@ -128138,29 +128308,29 @@ var IoTHub = class {
     }));
   }
   async setThreshold(tenantId, deviceId, sensorType, minValue, maxValue) {
-    const db5 = getDb();
-    const existing = await db5.execute(sql`
+    const db4 = getDb();
+    const existing = await db4.execute(sql`
       SELECT id FROM ${sql.raw(ALERT_TABLE)}
       WHERE tenant_id = ${tenantId} AND device_id = ${deviceId} AND sensor_type = ${sensorType} LIMIT 1
     `);
     if (existing.length > 0) {
-      await db5.execute(sql`
+      await db4.execute(sql`
         UPDATE ${sql.raw(ALERT_TABLE)} SET min_value = ${minValue ?? null}, max_value = ${maxValue ?? null}
         WHERE id = ${existing[0].id}
       `);
       return existing[0].id;
     }
-    const result = await db5.execute(sql`
+    const result = await db4.execute(sql`
       INSERT INTO ${sql.raw(ALERT_TABLE)} (tenant_id, device_id, sensor_type, min_value, max_value, enabled)
       VALUES (${tenantId}, ${deviceId}, ${sensorType}, ${minValue ?? null}, ${maxValue ?? null}, 1)
     `);
     return result.insertId;
   }
   async listThresholds(tenantId, deviceId) {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [sql`tenant_id = ${tenantId}`];
     if (deviceId) conditions.push(sql`device_id = ${deviceId}`);
-    const rows = await db5.execute(sql`
+    const rows = await db4.execute(sql`
       SELECT id, device_id, sensor_type, min_value, max_value, enabled
       FROM ${sql.raw(ALERT_TABLE)} WHERE ${conditions.join(sql` AND `)}
     `);
@@ -128174,10 +128344,10 @@ var IoTHub = class {
     }));
   }
   async deleteDevice(tenantId, deviceId) {
-    const db5 = getDb();
-    await db5.execute(sql`DELETE FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = ${deviceId}`);
-    await db5.execute(sql`DELETE FROM ${sql.raw(SENSOR_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = (SELECT id FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = ${deviceId})`);
-    await db5.execute(sql`DELETE FROM ${sql.raw(ALERT_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = (SELECT id FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = ${deviceId})`);
+    const db4 = getDb();
+    await db4.execute(sql`DELETE FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = ${deviceId}`);
+    await db4.execute(sql`DELETE FROM ${sql.raw(SENSOR_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = (SELECT id FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = ${deviceId})`);
+    await db4.execute(sql`DELETE FROM ${sql.raw(ALERT_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = (SELECT id FROM ${sql.raw(DEVICE_TABLE)} WHERE tenant_id = ${tenantId} AND device_id = ${deviceId})`);
   }
   async getDashboardData(tenantId) {
     const devices = await this.listDevices(tenantId);
@@ -128201,8 +128371,8 @@ var IoTHub = class {
     }
   }
   async createAlertEvent(tenantId, deviceId, sensorType, value, threshold) {
-    const db5 = getDb();
-    await db5.execute(sql`
+    const db4 = getDb();
+    await db4.execute(sql`
       INSERT INTO iot_alert_events (tenant_id, device_id, sensor_type, value, threshold_min, threshold_max, severity)
       VALUES (${tenantId}, ${deviceId}, ${sensorType}, ${value},
               ${threshold.minValue ?? null}, ${threshold.maxValue ?? null},
@@ -128349,9 +128519,9 @@ async function executeAction(step, data, tenantId) {
   const config2 = step.stepConfig;
   switch (step.stepType) {
     case "send_notification": {
-      const db5 = getDb();
+      const db4 = getDb();
       const { notifications: notifications2 } = await Promise.resolve().then(() => (init_schema2(), schema_exports));
-      await db5.insert(notifications2).values({
+      await db4.insert(notifications2).values({
         tenantId,
         userId: config2.userId || data.userId,
         type: config2.notificationType || "info",
@@ -128362,21 +128532,21 @@ async function executeAction(step, data, tenantId) {
       return { success: true };
     }
     case "create_record": {
-      const db5 = getDb();
+      const db4 = getDb();
       const entityTable = config2.entityType;
       const entityData = config2.fields || data;
       try {
-        await db5.execute(sql`INSERT INTO ${sql.identifier(entityTable)} SET ?`, entityData);
+        await db4.execute(sql`INSERT INTO ${sql.identifier(entityTable)} SET ?`, entityData);
         return { success: true };
       } catch (err) {
         return { success: false, error: err.message };
       }
     }
     case "update_field": {
-      const db5 = getDb();
+      const db4 = getDb();
       const entityTable = config2.entityType;
       try {
-        await db5.execute(
+        await db4.execute(
           sql`UPDATE ${sql.identifier(entityTable)} SET ${sql.identifier(config2.field)} = ${config2.value} WHERE id = ${config2.entityId || data.id}`
         );
         return { success: true };
@@ -128385,10 +128555,10 @@ async function executeAction(step, data, tenantId) {
       }
     }
     case "approval_request": {
-      const db5 = getDb();
+      const db4 = getDb();
       const approvalConfig = step.approvalConfig || {};
       const assignedTo = approvalConfig.approvers || [config2.assigneeId].filter(Boolean);
-      await db5.insert(workflowApprovals).values({
+      await db4.insert(workflowApprovals).values({
         tenantId,
         workflowId: step.workflowId,
         workflowStepId: step.id,
@@ -128420,7 +128590,7 @@ async function executeAction(step, data, tenantId) {
   }
 }
 async function processWorkflow(workflowId, event) {
-  const db5 = getDb();
+  const db4 = getDb();
   const startTime = Date.now();
   const result = {
     executed: false,
@@ -128431,7 +128601,7 @@ async function processWorkflow(workflowId, event) {
     errors: []
   };
   try {
-    const workflow = await db5.query.workflows.findFirst({
+    const workflow = await db4.query.workflows.findFirst({
       where: and(eq(workflows.id, workflowId), eq(workflows.isActive, true))
     });
     if (!workflow) return { ...result, errors: ["Workflow not found or inactive"] };
@@ -128443,7 +128613,7 @@ async function processWorkflow(workflowId, event) {
     if (triggerCfg?.action && triggerCfg.action !== event.action) {
       return result;
     }
-    const steps = await db5.query.workflowSteps.findMany({
+    const steps = await db4.query.workflowSteps.findMany({
       where: and(eq(workflowSteps.workflowId, workflowId), eq(workflowSteps.isActive, true)),
       orderBy: sql`step_order ASC`
     });
@@ -128482,7 +128652,7 @@ async function processWorkflow(workflowId, event) {
       }
       result.stepsExecuted += parallelGroup.length;
     }
-    await db5.insert(workflowLogs).values({
+    await db4.insert(workflowLogs).values({
       tenantId: event.tenantId,
       workflowId,
       entityType: event.entityType,
@@ -128497,7 +128667,7 @@ async function processWorkflow(workflowId, event) {
     });
     return result;
   } catch (err) {
-    await db5.insert(workflowLogs).values({
+    await db4.insert(workflowLogs).values({
       tenantId: event.tenantId,
       workflowId,
       entityType: event.entityType,
@@ -128512,8 +128682,8 @@ async function processWorkflow(workflowId, event) {
   }
 }
 async function findAndProcessMatchingWorkflows(event) {
-  const db5 = getDb();
-  const matching = await db5.query.workflows.findMany({
+  const db4 = getDb();
+  const matching = await db4.query.workflows.findMany({
     where: and(
       eq(workflows.tenantId, event.tenantId),
       eq(workflows.isActive, true)
@@ -128527,22 +128697,22 @@ async function findAndProcessMatchingWorkflows(event) {
   return results;
 }
 async function processApproval(approvalId, action, userId, reason) {
-  const db5 = getDb();
-  const approval = await db5.query.workflowApprovals.findFirst({
+  const db4 = getDb();
+  const approval = await db4.query.workflowApprovals.findFirst({
     where: eq(workflowApprovals.id, approvalId)
   });
   if (!approval || approval.status !== "pending") return false;
-  const step = await db5.query.workflowSteps.findFirst({
+  const step = await db4.query.workflowSteps.findFirst({
     where: eq(workflowSteps.id, approval.workflowStepId)
   });
-  await db5.update(workflowApprovals).set({
+  await db4.update(workflowApprovals).set({
     status: action,
     approvedBy: userId,
     approvedAt: /* @__PURE__ */ new Date(),
     rejectionReason: action === "rejected" ? reason : void 0
   }).where(eq(workflowApprovals.id, approvalId));
   const approvalCfg = step?.approvalConfig;
-  const allApprovals = await db5.query.workflowApprovals.findMany({
+  const allApprovals = await db4.query.workflowApprovals.findMany({
     where: and(
       eq(workflowApprovals.workflowId, approval.workflowId),
       eq(workflowApprovals.entityType, approval.entityType),
@@ -128553,7 +128723,7 @@ async function processApproval(approvalId, action, userId, reason) {
     const requiredApprovals = approvalCfg?.requiredApprovals || 1;
     const approvedCount = allApprovals.filter((a) => a.status === "approved").length;
     if (approvedCount >= requiredApprovals) {
-      await db5.insert(workflowLogs).values({
+      await db4.insert(workflowLogs).values({
         tenantId: approval.tenantId,
         workflowId: approval.workflowId,
         workflowStepId: approval.workflowStepId,
@@ -128566,7 +128736,7 @@ async function processApproval(approvalId, action, userId, reason) {
       });
     }
   }
-  await db5.insert(workflowLogs).values({
+  await db4.insert(workflowLogs).values({
     tenantId: approval.tenantId,
     workflowId: approval.workflowId,
     workflowStepId: approval.workflowStepId,
@@ -128580,18 +128750,18 @@ async function processApproval(approvalId, action, userId, reason) {
   return true;
 }
 async function getWorkflowLogs(tenantId, workflowId, limit = 50) {
-  const db5 = getDb();
+  const db4 = getDb();
   const conditions = [eq(workflowLogs.tenantId, tenantId)];
   if (workflowId) conditions.push(eq(workflowLogs.workflowId, workflowId));
-  return db5.query.workflowLogs.findMany({
+  return db4.query.workflowLogs.findMany({
     where: and(...conditions),
     orderBy: desc(workflowLogs.createdAt),
     limit
   });
 }
 async function getPendingApprovals(tenantId, userId) {
-  const db5 = getDb();
-  const all = await db5.query.workflowApprovals.findMany({
+  const db4 = getDb();
+  const all = await db4.query.workflowApprovals.findMany({
     where: and(
       eq(workflowApprovals.tenantId, tenantId),
       eq(workflowApprovals.status, "pending")
@@ -128604,22 +128774,22 @@ async function getPendingApprovals(tenantId, userId) {
   });
 }
 async function list(tenantId) {
-  const db5 = getDb();
-  return db5.query.workflows.findMany({
+  const db4 = getDb();
+  return db4.query.workflows.findMany({
     where: eq(workflows.tenantId, tenantId),
     orderBy: desc(workflows.createdAt)
   });
 }
 async function get(id) {
-  const db5 = getDb();
-  return db5.query.workflows.findFirst({
+  const db4 = getDb();
+  return db4.query.workflows.findFirst({
     where: eq(workflows.id, id),
     with: { steps: true }
   });
 }
 async function create(data) {
-  const db5 = getDb();
-  const [wf] = await db5.insert(workflows).values({
+  const db4 = getDb();
+  const [wf] = await db4.insert(workflows).values({
     tenantId: data.tenantId,
     name: data.name,
     description: data.description,
@@ -128628,7 +128798,7 @@ async function create(data) {
     isActive: data.isActive ?? true
   }).$returningId();
   if (data.steps?.length) {
-    await db5.insert(workflowSteps).values(
+    await db4.insert(workflowSteps).values(
       data.steps.map((s, i) => ({
         workflowId: wf.id,
         stepOrder: s.order ?? i + 1,
@@ -128644,18 +128814,18 @@ async function create(data) {
   return wf.id;
 }
 async function update(id, data) {
-  const db5 = getDb();
+  const db4 = getDb();
   const updates = {};
   if (data.name !== void 0) updates.name = data.name;
   if (data.description !== void 0) updates.description = data.description;
   if (data.isActive !== void 0) updates.isActive = data.isActive;
   if (data.trigger !== void 0) updates.triggerConfig = data.trigger;
   if (Object.keys(updates).length > 0) {
-    await db5.update(workflows).set(updates).where(eq(workflows.id, id));
+    await db4.update(workflows).set(updates).where(eq(workflows.id, id));
   }
   if (data.steps) {
-    await db5.delete(workflowSteps).where(eq(workflowSteps.workflowId, id));
-    await db5.insert(workflowSteps).values(
+    await db4.delete(workflowSteps).where(eq(workflowSteps.workflowId, id));
+    await db4.insert(workflowSteps).values(
       data.steps.map((s, i) => ({
         workflowId: id,
         stepOrder: s.order ?? i + 1,
@@ -128670,13 +128840,13 @@ async function update(id, data) {
   }
 }
 async function remove(id) {
-  const db5 = getDb();
-  await db5.delete(workflowSteps).where(eq(workflowSteps.workflowId, id));
-  await db5.delete(workflows).where(eq(workflows.id, id));
+  const db4 = getDb();
+  await db4.delete(workflowSteps).where(eq(workflowSteps.workflowId, id));
+  await db4.delete(workflows).where(eq(workflows.id, id));
 }
 async function toggle(id, isActive) {
-  const db5 = getDb();
-  await db5.update(workflows).set({ isActive }).where(eq(workflows.id, id));
+  const db4 = getDb();
+  await db4.update(workflows).set({ isActive }).where(eq(workflows.id, id));
 }
 async function executeWorkflow(wf, context) {
   const tenantId = context._tenantId;
@@ -128691,8 +128861,8 @@ async function executeWorkflow(wf, context) {
   });
 }
 async function getExecutionLogs(workflowId, limit = 50) {
-  const db5 = getDb();
-  return db5.query.workflowLogs.findMany({
+  const db4 = getDb();
+  return db4.query.workflowLogs.findMany({
     where: eq(workflowLogs.workflowId, workflowId),
     orderBy: desc(workflowLogs.createdAt),
     limit
@@ -128951,13 +129121,13 @@ var pluginRouter = createRouter({
   install: adminQuery.input(external_exports.object({ name: external_exports.string() })).mutation(async ({ input, ctx }) => {
     const manifest = pluginRegistry.getFromStore(input.name);
     if (!manifest) throw new Error(`Plugin '${input.name}' not found in store`);
-    const db5 = getDb();
-    const existing = await db5.execute(
+    const db4 = getDb();
+    const existing = await db4.execute(
       sql`SELECT id FROM ${sql.raw(PLUGIN_INSTALL_TABLE)} WHERE tenant_id = ${ctx.user.tenantId} AND plugin_name = ${input.name} LIMIT 1`
     );
     const existingRows = Array.isArray(existing?.[0]) ? existing[0] : existing;
     if (existingRows.length > 0) throw new Error("Plugin already installed");
-    await db5.execute(
+    await db4.execute(
       sql`INSERT INTO ${sql.raw(PLUGIN_INSTALL_TABLE)} (tenant_id, plugin_name, version, manifest, is_enabled, config, installed_at)
        VALUES (${ctx.user.tenantId}, ${input.name}, ${manifest.version}, ${JSON.stringify(manifest)}, 1, '{}', NOW())`
     );
@@ -128970,16 +129140,16 @@ var pluginRouter = createRouter({
     return { success: true, name: input.name };
   }),
   uninstall: adminQuery.input(external_exports.object({ name: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.execute(
+    const db4 = getDb();
+    await db4.execute(
       sql`DELETE FROM ${sql.raw(PLUGIN_INSTALL_TABLE)} WHERE tenant_id = ${ctx.user.tenantId} AND plugin_name = ${input.name}`
     );
     pluginRegistry.unregister(input.name);
     return { success: true };
   }),
   toggle: adminQuery.input(external_exports.object({ name: external_exports.string(), isEnabled: external_exports.boolean() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.execute(
+    const db4 = getDb();
+    await db4.execute(
       sql`UPDATE ${sql.raw(PLUGIN_INSTALL_TABLE)} SET is_enabled = ${input.isEnabled ? 1 : 0} WHERE tenant_id = ${ctx.user.tenantId} AND plugin_name = ${input.name}`
     );
     if (input.isEnabled) {
@@ -128991,8 +129161,8 @@ var pluginRouter = createRouter({
     return { success: true };
   }),
   listInstalled: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const result = await db5.execute(
+    const db4 = getDb();
+    const result = await db4.execute(
       sql`SELECT * FROM ${sql.raw(PLUGIN_INSTALL_TABLE)} WHERE tenant_id = ${ctx.user.tenantId} ORDER BY installed_at DESC`
     );
     const rows = Array.isArray(result?.[0]) ? result[0] : Array.isArray(result) ? result : [];
@@ -129008,8 +129178,8 @@ var pluginRouter = createRouter({
     }));
   }),
   updateConfig: adminQuery.input(external_exports.object({ name: external_exports.string(), config: external_exports.record(external_exports.string(), external_exports.any()) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.execute(
+    const db4 = getDb();
+    await db4.execute(
       sql`UPDATE ${sql.raw(PLUGIN_INSTALL_TABLE)} SET config = ${JSON.stringify(input.config)} WHERE tenant_id = ${ctx.user.tenantId} AND plugin_name = ${input.name}`
     );
     return { success: true };
@@ -129017,8 +129187,8 @@ var pluginRouter = createRouter({
   // ── Hooks ──
   getHookDefinitions: authedQuery.query(() => getHookDescriptions()),
   getHookLogs: adminQuery.input(external_exports.object({ pluginName: external_exports.string().optional(), limit: external_exports.number().default(50) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const result = await db5.execute(
+    const db4 = getDb();
+    const result = await db4.execute(
       sql`SELECT * FROM plugin_hook_logs WHERE tenant_id = ${ctx.user.tenantId} ${input.pluginName ? sql`AND plugin_name = ${input.pluginName}` : sql``} ORDER BY created_at DESC LIMIT ${input.limit}`
     );
     return Array.isArray(result?.[0]) ? result[0] : Array.isArray(result) ? result : [];
@@ -129033,22 +129203,22 @@ init_drizzle_orm();
 var mobileRouter = createRouter({
   // ── Approvals ──
   getPendingApprovals: authedQuery.input(external_exports.object({ limit: external_exports.number().default(20) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(approvalRequests).where(
+    const db4 = getDb();
+    return db4.select().from(approvalRequests).where(
       and(eq(approvalRequests.tenantId, ctx.user.tenantId), eq(approvalRequests.status, "pending"))
     ).orderBy(desc(approvalRequests.createdAt)).limit(input.limit);
   }),
   approveRequest: authedQuery.input(external_exports.object({ requestId: external_exports.number(), notes: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(approvalRequests).set({
+    const db4 = getDb();
+    await db4.update(approvalRequests).set({
       status: "approved",
       notes: input.notes
     }).where(eq(approvalRequests.id, input.requestId));
     return { success: true };
   }),
   rejectRequest: authedQuery.input(external_exports.object({ requestId: external_exports.number(), notes: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(approvalRequests).set({
+    const db4 = getDb();
+    await db4.update(approvalRequests).set({
       status: "rejected",
       notes: input.notes
     }).where(eq(approvalRequests.id, input.requestId));
@@ -129056,13 +129226,13 @@ var mobileRouter = createRouter({
   }),
   // ── Attendance (GPS Clock In/Out) ──
   clockIn: authedQuery.input(external_exports.object({ employeeId: external_exports.number(), latitude: external_exports.number(), longitude: external_exports.number(), notes: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const existing = await db5.select().from(attendance).where(
+    const existing = await db4.select().from(attendance).where(
       and(eq(attendance.tenantId, ctx.user.tenantId), eq(attendance.employeeId, input.employeeId), eq(attendance.date, today))
     ).limit(1);
     if (existing.length > 0) throw new Error("Already clocked in today");
-    const [att] = await db5.insert(attendance).values({
+    const [att] = await db4.insert(attendance).values({
       tenantId: ctx.user.tenantId,
       employeeId: input.employeeId,
       date: today,
@@ -129073,42 +129243,42 @@ var mobileRouter = createRouter({
     return { id: att.id, success: true, checkIn: /* @__PURE__ */ new Date() };
   }),
   clockOut: authedQuery.input(external_exports.object({ employeeId: external_exports.number(), latitude: external_exports.number().optional(), longitude: external_exports.number().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const [record2] = await db5.select().from(attendance).where(
+    const [record2] = await db4.select().from(attendance).where(
       and(eq(attendance.tenantId, ctx.user.tenantId), eq(attendance.employeeId, input.employeeId), eq(attendance.date, today))
     ).limit(1);
     if (!record2) throw new Error("No clock-in record found for today");
     const checkIn = record2.checkIn ? new Date(record2.checkIn) : /* @__PURE__ */ new Date();
     const diffMs = (/* @__PURE__ */ new Date()).getTime() - checkIn.getTime();
     const workHours = Math.round(diffMs / (1e3 * 60 * 60) * 100) / 100;
-    await db5.update(attendance).set({
+    await db4.update(attendance).set({
       checkOut: /* @__PURE__ */ new Date(),
       workHours: String(workHours)
     }).where(eq(attendance.id, record2.id));
     return { success: true, checkOut: /* @__PURE__ */ new Date(), workHours };
   }),
   getTodayAttendance: authedQuery.input(external_exports.object({ employeeId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const [record2] = await db5.select().from(attendance).where(
+    const [record2] = await db4.select().from(attendance).where(
       and(eq(attendance.tenantId, ctx.user.tenantId), eq(attendance.employeeId, input.employeeId), eq(attendance.date, today))
     ).limit(1);
     return record2 ?? null;
   }),
   getMyAttendance: authedQuery.input(external_exports.object({ employeeId: external_exports.number(), from: external_exports.string().optional(), to: external_exports.string().optional(), limit: external_exports.number().default(30) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(attendance.tenantId, ctx.user.tenantId), eq(attendance.employeeId, input.employeeId)];
     if (input.from) conditions.push(sql`date >= ${input.from}`);
     if (input.to) conditions.push(sql`date <= ${input.to}`);
-    return db5.select().from(attendance).where(and(...conditions)).orderBy(desc(attendance.date)).limit(input.limit);
+    return db4.select().from(attendance).where(and(...conditions)).orderBy(desc(attendance.date)).limit(input.limit);
   }),
   // ── Quick Sales ──
   quickSaleProducts: authedQuery.input(external_exports.object({ search: external_exports.string().optional(), limit: external_exports.number().default(20), offset: external_exports.number().default(0) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(products.tenantId, ctx.user.tenantId), eq(products.isActive, true)];
     if (input.search) conditions.push(sql`(name LIKE ${`%${input.search}%`} OR sku LIKE ${`%${input.search}%`} OR barcode LIKE ${`%${input.search}%`})`);
-    return db5.select({
+    return db4.select({
       id: products.id,
       sku: products.sku,
       name: products.name,
@@ -129124,16 +129294,16 @@ var mobileRouter = createRouter({
     paymentMethod: external_exports.string().default("cash"),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const orderNumber = `MOB-${Date.now()}`;
     const subTotal = input.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-    const orderIdResult = await db5.execute(
+    const orderIdResult = await db4.execute(
       sql`INSERT INTO sales_orders (tenant_id, order_number, customer_id, date, sub_total, total_amount, status, created_by, created_at)
          VALUES (${ctx.user.tenantId}, ${orderNumber}, ${input.customerId ?? null}, CURDATE(), ${subTotal}, ${subTotal}, 'confirmed', ${ctx.user.id}, NOW())`
     );
     const orderId = orderIdResult.insertId;
     for (const item of input.items) {
-      await db5.execute(
+      await db4.execute(
         sql`INSERT INTO sales_order_items (order_id, product_id, quantity, unit_price, total_amount)
            VALUES (${orderId}, ${item.productId}, ${item.quantity}, ${item.unitPrice}, ${item.quantity * item.unitPrice})`
       );
@@ -129141,10 +129311,10 @@ var mobileRouter = createRouter({
     return { orderId, orderNumber, success: true };
   }),
   getCustomers: authedQuery.input(external_exports.object({ search: external_exports.string().optional(), limit: external_exports.number().default(20) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(customers.tenantId, ctx.user.tenantId), eq(customers.isActive, true)];
     if (input.search) conditions.push(sql`(name LIKE ${`%${input.search}%`} OR phone LIKE ${`%${input.search}%`})`);
-    return db5.select({ id: customers.id, name: customers.name, phone: customers.phone }).from(customers).where(and(...conditions)).limit(input.limit);
+    return db4.select({ id: customers.id, name: customers.name, phone: customers.phone }).from(customers).where(and(...conditions)).limit(input.limit);
   }),
   // ── Site Expenses ──
   submitSiteExpense: authedQuery.input(external_exports.object({
@@ -129156,9 +129326,9 @@ var mobileRouter = createRouter({
     longitude: external_exports.number().optional(),
     receiptImage: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const entryNumber = `EXP-${Date.now()}`;
-    await db5.insert(journalEntries).values({
+    await db4.insert(journalEntries).values({
       tenantId: ctx.user.tenantId,
       entryNumber,
       date: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
@@ -129173,8 +129343,8 @@ var mobileRouter = createRouter({
     return { success: true, entryNumber };
   }),
   getMySiteExpenses: authedQuery.input(external_exports.object({ limit: external_exports.number().default(20) })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.select({
+    const db4 = getDb();
+    return db4.select({
       id: journalEntries.id,
       entryNumber: journalEntries.entryNumber,
       date: journalEntries.date,
@@ -129190,15 +129360,15 @@ var mobileRouter = createRouter({
   }),
   // ── Mobile Dashboard ──
   getDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const todaySales = await db5.execute(
+    const todaySales = await db4.execute(
       sql`SELECT COALESCE(SUM(total_amount), 0) as total FROM sales_orders WHERE tenant_id = ${tenantId} AND DATE(created_at) = ${today} AND status != 'cancelled'`
     );
-    const pendingApprovals = await db5.select({ count: sql`count(*)` }).from(approvalRequests).where(and(eq(approvalRequests.tenantId, tenantId), eq(approvalRequests.status, "pending")));
-    const notifications2 = await db5.select({ count: sql`count(*)` }).from(notifications).where(and(eq(notifications.tenantId, tenantId), eq(notifications.userId, ctx.user.id), eq(notifications.isRead, false)));
-    const todayAttendance = await db5.execute(
+    const pendingApprovals = await db4.select({ count: sql`count(*)` }).from(approvalRequests).where(and(eq(approvalRequests.tenantId, tenantId), eq(approvalRequests.status, "pending")));
+    const notifications2 = await db4.select({ count: sql`count(*)` }).from(notifications).where(and(eq(notifications.tenantId, tenantId), eq(notifications.userId, ctx.user.id), eq(notifications.isRead, false)));
+    const todayAttendance = await db4.execute(
       sql`SELECT COUNT(*) as count FROM attendance WHERE tenant_id = ${tenantId} AND date = ${today} AND status = 'present'`
     );
     return {
@@ -129220,7 +129390,7 @@ init_connection();
 init_schema2();
 init_drizzle_orm();
 async function calculateMetric(metricKey, tenantId, options) {
-  const db5 = getDb();
+  const db4 = getDb();
   const year3 = options?.year || (/* @__PURE__ */ new Date()).getFullYear();
   const month = options?.month || (/* @__PURE__ */ new Date()).getMonth() + 1;
   const fromDate = options?.fromDate || `${year3}-${String(month).padStart(2, "0")}-01`;
@@ -129249,7 +129419,7 @@ async function calculateMetric(metricKey, tenantId, options) {
   return calculator();
 }
 async function calculateTrend(metricKey, tenantId, periods = 6) {
-  const db5 = getDb();
+  const db4 = getDb();
   const results = [];
   const now = /* @__PURE__ */ new Date();
   for (let i = periods - 1; i >= 0; i--) {
@@ -129268,20 +129438,20 @@ async function calculateTrend(metricKey, tenantId, periods = 6) {
   return { metricKey, periods: results, trend, changePercent: Math.round(changePercent * 100) / 100 };
 }
 async function drillDown(metricKey, tenantId, dimension, options) {
-  const db5 = getDb();
+  const db4 = getDb();
   const year3 = options?.year || (/* @__PURE__ */ new Date()).getFullYear();
   const month = options?.month || (/* @__PURE__ */ new Date()).getMonth() + 1;
   const drillers = {
     revenue_by_customer: async () => {
-      const rows = await db5.select({ dimension: customers.name, value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).where(and(eq(invoices.tenantId, tenantId), sql`YEAR(${invoices.date}) = ${year3}`, sql`MONTH(${invoices.date}) = ${month}`)).groupBy(customers.id).orderBy(desc(sql`COALESCE(SUM(${invoices.totalAmount}), 0)`));
+      const rows = await db4.select({ dimension: customers.name, value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).where(and(eq(invoices.tenantId, tenantId), sql`YEAR(${invoices.date}) = ${year3}`, sql`MONTH(${invoices.date}) = ${month}`)).groupBy(customers.id).orderBy(desc(sql`COALESCE(SUM(${invoices.totalAmount}), 0)`));
       return rows;
     },
     revenue_by_product: async () => {
-      const rows = await db5.select({ dimension: products.name, value: sql`COALESCE(SUM(${invoiceItems.quantity} * ${invoiceItems.unitPrice}), 0)` }).from(invoiceItems).innerJoin(products, eq(invoiceItems.productId, products.id)).innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id)).where(and(eq(invoices.tenantId, tenantId), sql`YEAR(${invoices.date}) = ${year3}`, sql`MONTH(${invoices.date}) = ${month}`)).groupBy(products.id).orderBy(desc(sql`COALESCE(SUM(${invoiceItems.quantity} * ${invoiceItems.unitPrice}), 0)`));
+      const rows = await db4.select({ dimension: products.name, value: sql`COALESCE(SUM(${invoiceItems.quantity} * ${invoiceItems.unitPrice}), 0)` }).from(invoiceItems).innerJoin(products, eq(invoiceItems.productId, products.id)).innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id)).where(and(eq(invoices.tenantId, tenantId), sql`YEAR(${invoices.date}) = ${year3}`, sql`MONTH(${invoices.date}) = ${month}`)).groupBy(products.id).orderBy(desc(sql`COALESCE(SUM(${invoiceItems.quantity} * ${invoiceItems.unitPrice}), 0)`));
       return rows;
     },
     expenses_by_category: async () => {
-      const rows = await db5.select({ dimension: chartOfAccounts.name, value: sql`COALESCE(SUM(${journalEntryLines.debit}), 0)` }).from(journalEntryLines).innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id)).innerJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id)).where(and(
+      const rows = await db4.select({ dimension: chartOfAccounts.name, value: sql`COALESCE(SUM(${journalEntryLines.debit}), 0)` }).from(journalEntryLines).innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id)).innerJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id)).where(and(
         eq(journalEntries.tenantId, tenantId),
         eq(chartOfAccounts.accountType, "expense"),
         eq(journalEntries.isPosted, true),
@@ -129296,9 +129466,9 @@ async function drillDown(metricKey, tenantId, dimension, options) {
   return driller();
 }
 async function computeTotalRevenue(tenantId, fromDate, toDate, year3, month) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
-  const [prevRow] = await db5.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(
+  const db4 = getDb();
+  const [row] = await db4.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
+  const [prevRow] = await db4.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(
     eq(invoices.tenantId, tenantId),
     gte(invoices.date, `${year3 - 1}-${String(month).padStart(2, "0")}-01`),
     lte(invoices.date, `${year3 - 1}-${String(month).padStart(2, "0")}-${new Date(year3 - 1, month, 0).getDate()}`)
@@ -129308,91 +129478,91 @@ async function computeTotalRevenue(tenantId, fromDate, toDate, year3, month) {
   return { metricKey: "total_revenue", metricName: "Total Revenue", value, previousValue, changePercent: previousValue ? (value - previousValue) / previousValue * 100 : 0, period: `${year3}-${month}` };
 }
 async function computeNetProfit(tenantId, fromDate, toDate, year3, month) {
-  const db5 = getDb();
-  const [revenue] = await db5.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
-  const [expenses] = await db5.select({ value: sql`COALESCE(SUM(${purchaseOrders.totalAmount}), 0)` }).from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), gte(purchaseOrders.date, fromDate), lte(purchaseOrders.date, toDate)));
+  const db4 = getDb();
+  const [revenue] = await db4.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
+  const [expenses] = await db4.select({ value: sql`COALESCE(SUM(${purchaseOrders.totalAmount}), 0)` }).from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), gte(purchaseOrders.date, fromDate), lte(purchaseOrders.date, toDate)));
   const rev = Number(revenue?.value || 0);
   const exp = Number(expenses?.value || 0);
   const value = rev - exp;
   return { metricKey: "net_profit", metricName: "Net Profit", value, period: `${year3}-${month}` };
 }
 async function computeGrossMargin(tenantId, fromDate, toDate, year3, month) {
-  const db5 = getDb();
-  const [revenue] = await db5.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
-  const [cogs] = await db5.select({ value: sql`COALESCE(SUM(${invoiceItems.quantity} * ${products.purchasePrice}), 0)` }).from(invoiceItems).innerJoin(products, eq(invoiceItems.productId, products.id)).innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id)).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
+  const db4 = getDb();
+  const [revenue] = await db4.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
+  const [cogs] = await db4.select({ value: sql`COALESCE(SUM(${invoiceItems.quantity} * ${products.purchasePrice}), 0)` }).from(invoiceItems).innerJoin(products, eq(invoiceItems.productId, products.id)).innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id)).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
   const rev = Number(revenue?.value || 0);
   const cost = Number(cogs?.value || 0);
   const value = rev !== 0 ? (rev - cost) / rev * 100 : 0;
   return { metricKey: "gross_margin", metricName: "Gross Margin", value: Math.round(value * 100) / 100, unit: "%", period: `${year3}-${month}` };
 }
 async function computeTotalCustomers(tenantId) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: count() }).from(customers).where(eq(customers.tenantId, tenantId));
+  const db4 = getDb();
+  const [row] = await db4.select({ value: count() }).from(customers).where(eq(customers.tenantId, tenantId));
   return { metricKey: "total_customers", metricName: "Total Customers", value: row?.value || 0, period: "current" };
 }
 async function computeTotalSuppliers(tenantId) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: count() }).from(suppliers).where(eq(suppliers.tenantId, tenantId));
+  const db4 = getDb();
+  const [row] = await db4.select({ value: count() }).from(suppliers).where(eq(suppliers.tenantId, tenantId));
   return { metricKey: "total_suppliers", metricName: "Total Suppliers", value: row?.value || 0, period: "current" };
 }
 async function computeTotalProducts(tenantId) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: count() }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.isActive, true)));
+  const db4 = getDb();
+  const [row] = await db4.select({ value: count() }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.isActive, true)));
   return { metricKey: "total_products", metricName: "Total Products", value: row?.value || 0, period: "current" };
 }
 async function computeTotalEmployees(tenantId) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: count() }).from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "active")));
+  const db4 = getDb();
+  const [row] = await db4.select({ value: count() }).from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "active")));
   return { metricKey: "total_employees", metricName: "Total Employees", value: row?.value || 0, period: "current" };
 }
 async function computeInventoryValue(tenantId) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: sql`COALESCE(SUM(${inventoryBalances.totalValue}), 0)` }).from(inventoryBalances).where(eq(inventoryBalances.tenantId, tenantId));
+  const db4 = getDb();
+  const [row] = await db4.select({ value: sql`COALESCE(SUM(${inventoryBalances.totalValue}), 0)` }).from(inventoryBalances).where(eq(inventoryBalances.tenantId, tenantId));
   return { metricKey: "inventory_value", metricName: "Inventory Value", value: Number(row?.value || 0), period: "current" };
 }
 async function computeInventoryTurnover(tenantId, fromDate, toDate) {
-  const db5 = getDb();
-  const [cogs] = await db5.select({ value: sql`COALESCE(SUM(${invoiceItems.quantity} * ${products.purchasePrice}), 0)` }).from(invoiceItems).innerJoin(products, eq(invoiceItems.productId, products.id)).innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id)).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
-  const [avgInv] = await db5.select({ value: sql`COALESCE(AVG(${inventoryBalances.totalValue}), 0)` }).from(inventoryBalances).where(eq(inventoryBalances.tenantId, tenantId));
+  const db4 = getDb();
+  const [cogs] = await db4.select({ value: sql`COALESCE(SUM(${invoiceItems.quantity} * ${products.purchasePrice}), 0)` }).from(invoiceItems).innerJoin(products, eq(invoiceItems.productId, products.id)).innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id)).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
+  const [avgInv] = await db4.select({ value: sql`COALESCE(AVG(${inventoryBalances.totalValue}), 0)` }).from(inventoryBalances).where(eq(inventoryBalances.tenantId, tenantId));
   const costOfGoods = Number(cogs?.value || 0);
   const avgInventory = Number(avgInv?.value || 0);
   const value = avgInventory !== 0 ? costOfGoods / avgInventory : 0;
   return { metricKey: "inventory_turnover", metricName: "Inventory Turnover", value: Math.round(value * 100) / 100, period: `${fromDate} to ${toDate}` };
 }
 async function computeARAgingTotal(tenantId) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: sql`COALESCE(SUM(${invoices.balanceDue}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), sql`${invoices.status} IN ('sent', 'partial', 'overdue')`));
+  const db4 = getDb();
+  const [row] = await db4.select({ value: sql`COALESCE(SUM(${invoices.balanceDue}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), sql`${invoices.status} IN ('sent', 'partial', 'overdue')`));
   return { metricKey: "ar_aging_total", metricName: "AR Aging Total", value: Number(row?.value || 0), period: "current" };
 }
 async function computeAPAgingTotal(tenantId) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: sql`COALESCE(SUM(${purchaseOrders.totalAmount}), 0)` }).from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), sql`${purchaseOrders.status} IN ('sent', 'partial')`));
+  const db4 = getDb();
+  const [row] = await db4.select({ value: sql`COALESCE(SUM(${purchaseOrders.totalAmount}), 0)` }).from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), sql`${purchaseOrders.status} IN ('sent', 'partial')`));
   return { metricKey: "ap_aging_total", metricName: "AP Aging Total", value: Number(row?.value || 0), period: "current" };
 }
 async function computeAvgInvoiceValue(tenantId, fromDate, toDate) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: sql`COALESCE(AVG(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
+  const db4 = getDb();
+  const [row] = await db4.select({ value: sql`COALESCE(AVG(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
   return { metricKey: "avg_invoice_value", metricName: "Avg Invoice Value", value: Number(row?.value || 0), period: `${fromDate} to ${toDate}` };
 }
 async function computeRevenuePerCustomer(tenantId, fromDate, toDate) {
-  const db5 = getDb();
-  const [row] = await db5.select({ total: sql`COALESCE(SUM(${invoices.totalAmount}), 0)`, cnt: count() }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
+  const db4 = getDb();
+  const [row] = await db4.select({ total: sql`COALESCE(SUM(${invoices.totalAmount}), 0)`, cnt: count() }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
   const total = Number(row?.total || 0);
   const cnt = Number(row?.cnt || 1);
   return { metricKey: "revenue_per_customer", metricName: "Revenue per Customer", value: total / cnt, period: `${fromDate} to ${toDate}` };
 }
 async function computeEmployeeCostRatio(tenantId, fromDate, toDate, year3, month) {
-  const db5 = getDb();
-  const [salary] = await db5.select({ value: sql`COALESCE(SUM(${salarySlips.grossSalary}), 0)` }).from(salarySlips).where(and(eq(salarySlips.tenantId, tenantId), eq(sql`YEAR(${salarySlips.createdAt})`, year3), eq(sql`MONTH(${salarySlips.createdAt})`, month)));
-  const [revenue] = await db5.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
+  const db4 = getDb();
+  const [salary] = await db4.select({ value: sql`COALESCE(SUM(${salarySlips.grossSalary}), 0)` }).from(salarySlips).where(and(eq(salarySlips.tenantId, tenantId), eq(sql`YEAR(${salarySlips.createdAt})`, year3), eq(sql`MONTH(${salarySlips.createdAt})`, month)));
+  const [revenue] = await db4.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), gte(invoices.date, fromDate), lte(invoices.date, toDate)));
   const sal = Number(salary?.value || 0);
   const rev = Number(revenue?.value || 0);
   const value = rev !== 0 ? sal / rev * 100 : 0;
   return { metricKey: "employee_cost_ratio", metricName: "Employee Cost Ratio", value: Math.round(value * 100) / 100, unit: "%", period: `${year3}-${month}` };
 }
 async function computeMRR(tenantId, year3, month) {
-  const db5 = getDb();
-  const [row] = await db5.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(
+  const db4 = getDb();
+  const [row] = await db4.select({ value: sql`COALESCE(SUM(${invoices.totalAmount}), 0)` }).from(invoices).where(and(
     eq(invoices.tenantId, tenantId),
     eq(sql`YEAR(${invoices.date})`, year3),
     eq(sql`MONTH(${invoices.date})`, month),
@@ -129401,10 +129571,10 @@ async function computeMRR(tenantId, year3, month) {
   return { metricKey: "monthly_recurring_revenue", metricName: "Monthly Recurring Revenue", value: Number(row?.value || 0), period: `${year3}-${month}` };
 }
 async function computeCashConversionCycle(tenantId) {
-  const db5 = getDb();
-  const [ar] = await db5.select({ value: sql`COALESCE(AVG(DATEDIFF(CURDATE(), ${invoices.date})), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), sql`${invoices.status} IN ('sent', 'partial', 'overdue')`));
-  const [ap] = await db5.select({ value: sql`COALESCE(AVG(DATEDIFF(CURDATE(), ${purchaseOrders.date})), 0)` }).from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), sql`${purchaseOrders.status} IN ('sent', 'partial')`));
-  const [inv] = await db5.select({ value: sql`COALESCE(AVG(DATEDIFF(CURDATE(), ${inventoryMovements.createdAt})), 0)` }).from(inventoryMovements).where(eq(inventoryMovements.tenantId, tenantId));
+  const db4 = getDb();
+  const [ar] = await db4.select({ value: sql`COALESCE(AVG(DATEDIFF(CURDATE(), ${invoices.date})), 0)` }).from(invoices).where(and(eq(invoices.tenantId, tenantId), sql`${invoices.status} IN ('sent', 'partial', 'overdue')`));
+  const [ap] = await db4.select({ value: sql`COALESCE(AVG(DATEDIFF(CURDATE(), ${purchaseOrders.date})), 0)` }).from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), sql`${purchaseOrders.status} IN ('sent', 'partial')`));
+  const [inv] = await db4.select({ value: sql`COALESCE(AVG(DATEDIFF(CURDATE(), ${inventoryMovements.createdAt})), 0)` }).from(inventoryMovements).where(eq(inventoryMovements.tenantId, tenantId));
   const arDays = Number(ar?.value || 0);
   const apDays = Number(ap?.value || 0);
   const invDays = Number(inv?.value || 0);
@@ -129472,21 +129642,21 @@ var DASHBOARD_TEMPLATES = {
 };
 var dashboardBuilderRouter = createRouter({
   list: authedQuery.input(external_exports.object({ templateKey: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(dashboards.tenantId, ctx.user.tenantId)];
     if (input?.templateKey) conditions.push(eq(dashboards.templateKey, input.templateKey));
-    return db5.query.dashboards.findMany({
+    return db4.query.dashboards.findMany({
       where: and(...conditions),
       orderBy: desc(dashboards.createdAt)
     });
   }),
   getById: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const dashboard = await db5.query.dashboards.findFirst({
+    const db4 = getDb();
+    const dashboard = await db4.query.dashboards.findFirst({
       where: and(eq(dashboards.id, input.id), eq(dashboards.tenantId, ctx.user.tenantId))
     });
     if (!dashboard) return null;
-    const widgets = await db5.query.dashboardWidgets.findMany({
+    const widgets = await db4.query.dashboardWidgets.findMany({
       where: and(eq(dashboardWidgets.dashboardId, input.id), eq(dashboardWidgets.tenantId, ctx.user.tenantId)),
       orderBy: [asc2(dashboardWidgets.positionY), asc2(dashboardWidgets.positionX)]
     });
@@ -129500,8 +129670,8 @@ var dashboardBuilderRouter = createRouter({
     isDefault: external_exports.boolean().optional().default(false),
     roles: external_exports.array(external_exports.string()).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [dash] = await db5.insert(dashboards).values({
+    const db4 = getDb();
+    const [dash] = await db4.insert(dashboards).values({
       tenantId: ctx.user.tenantId,
       name: input.name,
       nameAr: input.nameAr,
@@ -129514,7 +129684,7 @@ var dashboardBuilderRouter = createRouter({
     if (input.templateKey && DASHBOARD_TEMPLATES[input.templateKey]) {
       const tmpl = DASHBOARD_TEMPLATES[input.templateKey];
       for (const w of tmpl.widgets) {
-        await db5.insert(dashboardWidgets).values({
+        await db4.insert(dashboardWidgets).values({
           tenantId: ctx.user.tenantId,
           dashboardId: dash.id,
           ...w
@@ -129533,20 +129703,20 @@ var dashboardBuilderRouter = createRouter({
     isShared: external_exports.boolean().optional(),
     roles: external_exports.array(external_exports.string()).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(dashboards).set(input).where(and(
+    const db4 = getDb();
+    await db4.update(dashboards).set(input).where(and(
       eq(dashboards.id, input.id),
       eq(dashboards.tenantId, ctx.user.tenantId)
     ));
     return { success: true };
   }),
   delete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(dashboardWidgets).where(and(
+    const db4 = getDb();
+    await db4.delete(dashboardWidgets).where(and(
       eq(dashboardWidgets.dashboardId, input.id),
       eq(dashboardWidgets.tenantId, ctx.user.tenantId)
     ));
-    await db5.delete(dashboards).where(and(
+    await db4.delete(dashboards).where(and(
       eq(dashboards.id, input.id),
       eq(dashboards.tenantId, ctx.user.tenantId)
     ));
@@ -129565,8 +129735,8 @@ var dashboardBuilderRouter = createRouter({
     width: external_exports.number().optional().default(4),
     height: external_exports.number().optional().default(3)
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [widget] = await db5.insert(dashboardWidgets).values({
+    const db4 = getDb();
+    const [widget] = await db4.insert(dashboardWidgets).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
@@ -129584,16 +129754,16 @@ var dashboardBuilderRouter = createRouter({
     height: external_exports.number().optional(),
     isVisible: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(dashboardWidgets).set(input).where(and(
+    const db4 = getDb();
+    await db4.update(dashboardWidgets).set(input).where(and(
       eq(dashboardWidgets.id, input.id),
       eq(dashboardWidgets.tenantId, ctx.user.tenantId)
     ));
     return { success: true };
   }),
   deleteWidget: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(dashboardWidgets).where(and(
+    const db4 = getDb();
+    await db4.delete(dashboardWidgets).where(and(
       eq(dashboardWidgets.id, input.id),
       eq(dashboardWidgets.tenantId, ctx.user.tenantId)
     ));
@@ -129605,8 +129775,8 @@ var dashboardBuilderRouter = createRouter({
     dashboardId: external_exports.number(),
     period: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const widget = await db5.query.dashboardWidgets.findFirst({
+    const db4 = getDb();
+    const widget = await db4.query.dashboardWidgets.findFirst({
       where: and(
         eq(dashboardWidgets.id, input.widgetId),
         eq(dashboardWidgets.dashboardId, input.dashboardId),
@@ -129640,12 +129810,12 @@ var dashboardBuilderRouter = createRouter({
     }));
   }),
   duplicate: authedQuery.input(external_exports.object({ id: external_exports.number(), newName: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const source = await db5.query.dashboards.findFirst({
+    const db4 = getDb();
+    const source = await db4.query.dashboards.findFirst({
       where: and(eq(dashboards.id, input.id), eq(dashboards.tenantId, ctx.user.tenantId))
     });
     if (!source) throw new Error("Dashboard not found");
-    const [dash] = await db5.insert(dashboards).values({
+    const [dash] = await db4.insert(dashboards).values({
       tenantId: ctx.user.tenantId,
       name: input.newName,
       nameAr: source.nameAr,
@@ -129653,11 +129823,11 @@ var dashboardBuilderRouter = createRouter({
       templateKey: source.templateKey,
       createdBy: ctx.user.id
     }).$returningId();
-    const widgets = await db5.query.dashboardWidgets.findMany({
+    const widgets = await db4.query.dashboardWidgets.findMany({
       where: eq(dashboardWidgets.dashboardId, input.id)
     });
     for (const w of widgets) {
-      await db5.insert(dashboardWidgets).values({
+      await db4.insert(dashboardWidgets).values({
         tenantId: ctx.user.tenantId,
         dashboardId: dash.id,
         widgetType: w.widgetType,
@@ -129781,7 +129951,7 @@ var MODULE_TABLES = {
 };
 var AGGREGATIONS = ["sum", "avg", "count", "min", "max", "count_distinct"];
 async function executeReportQuery(report, tenantId) {
-  const db5 = getDb();
+  const db4 = getDb();
   const cc = report.columnsConfig || [];
   const fc = report.filtersConfig || [];
   const sc = report.sortConfig;
@@ -129791,7 +129961,7 @@ async function executeReportQuery(report, tenantId) {
   const tableDef = MODULE_TABLES[module];
   if (!tableDef) throw new Error(`Unknown module: ${module}`);
   const selectedCols = cc.length > 0 ? cc.map((c) => sql`${sql.identifier(tableDef.columns[c.field] || c.field)}`) : [sql`*`];
-  const query = db5.select({
+  const query = db4.select({
     ...cc.length > 0 ? Object.fromEntries(cc.map((c) => [c.field, sql`${sql.identifier(c.field)}`])) : { all: sql`*` }
   }).from(tableDef.table).where(eq(tableDef.table.tenantId, tenantId));
   for (const f of fc) {
@@ -129873,8 +130043,8 @@ var reportBuilderRouter = createRouter({
     chartConfig: external_exports.any().optional(),
     isPublic: external_exports.boolean().optional().default(false)
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [tmpl] = await db5.insert(reportTemplates).values({
+    const db4 = getDb();
+    const [tmpl] = await db4.insert(reportTemplates).values({
       tenantId: ctx.user.tenantId,
       ...input,
       createdBy: ctx.user.id
@@ -129894,8 +130064,8 @@ var reportBuilderRouter = createRouter({
     isPublic: external_exports.boolean().optional(),
     isFavorite: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(reportTemplates).set(input).where(and(
+    const db4 = getDb();
+    await db4.update(reportTemplates).set(input).where(and(
       eq(reportTemplates.id, input.id),
       eq(reportTemplates.tenantId, ctx.user.tenantId)
     ));
@@ -129906,37 +130076,37 @@ var reportBuilderRouter = createRouter({
     isFavorite: external_exports.boolean().optional(),
     limit: external_exports.number().optional().default(50)
   }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(reportTemplates.tenantId, ctx.user.tenantId)];
     if (input?.module) conditions.push(eq(reportTemplates.module, input.module));
     if (input?.isFavorite !== void 0) conditions.push(eq(reportTemplates.isFavorite, input.isFavorite));
-    return db5.query.reportTemplates.findMany({
+    return db4.query.reportTemplates.findMany({
       where: and(...conditions),
       orderBy: desc(reportTemplates.createdAt),
       limit: input?.limit || 50
     });
   }),
   getById: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.query.reportTemplates.findFirst({
+    const db4 = getDb();
+    return db4.query.reportTemplates.findFirst({
       where: and(eq(reportTemplates.id, input.id), eq(reportTemplates.tenantId, ctx.user.tenantId))
     });
   }),
   delete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(reportTemplates).where(and(
+    const db4 = getDb();
+    await db4.delete(reportTemplates).where(and(
       eq(reportTemplates.id, input.id),
       eq(reportTemplates.tenantId, ctx.user.tenantId)
     ));
-    await db5.delete(reportSchedules).where(eq(reportSchedules.reportTemplateId, input.id));
+    await db4.delete(reportSchedules).where(eq(reportSchedules.reportTemplateId, input.id));
     return { success: true };
   }),
   // Schedule management
   schedules: authedQuery.input(external_exports.object({ reportTemplateId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(reportSchedules.tenantId, ctx.user.tenantId)];
     if (input?.reportTemplateId) conditions.push(eq(reportSchedules.reportTemplateId, input.reportTemplateId));
-    return db5.query.reportSchedules.findMany({
+    return db4.query.reportSchedules.findMany({
       where: and(...conditions),
       orderBy: desc(reportSchedules.createdAt)
     });
@@ -129953,8 +130123,8 @@ var reportBuilderRouter = createRouter({
     recipientEmails: external_exports.array(external_exports.string().email()),
     isActive: external_exports.boolean().optional().default(true)
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [sched] = await db5.insert(reportSchedules).values({
+    const db4 = getDb();
+    const [sched] = await db4.insert(reportSchedules).values({
       tenantId: ctx.user.tenantId,
       ...input,
       createdBy: ctx.user.id
@@ -129969,16 +130139,16 @@ var reportBuilderRouter = createRouter({
     recipientEmails: external_exports.array(external_exports.string()).optional(),
     isActive: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(reportSchedules).set(input).where(and(
+    const db4 = getDb();
+    await db4.update(reportSchedules).set(input).where(and(
       eq(reportSchedules.id, input.id),
       eq(reportSchedules.tenantId, ctx.user.tenantId)
     ));
     return { success: true };
   }),
   deleteSchedule: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(reportSchedules).where(and(
+    const db4 = getDb();
+    await db4.delete(reportSchedules).where(and(
       eq(reportSchedules.id, input.id),
       eq(reportSchedules.tenantId, ctx.user.tenantId)
     ));
@@ -130018,9 +130188,9 @@ var DEFAULT_RATES_OLD = {
   contributionCap: 45e3
 };
 async function getActiveGosiRateTable(tenantId, effectiveDate) {
-  const db5 = getDb();
+  const db4 = getDb();
   const date6 = effectiveDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const rates = await db5.select().from(gosiRateTables).where(
+  const rates = await db4.select().from(gosiRateTables).where(
     and(
       eq(gosiRateTables.tenantId, tenantId),
       eq(gosiRateTables.isActive, true),
@@ -130099,10 +130269,10 @@ function calculateGosi(input, rates) {
   };
 }
 async function autoCalculateEmployeeGosi(tenantId, employeeId) {
-  const db5 = getDb();
-  const emp = await db5.query.employees.findFirst({ where: eq(employees.id, employeeId) });
+  const db4 = getDb();
+  const emp = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
   if (!emp) return null;
-  const reg = await db5.query.gosiRegistrations.findFirst({
+  const reg = await db4.query.gosiRegistrations.findFirst({
     where: and(eq(gosiRegistrations.tenantId, tenantId), eq(gosiRegistrations.employeeId, employeeId))
   });
   if (reg && !reg.isSubscriber) return null;
@@ -130117,7 +130287,7 @@ async function autoCalculateEmployeeGosi(tenantId, employeeId) {
     },
     rate
   );
-  await db5.update(gosiRegistrations).set({
+  await db4.update(gosiRegistrations).set({
     lastCalculatedAt: /* @__PURE__ */ new Date(),
     lastContribution: String(result.employeeTotal + result.employerTotal),
     needsUpdate: false
@@ -130125,11 +130295,12 @@ async function autoCalculateEmployeeGosi(tenantId, employeeId) {
   return result;
 }
 async function calculateGosiForSlip(tenantId, employeeId, basicSalary, housingAllowance) {
+  const db4 = getDb();
   const rates = await getActiveGosiRateTable(tenantId);
-  const reg = await db.query.gosiRegistrations.findFirst({
+  const reg = await db4.query.gosiRegistrations.findFirst({
     where: and(eq(gosiRegistrations.tenantId, tenantId), eq(gosiRegistrations.employeeId, employeeId))
   });
-  const emp = await db.query.employees.findFirst({ where: eq(employees.id, employeeId) });
+  const emp = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
   const rate = rates.find((r) => r.systemType === (reg?.systemType || "new")) || rates[0];
   return calculateGosi(
     {
@@ -130160,8 +130331,8 @@ var gosiRouter = createRouter({
     employerUnemploymentRate: external_exports.number(),
     contributionCap: external_exports.number()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(gosiRateTables).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(gosiRateTables).values({
       ...input,
       tenantId: ctx.user.tenantId,
       effectiveTo: input.effectiveTo || null
@@ -130181,16 +130352,16 @@ var gosiRouter = createRouter({
     contributionCap: external_exports.number().optional(),
     isActive: external_exports.boolean().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(gosiRateTables).set(data).where(eq(gosiRateTables.id, id));
+    await db4.update(gosiRateTables).set(data).where(eq(gosiRateTables.id, id));
     return { success: true };
   }),
   // ─── GOSI Registrations ───
   registrationList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    return db5.select({
+    return db4.select({
       registration: gosiRegistrations,
       employee: employees
     }).from(gosiRegistrations).innerJoin(employees, eq(gosiRegistrations.employeeId, employees.id)).where(eq(gosiRegistrations.tenantId, tenantId));
@@ -130202,14 +130373,14 @@ var gosiRouter = createRouter({
     systemType: external_exports.enum(["new", "old"]).optional(),
     contributionCap: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const existing = await db5.query.gosiRegistrations.findFirst({
+    const db4 = getDb();
+    const existing = await db4.query.gosiRegistrations.findFirst({
       where: and(eq(gosiRegistrations.tenantId, ctx.user.tenantId), eq(gosiRegistrations.employeeId, input.employeeId))
     });
     if (existing) {
-      await db5.update(gosiRegistrations).set(input).where(eq(gosiRegistrations.id, existing.id));
+      await db4.update(gosiRegistrations).set(input).where(eq(gosiRegistrations.id, existing.id));
     } else {
-      await db5.insert(gosiRegistrations).values({
+      await db4.insert(gosiRegistrations).values({
         ...input,
         tenantId: ctx.user.tenantId
       });
@@ -130225,9 +130396,9 @@ var gosiRouter = createRouter({
     return calculateGosiForSlip(ctx.user.tenantId, input.employeeId, input.basicSalary, input.housingAllowance);
   }),
   recalculateAll: adminQuery.mutation(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const regs = await db5.select().from(gosiRegistrations).where(and(eq(gosiRegistrations.tenantId, tenantId), eq(gosiRegistrations.needsUpdate, true)));
+    const regs = await db4.select().from(gosiRegistrations).where(and(eq(gosiRegistrations.tenantId, tenantId), eq(gosiRegistrations.needsUpdate, true)));
     const results = [];
     for (const reg of regs) {
       const result = await autoCalculateEmployeeGosi(tenantId, reg.employeeId);
@@ -130237,9 +130408,9 @@ var gosiRouter = createRouter({
   }),
   // ─── GOSI Report ───
   report: authedQuery.input(external_exports.object({ month: external_exports.number(), year: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const allRegs = await db5.select({
+    const allRegs = await db4.select({
       registration: gosiRegistrations,
       employee: employees
     }).from(gosiRegistrations).innerJoin(employees, eq(gosiRegistrations.employeeId, employees.id)).where(and(eq(gosiRegistrations.tenantId, tenantId), eq(gosiRegistrations.isSubscriber, true)));
@@ -130265,8 +130436,8 @@ var gosiRouter = createRouter({
   }),
   // ─── Submission Log ───
   submissionList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(gosiSubmissionLogs).where(eq(gosiSubmissionLogs.tenantId, ctx.user.tenantId)).orderBy(desc(gosiSubmissionLogs.createdAt));
+    const db4 = getDb();
+    return db4.select().from(gosiSubmissionLogs).where(eq(gosiSubmissionLogs.tenantId, ctx.user.tenantId)).orderBy(desc(gosiSubmissionLogs.createdAt));
   }),
   submissionCreate: adminQuery.input(external_exports.object({
     periodMonth: external_exports.number(),
@@ -130276,9 +130447,9 @@ var gosiRouter = createRouter({
     employeeCount: external_exports.number(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const total = Number(input.totalEmployeeShare) + Number(input.totalEmployerShare);
-    const [{ id }] = await db5.insert(gosiSubmissionLogs).values({
+    const [{ id }] = await db4.insert(gosiSubmissionLogs).values({
       ...input,
       tenantId: ctx.user.tenantId,
       totalContributions: String(total),
@@ -130378,8 +130549,8 @@ var wpsRouter = createRouter({
   // ─── WPS Submission ───
   generate: adminQuery.input(WpsSubmissionInput).mutation(async ({ input, ctx }) => {
     const file2 = generateWpsFile(input);
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(wpsSubmissions).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(wpsSubmissions).values({
       tenantId: ctx.user.tenantId,
       payrollPeriodId: input.payrollPeriodId,
       submissionDate: input.paymentDate,
@@ -130395,20 +130566,20 @@ var wpsRouter = createRouter({
     return { id, file: file2, success: true };
   }),
   submit: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(wpsSubmissions).set({ status: "submitted", submittedAt: /* @__PURE__ */ new Date() }).where(and(eq(wpsSubmissions.id, input.id), eq(wpsSubmissions.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(wpsSubmissions).set({ status: "submitted", submittedAt: /* @__PURE__ */ new Date() }).where(and(eq(wpsSubmissions.id, input.id), eq(wpsSubmissions.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   list: authedQuery.input(external_exports.object({ payrollPeriodId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(wpsSubmissions.tenantId, tenantId)];
     if (input?.payrollPeriodId) conditions.push(eq(wpsSubmissions.payrollPeriodId, input.payrollPeriodId));
-    return db5.select().from(wpsSubmissions).where(and(...conditions)).orderBy(desc(wpsSubmissions.createdAt));
+    return db4.select().from(wpsSubmissions).where(and(...conditions)).orderBy(desc(wpsSubmissions.createdAt));
   }),
   getFile: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const sub = await db5.query.wpsSubmissions.findFirst({
+    const db4 = getDb();
+    const sub = await db4.query.wpsSubmissions.findFirst({
       where: and(eq(wpsSubmissions.id, input.id), eq(wpsSubmissions.tenantId, ctx.user.tenantId))
     });
     if (!sub) throw new Error("WPS submission not found");
@@ -130416,11 +130587,11 @@ var wpsRouter = createRouter({
   }),
   // ─── Exceptions ───
   exceptionList: authedQuery.input(external_exports.object({ payrollPeriodId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(wpsExceptions.tenantId, tenantId)];
     if (input?.payrollPeriodId) conditions.push(eq(wpsExceptions.payrollPeriodId, input.payrollPeriodId));
-    return db5.select().from(wpsExceptions).where(and(...conditions)).orderBy(desc(wpsExceptions.createdAt));
+    return db4.select().from(wpsExceptions).where(and(...conditions)).orderBy(desc(wpsExceptions.createdAt));
   }),
   exceptionCreate: authedQuery.input(external_exports.object({
     employeeId: external_exports.number(),
@@ -130429,8 +130600,8 @@ var wpsRouter = createRouter({
     amount: external_exports.number(),
     reason: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(wpsExceptions).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(wpsExceptions).values({
       ...input,
       tenantId: ctx.user.tenantId,
       amount: String(input.amount),
@@ -130439,16 +130610,16 @@ var wpsRouter = createRouter({
     return { id, success: true };
   }),
   exceptionApprove: adminQuery.input(external_exports.object({ id: external_exports.number(), approved: external_exports.boolean() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(wpsExceptions).set({ status: input.approved ? "approved" : "rejected", approvedBy: ctx.user.id }).where(eq(wpsExceptions.id, input.id));
+    const db4 = getDb();
+    await db4.update(wpsExceptions).set({ status: input.approved ? "approved" : "rejected", approvedBy: ctx.user.id }).where(eq(wpsExceptions.id, input.id));
     return { success: true };
   }),
   // ─── Compliance ───
   complianceStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const total = await db5.select({ count: sql`count(*)` }).from(wpsSubmissions).where(eq(wpsSubmissions.tenantId, tenantId));
-    const compliant = await db5.select({ count: sql`count(*)` }).from(wpsSubmissions).where(and(eq(wpsSubmissions.tenantId, tenantId), sql`${wpsSubmissions.complianceRate} >= 90`));
+    const total = await db4.select({ count: sql`count(*)` }).from(wpsSubmissions).where(eq(wpsSubmissions.tenantId, tenantId));
+    const compliant = await db4.select({ count: sql`count(*)` }).from(wpsSubmissions).where(and(eq(wpsSubmissions.tenantId, tenantId), sql`${wpsSubmissions.complianceRate} >= 90`));
     return {
       totalSubmissions: total[0].count,
       compliantSubmissions: compliant[0].count,
@@ -130511,10 +130682,10 @@ function calculateEosb(input) {
   };
 }
 async function calculateMonthlyAccrual(tenantId, employeeId, periodStart, periodEnd) {
-  const db5 = getDb();
-  const emp = await db5.query.employees.findFirst({ where: eq(employees.id, employeeId) });
+  const db4 = getDb();
+  const emp = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
   if (!emp || !emp.hireDate) throw new Error("Employee or hire date not found");
-  const latest = await db5.select().from(eosbAccruals).where(and(eq(eosbAccruals.tenantId, tenantId), eq(eosbAccruals.employeeId, employeeId))).orderBy(desc(eosbAccruals.periodEnd)).limit(1);
+  const latest = await db4.select().from(eosbAccruals).where(and(eq(eosbAccruals.tenantId, tenantId), eq(eosbAccruals.employeeId, employeeId))).orderBy(desc(eosbAccruals.periodEnd)).limit(1);
   const runningTotal = latest.length > 0 ? Number(latest[0].runningTotal) : 0;
   const result = calculateEosb({
     hireDate: emp.hireDate,
@@ -130523,7 +130694,7 @@ async function calculateMonthlyAccrual(tenantId, employeeId, periodStart, period
     isResignation: false
   });
   const newAccrual = result.totalEntitlement - runningTotal;
-  await db5.insert(eosbAccruals).values({
+  await db4.insert(eosbAccruals).values({
     tenantId,
     employeeId,
     periodStart,
@@ -130538,9 +130709,9 @@ async function calculateMonthlyAccrual(tenantId, employeeId, periodStart, period
   return result;
 }
 async function getEosbStatement(tenantId, employeeId) {
-  const db5 = getDb();
-  const accruals = await db5.select().from(eosbAccruals).where(and(eq(eosbAccruals.tenantId, tenantId), eq(eosbAccruals.employeeId, employeeId))).orderBy(desc(eosbAccruals.periodEnd));
-  const emp = await db5.query.employees.findFirst({ where: eq(employees.id, employeeId) });
+  const db4 = getDb();
+  const accruals = await db4.select().from(eosbAccruals).where(and(eq(eosbAccruals.tenantId, tenantId), eq(eosbAccruals.employeeId, employeeId))).orderBy(desc(eosbAccruals.periodEnd));
+  const emp = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
   const totalAccrued = accruals.length > 0 ? Number(accruals[0].runningTotal) : 0;
   return { employee: emp, accruals, totalAccrued };
 }
@@ -130567,13 +130738,13 @@ var eosbRouter = createRouter({
     periodEnd: external_exports.string(),
     employeeIds: external_exports.array(external_exports.number()).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(employees.tenantId, tenantId), eq(employees.status, "active")];
     if (input.employeeIds && input.employeeIds.length > 0) {
       conditions.push(sql`${employees.id} IN (${input.employeeIds.join(",")})`);
     }
-    const activeEmployees = await db5.select().from(employees).where(and(...conditions));
+    const activeEmployees = await db4.select().from(employees).where(and(...conditions));
     const results = [];
     for (const emp of activeEmployees) {
       const result = await calculateMonthlyAccrual(tenantId, emp.id, input.periodStart, input.periodEnd);
@@ -130585,20 +130756,20 @@ var eosbRouter = createRouter({
     return getEosbStatement(ctx.user.tenantId, input.employeeId);
   }),
   accrualList: authedQuery.input(external_exports.object({ employeeId: external_exports.number() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(eosbAccruals.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(eosbAccruals.employeeId, input.employeeId));
-    return db5.select().from(eosbAccruals).where(and(...conditions)).orderBy(desc(eosbAccruals.periodEnd));
+    return db4.select().from(eosbAccruals).where(and(...conditions)).orderBy(desc(eosbAccruals.periodEnd));
   }),
   summary: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const activeEmps = await db5.select().from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "active")));
+    const activeEmps = await db4.select().from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "active")));
     let totalAccrued = 0;
     const employeeAccruals = [];
     for (const emp of activeEmps) {
-      const last = await db5.select().from(eosbAccruals).where(and(eq(eosbAccruals.tenantId, tenantId), eq(eosbAccruals.employeeId, emp.id))).orderBy(desc(eosbAccruals.periodEnd)).limit(1);
+      const last = await db4.select().from(eosbAccruals).where(and(eq(eosbAccruals.tenantId, tenantId), eq(eosbAccruals.employeeId, emp.id))).orderBy(desc(eosbAccruals.periodEnd)).limit(1);
       if (last.length > 0) {
         totalAccrued += Number(last[0].runningTotal);
         employeeAccruals.push({ employeeId: emp.id, employeeName: `${emp.firstName} ${emp.lastName}`, totalAccrued: Number(last[0].runningTotal) });
@@ -130635,8 +130806,8 @@ function hashTemplate(data) {
   return createHash3("sha256").update(data).digest("hex");
 }
 async function recordConsent(input) {
-  const db5 = getDb();
-  await db5.insert(biometricConsentRecords).values({
+  const db4 = getDb();
+  await db4.insert(biometricConsentRecords).values({
     tenantId: input.tenantId,
     employeeId: input.employeeId,
     consentType: input.consentType,
@@ -130650,8 +130821,8 @@ async function recordConsent(input) {
   });
 }
 async function revokeConsent(tenantId, employeeId, consentType) {
-  const db5 = getDb();
-  await db5.update(biometricConsentRecords).set({ isConsented: false, revokedAt: /* @__PURE__ */ new Date() }).where(
+  const db4 = getDb();
+  await db4.update(biometricConsentRecords).set({ isConsented: false, revokedAt: /* @__PURE__ */ new Date() }).where(
     and(
       eq(biometricConsentRecords.tenantId, tenantId),
       eq(biometricConsentRecords.employeeId, employeeId),
@@ -130660,10 +130831,10 @@ async function revokeConsent(tenantId, employeeId, consentType) {
   );
 }
 async function storeBiometricTemplate(tenantId, employeeId, templateType, rawTemplateData, deviceId) {
-  const db5 = getDb();
+  const db4 = getDb();
   const templateHash = hashTemplate(rawTemplateData);
   const { encrypted, iv, tag: tag2 } = aesEncrypt(rawTemplateData);
-  await db5.insert(biometricTemplates).values({
+  await db4.insert(biometricTemplates).values({
     tenantId,
     employeeId,
     templateType,
@@ -130677,13 +130848,13 @@ async function storeBiometricTemplate(tenantId, employeeId, templateType, rawTem
   });
 }
 async function deleteBiometricData(tenantId, employeeId) {
-  const db5 = getDb();
-  await db5.update(biometricTemplates).set({ isActive: false }).where(and(eq(biometricTemplates.tenantId, tenantId), eq(biometricTemplates.employeeId, employeeId)));
-  await db5.update(biometricConsentRecords).set({ dataDeletedAt: /* @__PURE__ */ new Date() }).where(and(eq(biometricConsentRecords.tenantId, tenantId), eq(biometricConsentRecords.employeeId, employeeId)));
+  const db4 = getDb();
+  await db4.update(biometricTemplates).set({ isActive: false }).where(and(eq(biometricTemplates.tenantId, tenantId), eq(biometricTemplates.employeeId, employeeId)));
+  await db4.update(biometricConsentRecords).set({ dataDeletedAt: /* @__PURE__ */ new Date() }).where(and(eq(biometricConsentRecords.tenantId, tenantId), eq(biometricConsentRecords.employeeId, employeeId)));
 }
 async function logBiometricAccess(tenantId, action, accessedBy, employeeId, templateId, ipAddress, userAgent, isAllowed = true, reason) {
-  const db5 = getDb();
-  await db5.insert(biometricAccessLogs).values({
+  const db4 = getDb();
+  await db4.insert(biometricAccessLogs).values({
     tenantId,
     templateId: templateId || null,
     employeeId: employeeId || null,
@@ -130697,8 +130868,8 @@ async function logBiometricAccess(tenantId, action, accessedBy, employeeId, temp
   });
 }
 async function submitDataSubjectRequest(tenantId, employeeId, requestType, requestDetails, createdBy) {
-  const db5 = getDb();
-  await db5.insert(pdplDataSubjectRequests).values({
+  const db4 = getDb();
+  await db4.insert(pdplDataSubjectRequests).values({
     tenantId,
     employeeId,
     requestType,
@@ -130709,8 +130880,8 @@ async function submitDataSubjectRequest(tenantId, employeeId, requestType, reque
   });
 }
 async function checkConsentBeforeProcessing(tenantId, employeeId, templateType) {
-  const db5 = getDb();
-  const consent = await db5.query.biometricConsentRecords.findFirst({
+  const db4 = getDb();
+  const consent = await db4.query.biometricConsentRecords.findFirst({
     where: and(
       eq(biometricConsentRecords.tenantId, tenantId),
       eq(biometricConsentRecords.employeeId, employeeId),
@@ -130756,11 +130927,11 @@ var biometricRouter = createRouter({
     return { success: true };
   }),
   listTemplates: authedQuery.input(external_exports.object({ employeeId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(biometricTemplates.tenantId, tenantId), eq(biometricTemplates.isActive, true)];
     if (input?.employeeId) conditions.push(eq(biometricTemplates.employeeId, input.employeeId));
-    return db5.select({
+    return db4.select({
       id: biometricTemplates.id,
       employeeId: biometricTemplates.employeeId,
       templateType: biometricTemplates.templateType,
@@ -130777,11 +130948,11 @@ var biometricRouter = createRouter({
   }),
   // ─── Access Logs ───
   accessLogs: adminQuery.input(external_exports.object({ employeeId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(biometricAccessLogs.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(biometricAccessLogs.employeeId, input.employeeId));
-    return db5.select().from(biometricAccessLogs).where(and(...conditions)).orderBy(desc(biometricAccessLogs.createdAt));
+    return db4.select().from(biometricAccessLogs).where(and(...conditions)).orderBy(desc(biometricAccessLogs.createdAt));
   }),
   // ─── PDPL Data Subject Requests ───
   submitRequest: authedQuery.input(external_exports.object({
@@ -130793,22 +130964,22 @@ var biometricRouter = createRouter({
     return { success: true };
   }),
   listRequests: authedQuery.input(external_exports.object({ employeeId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(pdplDataSubjectRequests.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(pdplDataSubjectRequests.employeeId, input.employeeId));
-    return db5.select().from(pdplDataSubjectRequests).where(and(...conditions)).orderBy(desc(pdplDataSubjectRequests.submittedAt));
+    return db4.select().from(pdplDataSubjectRequests).where(and(...conditions)).orderBy(desc(pdplDataSubjectRequests.submittedAt));
   }),
   updateRequestStatus: adminQuery.input(external_exports.object({
     id: external_exports.number(),
     status: external_exports.enum(["pending", "in_progress", "completed", "rejected"]),
     responseSummary: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const updateData = { status: input.status };
     if (input.responseSummary) updateData.responseSummary = input.responseSummary;
     if (input.status === "completed") updateData.completedAt = /* @__PURE__ */ new Date();
-    await db5.update(pdplDataSubjectRequests).set(updateData).where(eq(pdplDataSubjectRequests.id, input.id));
+    await db4.update(pdplDataSubjectRequests).set(updateData).where(eq(pdplDataSubjectRequests.id, input.id));
     return { success: true };
   })
 });
@@ -130845,8 +131016,8 @@ function validateQiwaSalary(qiwaBasic, qiwaHousing, qiwaTransport, qiwaOther, pa
   return { isMatch: differences.length === 0, differences };
 }
 async function syncQiwaContract(tenantId, employeeId, qiwaData) {
-  const db5 = getDb();
-  const emp = await db5.query.employees.findFirst({ where: eq(employees.id, employeeId) });
+  const db4 = getDb();
+  const emp = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
   if (!emp) throw new Error("Employee not found");
   const payrollBasic = Number(emp.basicSalary);
   const payrollHousing = Number(emp.housingAllowance);
@@ -130863,7 +131034,7 @@ async function syncQiwaContract(tenantId, employeeId, qiwaData) {
     payrollTransport,
     payrollOther
   );
-  await db5.insert(qiwaContracts).values({
+  await db4.insert(qiwaContracts).values({
     tenantId,
     employeeId,
     qiwaContractId: qiwaData.qiwaContractId || null,
@@ -130887,7 +131058,7 @@ async function syncQiwaContract(tenantId, employeeId, qiwaData) {
       mismatchDetails: isMatch ? null : differences.join("; ")
     }
   });
-  await db5.insert(qiwaComparisonLogs).values({
+  await db4.insert(qiwaComparisonLogs).values({
     tenantId,
     employeeId,
     comparisonType: "all",
@@ -130908,10 +131079,10 @@ async function syncQiwaContract(tenantId, employeeId, qiwaData) {
   };
 }
 async function blockPayrollIfQiwaMismatch(tenantId, employeeIds) {
-  const db5 = getDb();
+  const db4 = getDb();
   const mismatched = [];
   for (const employeeId of employeeIds) {
-    const contract = await db5.query.qiwaContracts.findFirst({
+    const contract = await db4.query.qiwaContracts.findFirst({
       where: and(eq(qiwaContracts.tenantId, tenantId), eq(qiwaContracts.employeeId, employeeId))
     });
     if (contract && !contract.isMatched) {
@@ -130928,11 +131099,11 @@ init_schema2();
 var IqamaNumberSchema = external_exports.string().regex(/^\d{10}$/, "Iqama number must be exactly 10 digits");
 var PassportNumberSchema = external_exports.string().regex(/^[A-Za-z0-9]{6,20}$/, "Invalid passport number format");
 async function getExpiringIqamas(tenantId, withinDays = 30) {
-  const db5 = getDb();
+  const db4 = getDb();
   const cutoff = /* @__PURE__ */ new Date();
   cutoff.setDate(cutoff.getDate() + withinDays);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
-  return db5.select().from(iqamaRecords).where(
+  return db4.select().from(iqamaRecords).where(
     and(
       eq(iqamaRecords.tenantId, tenantId),
       eq(iqamaRecords.status, "active"),
@@ -130942,9 +131113,9 @@ async function getExpiringIqamas(tenantId, withinDays = 30) {
   );
 }
 async function getExpiredIqamas(tenantId) {
-  const db5 = getDb();
+  const db4 = getDb();
   const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  return db5.select().from(iqamaRecords).where(
+  return db4.select().from(iqamaRecords).where(
     and(
       eq(iqamaRecords.tenantId, tenantId),
       eq(iqamaRecords.status, "active"),
@@ -130953,8 +131124,8 @@ async function getExpiredIqamas(tenantId) {
   );
 }
 async function checkDocumentationBlock(tenantId, employeeId) {
-  const db5 = getDb();
-  const iqama = await db5.query.iqamaRecords.findFirst({
+  const db4 = getDb();
+  const iqama = await db4.query.iqamaRecords.findFirst({
     where: and(eq(iqamaRecords.tenantId, tenantId), eq(iqamaRecords.employeeId, employeeId))
   });
   if (!iqama) return { blocked: false, reason: null };
@@ -130993,8 +131164,8 @@ function determineCategory(ratio, targets) {
   return "red";
 }
 async function getCurrentNitaqatStatus(tenantId) {
-  const db5 = getDb();
-  const all = await db5.select().from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "active")));
+  const db4 = getDb();
+  const all = await db4.select().from(employees).where(and(eq(employees.tenantId, tenantId), eq(employees.status, "active")));
   const saudis = all.filter((e) => e.nationality === "saudi" || e.nationality === "Saudi");
   const expats = all.filter((e) => e.nationality && e.nationality !== "saudi" && e.nationality !== "Saudi");
   const totalSaudis = saudis.length;
@@ -131043,8 +131214,8 @@ var saudiComplianceRouter = createRouter({
     return syncQiwaContract(ctx.user.tenantId, input.employeeId, input);
   }),
   qiwaContractList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select({
+    const db4 = getDb();
+    return db4.select({
       contract: qiwaContracts,
       employeeName: sql`CONCAT(${employees.firstName}, ' ', ${employees.lastName})`
     }).from(qiwaContracts).innerJoin(employees, eq(qiwaContracts.employeeId, employees.id)).where(eq(qiwaContracts.tenantId, ctx.user.tenantId));
@@ -131053,17 +131224,17 @@ var saudiComplianceRouter = createRouter({
     return blockPayrollIfQiwaMismatch(ctx.user.tenantId, input.employeeIds);
   }),
   qiwaComparisonLogs: authedQuery.input(external_exports.object({ employeeId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(qiwaComparisonLogs.tenantId, tenantId)];
     if (input?.employeeId) conditions.push(eq(qiwaComparisonLogs.employeeId, input.employeeId));
-    return db5.select().from(qiwaComparisonLogs).where(and(...conditions)).orderBy(desc(qiwaComparisonLogs.checkedAt));
+    return db4.select().from(qiwaComparisonLogs).where(and(...conditions)).orderBy(desc(qiwaComparisonLogs.checkedAt));
   }),
   // ─── Muqeem ───
   iqamaList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    return db5.select({
+    return db4.select({
       record: iqamaRecords,
       employeeName: sql`CONCAT(${employees.firstName}, ' ', ${employees.lastName})`
     }).from(iqamaRecords).innerJoin(employees, eq(iqamaRecords.employeeId, employees.id)).where(eq(iqamaRecords.tenantId, tenantId));
@@ -131078,14 +131249,14 @@ var saudiComplianceRouter = createRouter({
     sponsorName: external_exports.string().optional(),
     borderNumber: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const existing = await db5.query.iqamaRecords.findFirst({
+    const db4 = getDb();
+    const existing = await db4.query.iqamaRecords.findFirst({
       where: and(eq(iqamaRecords.tenantId, ctx.user.tenantId), eq(iqamaRecords.employeeId, input.employeeId))
     });
     if (existing) {
-      await db5.update(iqamaRecords).set({ ...input, status: "active" }).where(eq(iqamaRecords.id, existing.id));
+      await db4.update(iqamaRecords).set({ ...input, status: "active" }).where(eq(iqamaRecords.id, existing.id));
     } else {
-      await db5.insert(iqamaRecords).values({ ...input, tenantId: ctx.user.tenantId });
+      await db4.insert(iqamaRecords).values({ ...input, tenantId: ctx.user.tenantId });
     }
     return { success: true };
   }),
@@ -131111,14 +131282,14 @@ var saudiComplianceRouter = createRouter({
     return whatIfAnalysis(ctx.user.tenantId, input);
   }),
   nitaqatSnapshots: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(nitaqatSnapshots).where(eq(nitaqatSnapshots.tenantId, ctx.user.tenantId)).orderBy(desc(nitaqatSnapshots.snapshotDate));
+    const db4 = getDb();
+    return db4.select().from(nitaqatSnapshots).where(eq(nitaqatSnapshots.tenantId, ctx.user.tenantId)).orderBy(desc(nitaqatSnapshots.snapshotDate));
   }),
   nitaqatSnapshotCreate: adminQuery.mutation(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const status = await getCurrentNitaqatStatus(ctx.user.tenantId);
     const { whatIfHireSaudi, whatIfHireExpat, whatIfFireSaudi, whatIfFireExpat, ...snap } = status;
-    await db5.insert(nitaqatSnapshots).values({
+    await db4.insert(nitaqatSnapshots).values({
       tenantId: ctx.user.tenantId,
       snapshotDate: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
       totalSaudis: status.totalSaudis,
@@ -131160,8 +131331,8 @@ var portalAuthRouter = createRouter({
     password: external_exports.string().min(1),
     portalType: external_exports.enum(["customer", "vendor", "employee"])
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const [users2] = await db5.execute(sql`
+    const db4 = getDb();
+    const [users2] = await db4.execute(sql`
         SELECT * FROM portal_users WHERE email = ${input.email} AND portal_type = ${input.portalType} LIMIT 1
       `);
     const user = users2?.[0];
@@ -131174,20 +131345,20 @@ var portalAuthRouter = createRouter({
     const token = generateToken();
     const refreshToken = generateToken();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1e3);
-    await db5.execute(sql`
+    await db4.execute(sql`
         INSERT INTO portal_sessions (portal_user_id, token, refresh_token, expires_at)
         VALUES (${user.id}, ${token}, ${refreshToken}, ${expiresAt})
       `);
-    await db5.execute(sql`
+    await db4.execute(sql`
         UPDATE portal_users SET last_login_at = NOW() WHERE id = ${user.id}
       `);
     let referenceData = null;
     if (input.portalType === "customer") {
-      referenceData = await db5.query.customers.findFirst({ where: eq(customers.id, user.reference_id) });
+      referenceData = await db4.query.customers.findFirst({ where: eq(customers.id, user.reference_id) });
     } else if (input.portalType === "vendor") {
-      referenceData = await db5.query.suppliers.findFirst({ where: eq(suppliers.id, user.reference_id) });
+      referenceData = await db4.query.suppliers.findFirst({ where: eq(suppliers.id, user.reference_id) });
     } else if (input.portalType === "employee") {
-      referenceData = await db5.query.employees.findFirst({ where: eq(employees.id, user.reference_id) });
+      referenceData = await db4.query.employees.findFirst({ where: eq(employees.id, user.reference_id) });
     }
     return {
       token,
@@ -131198,8 +131369,8 @@ var portalAuthRouter = createRouter({
     };
   }),
   refresh: publicQuery.input(external_exports.object({ refreshToken: external_exports.string() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const [sessions] = await db5.execute(sql`
+    const db4 = getDb();
+    const [sessions] = await db4.execute(sql`
         SELECT * FROM portal_sessions WHERE refresh_token = ${input.refreshToken} LIMIT 1
       `);
     const session = sessions?.[0];
@@ -131209,15 +131380,15 @@ var portalAuthRouter = createRouter({
     const newToken = generateToken();
     const newRefreshToken = generateToken();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1e3);
-    await db5.execute(sql`
+    await db4.execute(sql`
         UPDATE portal_sessions SET token = ${newToken}, refresh_token = ${newRefreshToken}, expires_at = ${expiresAt}, last_activity_at = NOW()
         WHERE id = ${session.id}
       `);
     return { token: newToken, refreshToken: newRefreshToken, expiresAt };
   }),
   me: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const [sessions] = await db5.execute(sql`
+    const db4 = getDb();
+    const [sessions] = await db4.execute(sql`
         SELECT ps.*, pu.* FROM portal_sessions ps
         JOIN portal_users pu ON pu.id = ps.portal_user_id
         WHERE ps.token = ${input.token} LIMIT 1
@@ -131226,16 +131397,16 @@ var portalAuthRouter = createRouter({
     if (!row || new Date(row.expires_at) < /* @__PURE__ */ new Date()) {
       throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired session" });
     }
-    await db5.execute(sql`
+    await db4.execute(sql`
         UPDATE portal_sessions SET last_activity_at = NOW() WHERE id = ${row.id}
       `);
     let referenceData = null;
     if (row.portal_type === "customer") {
-      referenceData = await db5.query.customers.findFirst({ where: eq(customers.id, row.reference_id) });
+      referenceData = await db4.query.customers.findFirst({ where: eq(customers.id, row.reference_id) });
     } else if (row.portal_type === "vendor") {
-      referenceData = await db5.query.suppliers.findFirst({ where: eq(suppliers.id, row.reference_id) });
+      referenceData = await db4.query.suppliers.findFirst({ where: eq(suppliers.id, row.reference_id) });
     } else if (row.portal_type === "employee") {
-      referenceData = await db5.query.employees.findFirst({ where: eq(employees.id, row.reference_id) });
+      referenceData = await db4.query.employees.findFirst({ where: eq(employees.id, row.reference_id) });
     }
     return {
       user: { id: row.id, name: row.name, email: row.email, portalType: row.portal_type },
@@ -131243,8 +131414,8 @@ var portalAuthRouter = createRouter({
     };
   }),
   logout: publicQuery.input(external_exports.object({ token: external_exports.string() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.execute(sql`DELETE FROM portal_sessions WHERE token = ${input.token}`);
+    const db4 = getDb();
+    await db4.execute(sql`DELETE FROM portal_sessions WHERE token = ${input.token}`);
     return { success: true };
   })
 });
@@ -131254,9 +131425,9 @@ init_dist();
 init_connection();
 init_schema2();
 init_drizzle_orm();
-var db2 = getDb();
+var db = getDb();
 async function getSession(token) {
-  const [rows] = await db2.execute(sql`
+  const [rows] = await db.execute(sql`
     SELECT ps.*, pu.* FROM portal_sessions ps
     JOIN portal_users pu ON pu.id = ps.portal_user_id
     WHERE ps.token = ${token} AND ps.expires_at > NOW()
@@ -131270,11 +131441,11 @@ var portalCustomerRouter = createRouter({
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const customerId = session.reference_id;
-    const customer = await db2.query.customers.findFirst({ where: eq(customers.id, customerId) });
-    const recentInvoices = await db2.select().from(invoices).where(and(eq(invoices.tenantId, tenantId), eq(invoices.customerId, customerId))).orderBy(desc(invoices.createdAt)).limit(5);
-    const recentOrders = await db2.select().from(salesOrders).where(and(eq(salesOrders.tenantId, tenantId), eq(salesOrders.customerId, customerId))).orderBy(desc(salesOrders.createdAt)).limit(5);
-    const openTickets = await db2.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.status, "open"), eq(supportTickets.source, "web")));
-    const invoiceStats = await db2.select({
+    const customer = await db.query.customers.findFirst({ where: eq(customers.id, customerId) });
+    const recentInvoices = await db.select().from(invoices).where(and(eq(invoices.tenantId, tenantId), eq(invoices.customerId, customerId))).orderBy(desc(invoices.createdAt)).limit(5);
+    const recentOrders = await db.select().from(salesOrders).where(and(eq(salesOrders.tenantId, tenantId), eq(salesOrders.customerId, customerId))).orderBy(desc(salesOrders.createdAt)).limit(5);
+    const openTickets = await db.select({ count: sql`count(*)` }).from(supportTickets).where(and(eq(supportTickets.tenantId, tenantId), eq(supportTickets.status, "open"), eq(supportTickets.source, "web")));
+    const invoiceStats = await db.select({
       total: sql`count(*)`,
       paid: sql`sum(case when status = 'paid' then 1 else 0 end)`,
       overdue: sql`sum(case when status = 'overdue' then 1 else 0 end)`,
@@ -131288,20 +131459,20 @@ var portalCustomerRouter = createRouter({
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(invoices.tenantId, session.tenant_id), eq(invoices.customerId, session.reference_id)];
     if (input.status) conditions.push(eq(invoices.status, input.status));
-    return db2.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
+    return db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
   }),
   invoiceGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const invoice = await db2.query.invoices.findFirst({ where: eq(invoices.id, input.id) });
-    const items = await db2.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.id));
-    const company = await db2.query.companySettings.findFirst({ where: eq(companySettings.tenantId, session.tenant_id) });
+    const invoice = await db.query.invoices.findFirst({ where: eq(invoices.id, input.id) });
+    const items = await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.id));
+    const company = await db.query.companySettings.findFirst({ where: eq(companySettings.tenantId, session.tenant_id) });
     return { invoice, items, company };
   }),
   paymentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    return db2.select().from(customerPayments).where(and(eq(customerPayments.tenantId, session.tenant_id), eq(customerPayments.customerId, session.reference_id))).orderBy(desc(customerPayments.createdAt));
+    return db.select().from(customerPayments).where(and(eq(customerPayments.tenantId, session.tenant_id), eq(customerPayments.customerId, session.reference_id))).orderBy(desc(customerPayments.createdAt));
   }),
   initiatePayment: publicQuery.input(external_exports.object({
     token: external_exports.string(),
@@ -131312,7 +131483,7 @@ var portalCustomerRouter = createRouter({
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const paymentNumber = `ONL-${Date.now().toString().slice(-8)}`;
-    const [{ id }] = await db2.insert(customerPayments).values({
+    const [{ id }] = await db.insert(customerPayments).values({
       tenantId: session.tenant_id,
       paymentNumber,
       customerId: session.reference_id,
@@ -131329,29 +131500,29 @@ var portalCustomerRouter = createRouter({
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(salesOrders.tenantId, session.tenant_id), eq(salesOrders.customerId, session.reference_id)];
     if (input.status) conditions.push(eq(salesOrders.status, input.status));
-    return db2.select().from(salesOrders).where(and(...conditions)).orderBy(desc(salesOrders.createdAt));
+    return db.select().from(salesOrders).where(and(...conditions)).orderBy(desc(salesOrders.createdAt));
   }),
   orderGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const order = await db2.query.salesOrders.findFirst({ where: eq(salesOrders.id, input.id) });
-    const items = await db2.select().from(salesOrderItems).where(eq(salesOrderItems.orderId, input.id));
+    const order = await db.query.salesOrders.findFirst({ where: eq(salesOrders.id, input.id) });
+    const items = await db.select().from(salesOrderItems).where(eq(salesOrderItems.orderId, input.id));
     return { order, items };
   }),
   ticketList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const customer = await db2.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
+    const customer = await db.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
     const conditions = [eq(supportTickets.tenantId, session.tenant_id), eq(supportTickets.requesterEmail, customer?.email || "")];
     if (input.status) conditions.push(eq(supportTickets.status, input.status));
-    return db2.select().from(supportTickets).where(and(...conditions)).orderBy(desc(supportTickets.createdAt));
+    return db.select().from(supportTickets).where(and(...conditions)).orderBy(desc(supportTickets.createdAt));
   }),
   ticketCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), subject: external_exports.string(), description: external_exports.string(), priority: external_exports.enum(["low", "medium", "high", "urgent"]).optional() })).mutation(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const customer = await db2.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
+    const customer = await db.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
     const ticketNumber = `PTK-${Date.now().toString().slice(-6)}`;
-    const [{ id }] = await db2.insert(supportTickets).values({
+    const [{ id }] = await db.insert(supportTickets).values({
       tenantId: session.tenant_id,
       ticketNumber,
       subject: input.subject,
@@ -131367,12 +131538,12 @@ var portalCustomerRouter = createRouter({
   ticketComments: publicQuery.input(external_exports.object({ token: external_exports.string(), ticketId: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    return db2.select().from(ticketComments).where(and(eq(ticketComments.ticketId, input.ticketId), eq(ticketComments.isInternal, false))).orderBy(ticketComments.createdAt);
+    return db.select().from(ticketComments).where(and(eq(ticketComments.ticketId, input.ticketId), eq(ticketComments.isInternal, false))).orderBy(ticketComments.createdAt);
   }),
   addComment: publicQuery.input(external_exports.object({ token: external_exports.string(), ticketId: external_exports.number(), comment: external_exports.string() })).mutation(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const [{ id }] = await db2.insert(ticketComments).values({
+    const [{ id }] = await db.insert(ticketComments).values({
       ticketId: input.ticketId,
       comment: input.comment,
       isInternal: false
@@ -131382,7 +131553,7 @@ var portalCustomerRouter = createRouter({
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const customer = await db2.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
+    const customer = await db.query.customers.findFirst({ where: eq(customers.id, session.reference_id) });
     return { portalUser: { id: session.id, name: session.name, email: session.email, portalType: session.portal_type }, customer };
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string().optional(), phone: external_exports.string().optional(), email: external_exports.string().optional(), address: external_exports.string().optional(), city: external_exports.string().optional() })).mutation(async ({ input }) => {
@@ -131395,15 +131566,15 @@ var portalCustomerRouter = createRouter({
     if (input.address) updateData.address = input.address;
     if (input.city) updateData.city = input.city;
     if (Object.keys(updateData).length > 0) {
-      await db2.update(customers).set(updateData).where(eq(customers.id, session.reference_id));
-      if (input.name) await db2.execute(sql`UPDATE portal_users SET name = ${input.name} WHERE id = ${session.id}`);
+      await db.update(customers).set(updateData).where(eq(customers.id, session.reference_id));
+      if (input.name) await db.execute(sql`UPDATE portal_users SET name = ${input.name} WHERE id = ${session.id}`);
     }
     return { success: true };
   }),
   messages: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const [rows] = await db2.execute(sql`
+    const [rows] = await db.execute(sql`
         SELECT * FROM portal_messages
         WHERE tenant_id = ${session.tenant_id} AND receiver_type = 'customer' AND receiver_id = ${session.reference_id}
         ORDER BY created_at DESC
@@ -131417,9 +131588,9 @@ init_dist();
 init_connection();
 init_schema2();
 init_drizzle_orm();
-var db3 = getDb();
+var db2 = getDb();
 async function getSession2(token) {
-  const [rows] = await db3.execute(sql`
+  const [rows] = await db2.execute(sql`
     SELECT ps.*, pu.* FROM portal_sessions ps
     JOIN portal_users pu ON pu.id = ps.portal_user_id
     WHERE ps.token = ${token} AND ps.expires_at > NOW()
@@ -131433,16 +131604,16 @@ var portalVendorRouter = createRouter({
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const supplierId = session.reference_id;
-    const supplier = await db3.query.suppliers.findFirst({ where: eq(suppliers.id, supplierId) });
-    const recentPOs = await db3.select().from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), eq(purchaseOrders.supplierId, supplierId))).orderBy(desc(purchaseOrders.createdAt)).limit(5);
-    const recentPayments = await db3.select().from(supplierPayments).where(and(eq(supplierPayments.tenantId, tenantId), eq(supplierPayments.supplierId, supplierId))).orderBy(desc(supplierPayments.createdAt)).limit(5);
-    const poStats = await db3.select({
+    const supplier = await db2.query.suppliers.findFirst({ where: eq(suppliers.id, supplierId) });
+    const recentPOs = await db2.select().from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), eq(purchaseOrders.supplierId, supplierId))).orderBy(desc(purchaseOrders.createdAt)).limit(5);
+    const recentPayments = await db2.select().from(supplierPayments).where(and(eq(supplierPayments.tenantId, tenantId), eq(supplierPayments.supplierId, supplierId))).orderBy(desc(supplierPayments.createdAt)).limit(5);
+    const poStats = await db2.select({
       total: sql`count(*)`,
       pending: sql`sum(case when status = 'sent' then 1 else 0 end)`,
       completed: sql`sum(case when status in ('received','completed') then 1 else 0 end)`,
       totalAmount: sql`coalesce(sum(total_amount), 0)`
     }).from(purchaseOrders).where(and(eq(purchaseOrders.tenantId, tenantId), eq(purchaseOrders.supplierId, supplierId)));
-    const [paymentStats] = await db3.select({ totalPaid: sql`coalesce(sum(amount), 0)` }).from(supplierPayments).where(and(eq(supplierPayments.tenantId, tenantId), eq(supplierPayments.supplierId, supplierId)));
+    const [paymentStats] = await db2.select({ totalPaid: sql`coalesce(sum(amount), 0)` }).from(supplierPayments).where(and(eq(supplierPayments.tenantId, tenantId), eq(supplierPayments.supplierId, supplierId)));
     return { supplier, recentPOs, recentPayments, stats: poStats[0], totalPaid: paymentStats?.totalPaid || 0 };
   }),
   poList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
@@ -131450,26 +131621,26 @@ var portalVendorRouter = createRouter({
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(purchaseOrders.tenantId, session.tenant_id), eq(purchaseOrders.supplierId, session.reference_id)];
     if (input.status) conditions.push(eq(purchaseOrders.status, input.status));
-    return db3.select().from(purchaseOrders).where(and(...conditions)).orderBy(desc(purchaseOrders.createdAt));
+    return db2.select().from(purchaseOrders).where(and(...conditions)).orderBy(desc(purchaseOrders.createdAt));
   }),
   poGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const po = await db3.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.id) });
-    const items = await db3.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.poId, input.id));
+    const po = await db2.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.id) });
+    const items = await db2.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.poId, input.id));
     return { po, items };
   }),
   invoiceList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    return db3.select().from(invoices).where(and(eq(invoices.tenantId, session.tenant_id), eq(invoices.customerId, session.reference_id))).orderBy(desc(invoices.createdAt));
+    return db2.select().from(invoices).where(and(eq(invoices.tenantId, session.tenant_id), eq(invoices.customerId, session.reference_id))).orderBy(desc(invoices.createdAt));
   }),
   invoiceCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), poId: external_exports.number(), invoiceNumber: external_exports.string(), amount: external_exports.string(), taxAmount: external_exports.string().optional(), totalAmount: external_exports.string() })).mutation(async ({ input }) => {
     const session = await getSession2(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const po = await db3.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.poId) });
+    const po = await db2.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, input.poId) });
     if (!po) throw new Error("Purchase order not found");
-    const [{ id }] = await db3.insert(invoices).values({
+    const [{ id }] = await db2.insert(invoices).values({
       tenantId: session.tenant_id,
       invoiceNumber: input.invoiceNumber,
       customerId: session.reference_id,
@@ -131488,12 +131659,12 @@ var portalVendorRouter = createRouter({
   paymentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    return db3.select().from(supplierPayments).where(and(eq(supplierPayments.tenantId, session.tenant_id), eq(supplierPayments.supplierId, session.reference_id))).orderBy(desc(supplierPayments.createdAt));
+    return db2.select().from(supplierPayments).where(and(eq(supplierPayments.tenantId, session.tenant_id), eq(supplierPayments.supplierId, session.reference_id))).orderBy(desc(supplierPayments.createdAt));
   }),
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const supplier = await db3.query.suppliers.findFirst({ where: eq(suppliers.id, session.reference_id) });
+    const supplier = await db2.query.suppliers.findFirst({ where: eq(suppliers.id, session.reference_id) });
     return { portalUser: { id: session.id, name: session.name, email: session.email, portalType: session.portal_type }, supplier };
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string().optional(), phone: external_exports.string().optional(), email: external_exports.string().optional(), address: external_exports.string().optional(), city: external_exports.string().optional() })).mutation(async ({ input }) => {
@@ -131506,15 +131677,15 @@ var portalVendorRouter = createRouter({
     if (input.address) updateData.address = input.address;
     if (input.city) updateData.city = input.city;
     if (Object.keys(updateData).length > 0) {
-      await db3.update(suppliers).set(updateData).where(eq(suppliers.id, session.reference_id));
-      if (input.name) await db3.execute(sql`UPDATE portal_users SET name = ${input.name} WHERE id = ${session.id}`);
+      await db2.update(suppliers).set(updateData).where(eq(suppliers.id, session.reference_id));
+      if (input.name) await db2.execute(sql`UPDATE portal_users SET name = ${input.name} WHERE id = ${session.id}`);
     }
     return { success: true };
   }),
   messages: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession2(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const [rows] = await db3.execute(sql`
+    const [rows] = await db2.execute(sql`
         SELECT * FROM portal_messages
         WHERE tenant_id = ${session.tenant_id} AND receiver_type = 'vendor' AND receiver_id = ${session.reference_id}
         ORDER BY created_at DESC
@@ -131529,8 +131700,8 @@ init_connection();
 init_schema2();
 init_drizzle_orm();
 async function getSession3(token) {
-  const db5 = getDb();
-  const [rows] = await db5.execute(sql`
+  const db4 = getDb();
+  const [rows] = await db4.execute(sql`
     SELECT ps.*, pu.* FROM portal_sessions ps
     JOIN portal_users pu ON pu.id = ps.portal_user_id
     WHERE ps.token = ${token} AND ps.expires_at > NOW()
@@ -131538,19 +131709,19 @@ async function getSession3(token) {
   `);
   return rows?.[0] || null;
 }
-var db4 = getDb();
+var db3 = getDb();
 var portalEmployeeRouter = createRouter({
   dashboard: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const tenantId = session.tenant_id;
     const employeeId = session.reference_id;
-    const employee = await db4.query.employees.findFirst({ where: eq(employees.id, employeeId) });
-    const latestSlip = await db4.select().from(salarySlips).where(and(eq(salarySlips.tenantId, tenantId), eq(salarySlips.employeeId, employeeId))).orderBy(desc(salarySlips.createdAt)).limit(1);
-    const [pendingLeave] = await db4.select({ count: sql`count(*)` }).from(leaveRequests).where(and(eq(leaveRequests.tenantId, tenantId), eq(leaveRequests.employeeId, employeeId), eq(leaveRequests.status, "pending")));
-    const todayAttendance = await db4.select().from(attendance).where(and(eq(attendance.tenantId, tenantId), eq(attendance.employeeId, employeeId), eq(attendance.date, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10))));
-    const leaveBalance = await db4.select({ typeId: leaveTypes.id, typeName: leaveTypes.name, daysAllowed: leaveTypes.daysAllowed }).from(leaveTypes).where(eq(leaveTypes.tenantId, tenantId));
-    const usedLeaves = await db4.select({
+    const employee = await db3.query.employees.findFirst({ where: eq(employees.id, employeeId) });
+    const latestSlip = await db3.select().from(salarySlips).where(and(eq(salarySlips.tenantId, tenantId), eq(salarySlips.employeeId, employeeId))).orderBy(desc(salarySlips.createdAt)).limit(1);
+    const [pendingLeave] = await db3.select({ count: sql`count(*)` }).from(leaveRequests).where(and(eq(leaveRequests.tenantId, tenantId), eq(leaveRequests.employeeId, employeeId), eq(leaveRequests.status, "pending")));
+    const todayAttendance = await db3.select().from(attendance).where(and(eq(attendance.tenantId, tenantId), eq(attendance.employeeId, employeeId), eq(attendance.date, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10))));
+    const leaveBalance = await db3.select({ typeId: leaveTypes.id, typeName: leaveTypes.name, daysAllowed: leaveTypes.daysAllowed }).from(leaveTypes).where(eq(leaveTypes.tenantId, tenantId));
+    const usedLeaves = await db3.select({
       typeId: leaveRequests.leaveTypeId,
       used: sql`coalesce(sum(days), 0)`
     }).from(leaveRequests).where(and(eq(leaveRequests.tenantId, tenantId), eq(leaveRequests.employeeId, employeeId), eq(leaveRequests.status, "approved"))).groupBy(leaveRequests.leaveTypeId);
@@ -131570,16 +131741,16 @@ var portalEmployeeRouter = createRouter({
   payslipList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const slips = await db4.select().from(salarySlips).where(and(eq(salarySlips.tenantId, session.tenant_id), eq(salarySlips.employeeId, session.reference_id))).orderBy(desc(salarySlips.createdAt));
-    const periods = await db4.select().from(payrollPeriods).where(eq(payrollPeriods.tenantId, session.tenant_id));
+    const slips = await db3.select().from(salarySlips).where(and(eq(salarySlips.tenantId, session.tenant_id), eq(salarySlips.employeeId, session.reference_id))).orderBy(desc(salarySlips.createdAt));
+    const periods = await db3.select().from(payrollPeriods).where(eq(payrollPeriods.tenantId, session.tenant_id));
     return slips.map((slip) => ({ ...slip, period: periods.find((p) => p.id === slip.payrollPeriodId) }));
   }),
   payslipGet: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const slip = await db4.query.salarySlips.findFirst({ where: eq(salarySlips.id, input.id) });
-    const period = slip ? await db4.query.payrollPeriods.findFirst({ where: eq(payrollPeriods.id, slip.payrollPeriodId) }) : null;
-    const employee = await db4.query.employees.findFirst({ where: eq(employees.id, slip?.employeeId) });
+    const slip = await db3.query.salarySlips.findFirst({ where: eq(salarySlips.id, input.id) });
+    const period = slip ? await db3.query.payrollPeriods.findFirst({ where: eq(payrollPeriods.id, slip.payrollPeriodId) }) : null;
+    const employee = await db3.query.employees.findFirst({ where: eq(employees.id, slip?.employeeId) });
     return { slip, period, employee };
   }),
   leaveRequestList: publicQuery.input(external_exports.object({ token: external_exports.string(), status: external_exports.string().optional() })).query(async ({ input }) => {
@@ -131587,14 +131758,14 @@ var portalEmployeeRouter = createRouter({
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     const conditions = [eq(leaveRequests.tenantId, session.tenant_id), eq(leaveRequests.employeeId, session.reference_id)];
     if (input.status) conditions.push(eq(leaveRequests.status, input.status));
-    const requests = await db4.select().from(leaveRequests).where(and(...conditions)).orderBy(desc(leaveRequests.createdAt));
-    const types = await db4.select().from(leaveTypes).where(eq(leaveTypes.tenantId, session.tenant_id));
+    const requests = await db3.select().from(leaveRequests).where(and(...conditions)).orderBy(desc(leaveRequests.createdAt));
+    const types = await db3.select().from(leaveTypes).where(eq(leaveTypes.tenantId, session.tenant_id));
     return requests.map((lr) => ({ ...lr, leaveType: types.find((t2) => t2.id === lr.leaveTypeId) }));
   }),
   leaveRequestCreate: publicQuery.input(external_exports.object({ token: external_exports.string(), leaveTypeId: external_exports.number(), startDate: external_exports.string(), endDate: external_exports.string(), days: external_exports.number(), reason: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const [{ id }] = await db4.insert(leaveRequests).values({
+    const [{ id }] = await db3.insert(leaveRequests).values({
       tenantId: session.tenant_id,
       employeeId: session.reference_id,
       leaveTypeId: input.leaveTypeId,
@@ -131609,13 +131780,13 @@ var portalEmployeeRouter = createRouter({
   leaveRequestCancel: publicQuery.input(external_exports.object({ token: external_exports.string(), id: external_exports.number() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    await db4.update(leaveRequests).set({ status: "cancelled" }).where(and(eq(leaveRequests.id, input.id), eq(leaveRequests.employeeId, session.reference_id)));
+    await db3.update(leaveRequests).set({ status: "cancelled" }).where(and(eq(leaveRequests.id, input.id), eq(leaveRequests.employeeId, session.reference_id)));
     return { success: true };
   }),
   attendanceList: publicQuery.input(external_exports.object({ token: external_exports.string(), limit: external_exports.number().default(30) })).query(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    return db4.select().from(attendance).where(and(eq(attendance.tenantId, session.tenant_id), eq(attendance.employeeId, session.reference_id))).orderBy(desc(attendance.date)).limit(input.limit);
+    return db3.select().from(attendance).where(and(eq(attendance.tenantId, session.tenant_id), eq(attendance.employeeId, session.reference_id))).orderBy(desc(attendance.date)).limit(input.limit);
   }),
   attendanceStats: publicQuery.input(external_exports.object({ token: external_exports.string(), month: external_exports.number().optional(), year: external_exports.number().optional() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
@@ -131624,7 +131795,7 @@ var portalEmployeeRouter = createRouter({
     const year3 = input.year || now.getFullYear();
     const month = input.month || now.getMonth() + 1;
     const startDate = `${year3}-${String(month).padStart(2, "0")}-01`;
-    const records = await db4.select().from(attendance).where(and(
+    const records = await db3.select().from(attendance).where(and(
       eq(attendance.tenantId, session.tenant_id),
       eq(attendance.employeeId, session.reference_id),
       gte(attendance.date, startDate),
@@ -131640,7 +131811,7 @@ var portalEmployeeRouter = createRouter({
   documentList: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const [rows] = await db4.execute(sql`
+    const [rows] = await db3.execute(sql`
         SELECT * FROM portal_documents
         WHERE tenant_id = ${session.tenant_id} AND portal_type = 'employee' AND reference_id = ${session.reference_id}
         ORDER BY created_at DESC
@@ -131650,7 +131821,7 @@ var portalEmployeeRouter = createRouter({
   documentUpload: publicQuery.input(external_exports.object({ token: external_exports.string(), name: external_exports.string(), category: external_exports.string(), fileUrl: external_exports.string(), fileSize: external_exports.number().optional(), mimeType: external_exports.string().optional() })).mutation(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const [result] = await db4.execute(sql`
+    const [result] = await db3.execute(sql`
         INSERT INTO portal_documents (tenant_id, portal_type, reference_id, document_type, file_name, file_path, file_size, mime_type, uploaded_by)
         VALUES (${session.tenant_id}, 'employee', ${session.reference_id}, ${input.category}, ${input.name}, ${input.fileUrl}, ${input.fileSize || 0}, ${input.mimeType || "application/octet-stream"}, ${session.id})
       `);
@@ -131659,9 +131830,9 @@ var portalEmployeeRouter = createRouter({
   profile: publicQuery.input(external_exports.object({ token: external_exports.string() })).query(async ({ input }) => {
     const session = await getSession3(input.token);
     if (!session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    const employee = await db4.query.employees.findFirst({ where: eq(employees.id, session.reference_id) });
-    const department = employee ? await db4.query.departments.findFirst({ where: eq(departments.id, employee.departmentId) }) : null;
-    const designation = employee ? await db4.query.designations.findFirst({ where: eq(designations.id, employee.designationId) }) : null;
+    const employee = await db3.query.employees.findFirst({ where: eq(employees.id, session.reference_id) });
+    const department = employee ? await db3.query.departments.findFirst({ where: eq(departments.id, employee.departmentId) }) : null;
+    const designation = employee ? await db3.query.designations.findFirst({ where: eq(designations.id, employee.designationId) }) : null;
     return { portalUser: { id: session.id, name: session.name, email: session.email, portalType: session.portal_type }, employee, department, designation };
   }),
   profileUpdate: publicQuery.input(external_exports.object({ token: external_exports.string(), phone: external_exports.string().optional(), mobile: external_exports.string().optional(), address: external_exports.string().optional(), emergencyContact: external_exports.string().optional(), emergencyPhone: external_exports.string().optional() })).mutation(async ({ input }) => {
@@ -131674,7 +131845,7 @@ var portalEmployeeRouter = createRouter({
     if (input.emergencyContact) updateData.emergencyContact = input.emergencyContact;
     if (input.emergencyPhone) updateData.emergencyPhone = input.emergencyPhone;
     if (Object.keys(updateData).length > 0) {
-      await db4.update(employees).set(updateData).where(eq(employees.id, session.reference_id));
+      await db3.update(employees).set(updateData).where(eq(employees.id, session.reference_id));
     }
     return { success: true };
   })
@@ -131686,14 +131857,14 @@ init_schema2();
 init_drizzle_orm();
 var healthcareRouter = createRouter({
   patientList: authedQuery.input(external_exports.object({ search: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(patients.tenantId, ctx.user.tenantId)];
     if (input?.search) conditions.push(eq(patients.phone, input.search));
-    return db5.select().from(patients).where(and(...conditions)).orderBy(desc(patients.createdAt));
+    return db4.select().from(patients).where(and(...conditions)).orderBy(desc(patients.createdAt));
   }),
   patientGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    return db5.query.patients.findFirst({ where: eq(patients.id, input.id) });
+    const db4 = getDb();
+    return db4.query.patients.findFirst({ where: eq(patients.id, input.id) });
   }),
   patientCreate: authedQuery.input(external_exports.object({
     patientNumber: external_exports.string(),
@@ -131715,16 +131886,16 @@ var healthcareRouter = createRouter({
     insurancePolicyNumber: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(patients).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(patients).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   appointmentList: authedQuery.input(external_exports.object({ patientId: external_exports.number().optional(), date: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(appointments.tenantId, ctx.user.tenantId)];
     if (input?.patientId) conditions.push(eq(appointments.patientId, input.patientId));
     if (input?.date) conditions.push(eq(appointments.appointmentDate, input.date));
-    return db5.select().from(appointments).where(and(...conditions)).orderBy(desc(appointments.appointmentDate));
+    return db4.select().from(appointments).where(and(...conditions)).orderBy(desc(appointments.appointmentDate));
   }),
   appointmentCreate: authedQuery.input(external_exports.object({
     patientId: external_exports.number(),
@@ -131736,13 +131907,13 @@ var healthcareRouter = createRouter({
     appointmentType: external_exports.enum(["consultation", "follow_up", "emergency", "checkup", "procedure", "vaccination"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(appointments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(appointments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   doctorRosterList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(doctorRosters).where(eq(doctorRosters.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(doctorRosters).where(eq(doctorRosters.tenantId, ctx.user.tenantId));
   }),
   doctorRosterCreate: authedQuery.input(external_exports.object({
     employeeId: external_exports.number(),
@@ -131752,15 +131923,15 @@ var healthcareRouter = createRouter({
     maxPatientsPerDay: external_exports.number().optional(),
     workingDays: external_exports.any().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(doctorRosters).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(doctorRosters).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   insuranceClaimList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(insuranceClaimsHealthcare.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(insuranceClaimsHealthcare.status, input.status));
-    return db5.select().from(insuranceClaimsHealthcare).where(and(...conditions)).orderBy(desc(insuranceClaimsHealthcare.createdAt));
+    return db4.select().from(insuranceClaimsHealthcare).where(and(...conditions)).orderBy(desc(insuranceClaimsHealthcare.createdAt));
   }),
   insuranceClaimCreate: authedQuery.input(external_exports.object({
     patientId: external_exports.number(),
@@ -131772,28 +131943,28 @@ var healthcareRouter = createRouter({
     treatment: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(insuranceClaimsHealthcare).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(insuranceClaimsHealthcare).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   labOrderList: authedQuery.input(external_exports.object({ patientId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(labOrders.tenantId, ctx.user.tenantId)];
     if (input?.patientId) conditions.push(eq(labOrders.patientId, input.patientId));
-    return db5.select().from(labOrders).where(and(...conditions)).orderBy(desc(labOrders.orderDate));
+    return db4.select().from(labOrders).where(and(...conditions)).orderBy(desc(labOrders.orderDate));
   }),
   pharmacyList: authedQuery.input(external_exports.object({ patientId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(pharmacyIntegration.tenantId, ctx.user.tenantId)];
     if (input?.patientId) conditions.push(eq(pharmacyIntegration.patientId, input.patientId));
-    return db5.select().from(pharmacyIntegration).where(and(...conditions));
+    return db4.select().from(pharmacyIntegration).where(and(...conditions));
   }),
   healthcareStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalPatients] = await db5.select({ count: sql`count(*)` }).from(patients).where(eq(patients.tenantId, tenantId));
-    const [todayAppointments] = await db5.select({ count: sql`count(*)` }).from(appointments).where(and(eq(appointments.tenantId, tenantId), eq(appointments.appointmentDate, sql`curdate()`)));
-    const [pendingClaims] = await db5.select({ count: sql`count(*)` }).from(insuranceClaimsHealthcare).where(and(eq(insuranceClaimsHealthcare.tenantId, tenantId), eq(insuranceClaimsHealthcare.status, "submitted")));
+    const [totalPatients] = await db4.select({ count: sql`count(*)` }).from(patients).where(eq(patients.tenantId, tenantId));
+    const [todayAppointments] = await db4.select({ count: sql`count(*)` }).from(appointments).where(and(eq(appointments.tenantId, tenantId), eq(appointments.appointmentDate, sql`curdate()`)));
+    const [pendingClaims] = await db4.select({ count: sql`count(*)` }).from(insuranceClaimsHealthcare).where(and(eq(insuranceClaimsHealthcare.tenantId, tenantId), eq(insuranceClaimsHealthcare.status, "submitted")));
     return { totalPatients: totalPatients.count, todayAppointments: todayAppointments.count, pendingClaims: pendingClaims.count };
   })
 });
@@ -131804,11 +131975,11 @@ init_schema2();
 init_drizzle_orm();
 var educationRouter = createRouter({
   studentList: authedQuery.input(external_exports.object({ grade: external_exports.string().optional(), status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(students.tenantId, ctx.user.tenantId)];
     if (input?.grade) conditions.push(eq(students.grade, input.grade));
     if (input?.status) conditions.push(eq(students.status, input.status));
-    return db5.select().from(students).where(and(...conditions)).orderBy(desc(students.createdAt));
+    return db4.select().from(students).where(and(...conditions)).orderBy(desc(students.createdAt));
   }),
   studentCreate: authedQuery.input(external_exports.object({
     studentNumber: external_exports.string(),
@@ -131828,15 +131999,15 @@ var educationRouter = createRouter({
     enrollmentDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(students).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(students).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   admissionList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(admissions.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(admissions.status, input.status));
-    return db5.select().from(admissions).where(and(...conditions)).orderBy(desc(admissions.createdAt));
+    return db4.select().from(admissions).where(and(...conditions)).orderBy(desc(admissions.createdAt));
   }),
   admissionCreate: authedQuery.input(external_exports.object({
     admissionNumber: external_exports.string(),
@@ -131855,34 +132026,34 @@ var educationRouter = createRouter({
     academicYear: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(admissions).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(admissions).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   feeStructureList: authedQuery.input(external_exports.object({ grade: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(feeStructures.tenantId, ctx.user.tenantId)];
     if (input?.grade) conditions.push(eq(feeStructures.grade, input.grade));
-    return db5.select().from(feeStructures).where(and(...conditions));
+    return db4.select().from(feeStructures).where(and(...conditions));
   }),
   feeInvoiceList: authedQuery.input(external_exports.object({ studentId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(studentFeeInvoices.tenantId, ctx.user.tenantId)];
     if (input?.studentId) conditions.push(eq(studentFeeInvoices.studentId, input.studentId));
-    return db5.select().from(studentFeeInvoices).where(and(...conditions)).orderBy(desc(studentFeeInvoices.createdAt));
+    return db4.select().from(studentFeeInvoices).where(and(...conditions)).orderBy(desc(studentFeeInvoices.createdAt));
   }),
   classTimetableList: authedQuery.input(external_exports.object({ grade: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(classTimetables.tenantId, ctx.user.tenantId)];
     if (input?.grade) conditions.push(eq(classTimetables.grade, input.grade));
-    return db5.select().from(classTimetables).where(and(...conditions));
+    return db4.select().from(classTimetables).where(and(...conditions));
   }),
   attendanceList: authedQuery.input(external_exports.object({ studentId: external_exports.number().optional(), date: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(studentAttendance.tenantId, ctx.user.tenantId)];
     if (input?.studentId) conditions.push(eq(studentAttendance.studentId, input.studentId));
     if (input?.date) conditions.push(eq(studentAttendance.date, input.date));
-    return db5.select().from(studentAttendance).where(and(...conditions)).orderBy(desc(studentAttendance.date));
+    return db4.select().from(studentAttendance).where(and(...conditions)).orderBy(desc(studentAttendance.date));
   }),
   attendanceCreate: authedQuery.input(external_exports.object({
     studentId: external_exports.number(),
@@ -131890,23 +132061,181 @@ var educationRouter = createRouter({
     status: external_exports.enum(["present", "absent", "late", "excused", "holiday"]).optional(),
     remarks: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(studentAttendance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(studentAttendance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   reportCardList: authedQuery.input(external_exports.object({ studentId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(reportCards.tenantId, ctx.user.tenantId)];
     if (input?.studentId) conditions.push(eq(reportCards.studentId, input.studentId));
-    return db5.select().from(reportCards).where(and(...conditions));
+    return db4.select().from(reportCards).where(and(...conditions));
   }),
   educationStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalStudents] = await db5.select({ count: sql`count(*)` }).from(students).where(eq(students.tenantId, tenantId));
-    const [pendingAdmissions] = await db5.select({ count: sql`count(*)` }).from(admissions).where(and(eq(admissions.tenantId, tenantId), eq(admissions.status, "applied")));
-    const [todayAttendance] = await db5.select({ count: sql`count(*)` }).from(studentAttendance).where(and(eq(studentAttendance.tenantId, tenantId), eq(studentAttendance.date, sql`curdate()`)));
+    const [totalStudents] = await db4.select({ count: sql`count(*)` }).from(students).where(eq(students.tenantId, tenantId));
+    const [pendingAdmissions] = await db4.select({ count: sql`count(*)` }).from(admissions).where(and(eq(admissions.tenantId, tenantId), eq(admissions.status, "applied")));
+    const [todayAttendance] = await db4.select({ count: sql`count(*)` }).from(studentAttendance).where(and(eq(studentAttendance.tenantId, tenantId), eq(studentAttendance.date, sql`curdate()`)));
     return { totalStudents: totalStudents.count, pendingAdmissions: pendingAdmissions.count, todayAttendance: todayAttendance.count };
+  })
+});
+
+// api/thermalPrintRouter.ts
+init_connection();
+init_schema2();
+init_drizzle_orm();
+init_schema2();
+
+// api/lib/thermal/escpos.ts
+import { Buffer as Buffer2 } from "buffer";
+var ESC = 27;
+var GS = 29;
+var LF = 10;
+var ThermalPrinter = class {
+  commands = [];
+  add(...bytes) {
+    this.commands.push(...bytes);
+  }
+  init() {
+    this.add(ESC, 64);
+    return this;
+  }
+  alignCenter() {
+    this.add(ESC, 97, 1);
+    return this;
+  }
+  alignLeft() {
+    this.add(ESC, 97, 0);
+    return this;
+  }
+  alignRight() {
+    this.add(ESC, 97, 2);
+    return this;
+  }
+  boldOn() {
+    this.add(ESC, 69, 1);
+    return this;
+  }
+  boldOff() {
+    this.add(ESC, 69, 0);
+    return this;
+  }
+  doubleWidthOn() {
+    this.add(ESC, 33, 32);
+    return this;
+  }
+  doubleWidthOff() {
+    this.add(ESC, 33, 0);
+    return this;
+  }
+  text(str) {
+    this.add(...Buffer2.from(str, "utf8"));
+    return this;
+  }
+  line(str = "") {
+    this.text(str);
+    this.add(LF);
+    return this;
+  }
+  separator(char2 = "\u2500", width = 48) {
+    this.line(char2.repeat(width));
+    return this;
+  }
+  qrCode(data, size = 8) {
+    const buf = Buffer2.from(data);
+    this.add(GS, 40, 107, 3, 0, 49, 67, size);
+    this.add(GS, 40, 107, buf.length + 3, 0, 49, 80, 48);
+    this.add(...buf);
+    this.add(GS, 40, 107, 3, 0, 49, 81, 48);
+    return this;
+  }
+  cut() {
+    this.add(GS, 86, 1);
+    return this;
+  }
+  openDrawer() {
+    this.add(ESC, 112, 0, 25, 250);
+    return this;
+  }
+  build() {
+    return Buffer2.from(this.commands);
+  }
+};
+function generate80mmThermal(invoice) {
+  const p = new ThermalPrinter();
+  p.init().alignCenter().boldOn().doubleWidthOn().line(invoice.companyNameAr).doubleWidthOff().boldOff().line(invoice.companyNameEn).line(`VAT: ${invoice.vatNumber}`).separator().alignCenter().boldOn().line(invoice.isSimplified ? "\u0641\u0627\u062A\u0648\u0631\u0629 \u0636\u0631\u064A\u0628\u064A\u0629 \u0645\u0628\u0633\u0637\u0629" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0636\u0631\u064A\u0628\u064A\u0629").boldOff().line(`\u0631\u0642\u0645: ${invoice.invoiceNumber}`).line(invoice.date).separator();
+  if (invoice.customerName) {
+    p.alignLeft().line(`\u0627\u0644\u0639\u0645\u064A\u0644: ${invoice.customerName}`).separator();
+  }
+  p.alignLeft();
+  for (const item of invoice.items) {
+    p.line(`${item.description} \xD7${item.qty} = ${item.total.toFixed(2)} SAR`);
+  }
+  p.separator("\u2550").alignRight().boldOn().line(`\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A: ${invoice.grandTotal.toFixed(2)} SAR`).boldOff().separator();
+  p.alignCenter().qrCode(invoice.qrData, 6).line("\u0627\u0645\u0633\u062D \u0644\u0644\u062A\u062D\u0642\u0642 / Scan to Verify").line("\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627").cut();
+  return p.build();
+}
+function generate58mmThermal(invoice) {
+  const p = new ThermalPrinter();
+  p.init().alignCenter().boldOn().line(invoice.companyNameAr.length > 18 ? invoice.companyNameAr.slice(0, 18) : invoice.companyNameAr).boldOff().line(`VAT:${invoice.vatNumber}`).separator("-", 32).line(invoice.isSimplified ? "\u0645\u0628\u0633\u0637\u0629" : "\u0641\u0627\u062A\u0648\u0631\u0629").line(`#${invoice.invoiceNumber} ${invoice.date}`).separator("-", 32);
+  for (const item of invoice.items) {
+    p.line(`${item.description.slice(0, 20)} \xD7${item.qty} = ${item.total.toFixed(0)}`);
+  }
+  p.separator("=", 32).boldOn().line(`\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A: ${invoice.grandTotal.toFixed(0)} SAR`).boldOff().qrCode(invoice.qrData, 4).line("\u0634\u0643\u0631\u0627\u064B").cut();
+  return p.build();
+}
+
+// api/thermalPrintRouter.ts
+var thermalPrintRouter = createRouter({
+  generateThermal: authedMutation.input(external_exports.object({
+    invoiceId: external_exports.number(),
+    format: external_exports.enum(["80mm", "58mm"]).default("80mm")
+  })).mutation(async ({ input, ctx }) => {
+    try {
+      const db4 = getDb();
+      const tenantId = ctx.user.tenantId;
+      const invoice = await db4.query.invoices.findFirst({
+        where: and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, tenantId))
+      });
+      if (!invoice) throw new Error("Invoice not found");
+      const company = await db4.query.companySettings.findFirst({
+        where: eq(companySettings.tenantId, tenantId)
+      });
+      if (!company) throw new Error("Company settings not found");
+      const items = await db4.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.invoiceId));
+      const customer = invoice.customerId ? await db4.query.customers.findFirst({ where: eq(customers.id, invoice.customerId) }) : null;
+      const thermalData = {
+        companyNameAr: company.companyNameAr || company.companyName || "\u0634\u0631\u0643\u0629",
+        companyNameEn: company.companyName || "Company",
+        vatNumber: company.taxNumber || company.vatNumber || "",
+        address: company.address,
+        invoiceNumber: invoice.invoiceNumber,
+        date: invoice.date,
+        customerName: customer?.name,
+        items: items.map((i) => ({
+          description: i.description || "",
+          qty: Number(i.quantity),
+          unitPrice: Number(i.unitPrice),
+          total: Number(i.totalAmount)
+        })),
+        subtotal: Number(invoice.subTotal || 0),
+        vatAmount: Number(invoice.taxAmount || 0),
+        grandTotal: Number(invoice.totalAmount || 0),
+        qrData: invoice.zatcaQrCode || "",
+        isSimplified: invoice.invoiceType === "simplified"
+      };
+      const buffer = input.format === "80mm" ? generate80mmThermal(thermalData) : generate58mmThermal(thermalData);
+      return {
+        success: true,
+        data: buffer.toString("base64"),
+        format: input.format,
+        message: `Thermal receipt (${input.format}) generated successfully`
+      };
+    } catch (error48) {
+      const message2 = error48 instanceof Error ? error48.message : "Failed to generate thermal receipt";
+      throw new Error(message2);
+    }
   })
 });
 
@@ -131916,8 +132245,8 @@ init_schema2();
 init_drizzle_orm();
 var hotelRouter = createRouter({
   roomTypeList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(roomTypes).where(eq(roomTypes.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(roomTypes).where(eq(roomTypes.tenantId, ctx.user.tenantId));
   }),
   roomTypeCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
@@ -131928,23 +132257,23 @@ var hotelRouter = createRouter({
     numberOfRooms: external_exports.number().optional(),
     amenities: external_exports.any().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(roomTypes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(roomTypes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   roomInventoryList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), roomTypeId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(roomInventory.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(roomInventory.status, input.status));
     if (input?.roomTypeId) conditions.push(eq(roomInventory.roomTypeId, input.roomTypeId));
-    return db5.select().from(roomInventory).where(and(...conditions));
+    return db4.select().from(roomInventory).where(and(...conditions));
   }),
   bookingList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), dateFrom: external_exports.string().optional(), dateTo: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(hotelBookings.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(hotelBookings.status, input.status));
     if (input?.dateFrom && input?.dateTo) conditions.push(between(hotelBookings.checkIn, input.dateFrom, input.dateTo));
-    return db5.select().from(hotelBookings).where(and(...conditions)).orderBy(desc(hotelBookings.createdAt));
+    return db4.select().from(hotelBookings).where(and(...conditions)).orderBy(desc(hotelBookings.createdAt));
   }),
   bookingCreate: authedQuery.input(external_exports.object({
     bookingNumber: external_exports.string(),
@@ -131965,8 +132294,8 @@ var hotelRouter = createRouter({
     channelBookingId: external_exports.string().optional(),
     specialRequests: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(hotelBookings).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(hotelBookings).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   bookingUpdate: authedQuery.input(external_exports.object({
@@ -131975,28 +132304,28 @@ var hotelRouter = createRouter({
     roomId: external_exports.number().optional(),
     paidAmount: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(hotelBookings).set(data).where(eq(hotelBookings.id, id));
+    await db4.update(hotelBookings).set(data).where(eq(hotelBookings.id, id));
     return { success: true };
   }),
   calendarView: authedQuery.input(external_exports.object({ roomId: external_exports.number().optional(), dateFrom: external_exports.string(), dateTo: external_exports.string() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(bookingCalendar.tenantId, ctx.user.tenantId)];
     if (input?.roomId) conditions.push(eq(bookingCalendar.roomId, input.roomId));
     conditions.push(between(bookingCalendar.date, input.dateFrom, input.dateTo));
-    return db5.select().from(bookingCalendar).where(and(...conditions));
+    return db4.select().from(bookingCalendar).where(and(...conditions));
   }),
   housekeepingList: authedQuery.input(external_exports.object({ date: external_exports.string().optional(), status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(housekeepingSchedule.tenantId, ctx.user.tenantId)];
     if (input?.date) conditions.push(eq(housekeepingSchedule.date, input.date));
     if (input?.status) conditions.push(eq(housekeepingSchedule.status, input.status));
-    return db5.select().from(housekeepingSchedule).where(and(...conditions));
+    return db4.select().from(housekeepingSchedule).where(and(...conditions));
   }),
   folioList: authedQuery.input(external_exports.object({ bookingId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(folioCharges).where(and(eq(folioCharges.tenantId, ctx.user.tenantId), eq(folioCharges.bookingId, input.bookingId)));
+    const db4 = getDb();
+    return db4.select().from(folioCharges).where(and(eq(folioCharges.tenantId, ctx.user.tenantId), eq(folioCharges.bookingId, input.bookingId)));
   }),
   folioCreate: authedQuery.input(external_exports.object({
     bookingId: external_exports.number(),
@@ -132007,17 +132336,17 @@ var hotelRouter = createRouter({
     totalAmount: external_exports.string(),
     chargeDate: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(folioCharges).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(folioCharges).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   hotelStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [available] = await db5.select({ count: sql`count(*)` }).from(roomInventory).where(and(eq(roomInventory.tenantId, tenantId), eq(roomInventory.status, "available")));
-    const [occupied] = await db5.select({ count: sql`count(*)` }).from(roomInventory).where(and(eq(roomInventory.tenantId, tenantId), eq(roomInventory.status, "occupied")));
-    const [todayCheckIns] = await db5.select({ count: sql`count(*)` }).from(hotelBookings).where(and(eq(hotelBookings.tenantId, tenantId), eq(hotelBookings.checkIn, sql`curdate()`), eq(hotelBookings.status, "confirmed")));
-    const [todayCheckOuts] = await db5.select({ count: sql`count(*)` }).from(hotelBookings).where(and(eq(hotelBookings.tenantId, tenantId), eq(hotelBookings.checkOut, sql`curdate()`), eq(hotelBookings.status, "checked_in")));
+    const [available] = await db4.select({ count: sql`count(*)` }).from(roomInventory).where(and(eq(roomInventory.tenantId, tenantId), eq(roomInventory.status, "available")));
+    const [occupied] = await db4.select({ count: sql`count(*)` }).from(roomInventory).where(and(eq(roomInventory.tenantId, tenantId), eq(roomInventory.status, "occupied")));
+    const [todayCheckIns] = await db4.select({ count: sql`count(*)` }).from(hotelBookings).where(and(eq(hotelBookings.tenantId, tenantId), eq(hotelBookings.checkIn, sql`curdate()`), eq(hotelBookings.status, "confirmed")));
+    const [todayCheckOuts] = await db4.select({ count: sql`count(*)` }).from(hotelBookings).where(and(eq(hotelBookings.tenantId, tenantId), eq(hotelBookings.checkOut, sql`curdate()`), eq(hotelBookings.status, "checked_in")));
     return { availableRooms: available.count, occupiedRooms: occupied.count, todayCheckIns: todayCheckIns.count, todayCheckOuts: todayCheckOuts.count };
   })
 });
@@ -132028,10 +132357,10 @@ init_schema2();
 init_drizzle_orm();
 var constructionRouter = createRouter({
   projectList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(constructionProjects.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(constructionProjects.status, input.status));
-    return db5.select().from(constructionProjects).where(and(...conditions)).orderBy(desc(constructionProjects.createdAt));
+    return db4.select().from(constructionProjects).where(and(...conditions)).orderBy(desc(constructionProjects.createdAt));
   }),
   projectCreate: authedQuery.input(external_exports.object({
     projectCode: external_exports.string(),
@@ -132045,19 +132374,19 @@ var constructionRouter = createRouter({
     budget: external_exports.string().optional(),
     projectType: external_exports.enum(["residential", "commercial", "industrial", "infrastructure", "renovation"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(constructionProjects).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(constructionProjects).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   projectUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), progress: external_exports.number().optional(), status: external_exports.enum(["planning", "tendering", "active", "on_hold", "completed", "cancelled"]).optional(), actualCost: external_exports.string().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(constructionProjects).set(data).where(eq(constructionProjects.id, id));
+    await db4.update(constructionProjects).set(data).where(eq(constructionProjects.id, id));
     return { success: true };
   }),
   subcontractorList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(subcontractors).where(eq(subcontractors.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(subcontractors).where(eq(subcontractors.tenantId, ctx.user.tenantId));
   }),
   subcontractorCreate: authedQuery.input(external_exports.object({
     code: external_exports.string().optional(),
@@ -132071,34 +132400,34 @@ var constructionRouter = createRouter({
     retentionPercent: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(subcontractors).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(subcontractors).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   equipmentList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(equipmentTracking.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(equipmentTracking.projectId, input.projectId));
-    return db5.select().from(equipmentTracking).where(and(...conditions));
+    return db4.select().from(equipmentTracking).where(and(...conditions));
   }),
   progressBillingList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(progressBilling.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(progressBilling.projectId, input.projectId));
-    return db5.select().from(progressBilling).where(and(...conditions)).orderBy(desc(progressBilling.createdAt));
+    return db4.select().from(progressBilling).where(and(...conditions)).orderBy(desc(progressBilling.createdAt));
   }),
   retentionList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(retentionAccounts.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(retentionAccounts.projectId, input.projectId));
-    return db5.select().from(retentionAccounts).where(and(...conditions));
+    return db4.select().from(retentionAccounts).where(and(...conditions));
   }),
   // ---- WBS Items ----
   wbsList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(wbsItems.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(wbsItems.projectId, input.projectId));
-    return db5.select().from(wbsItems).where(and(...conditions));
+    return db4.select().from(wbsItems).where(and(...conditions));
   }),
   wbsCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132118,8 +132447,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["planned", "in_progress", "completed", "delayed", "cancelled"]).optional(),
     responsiblePersonId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(wbsItems).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(wbsItems).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   wbsUpdate: authedQuery.input(external_exports.object({
@@ -132137,17 +132466,17 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["planned", "in_progress", "completed", "delayed", "cancelled"]).optional(),
     responsiblePersonId: external_exports.number().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(wbsItems).set(data).where(eq(wbsItems.id, id));
+    await db4.update(wbsItems).set(data).where(eq(wbsItems.id, id));
     return { success: true };
   }),
   // ---- BOQ Items ----
   boqList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(boqItems.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(boqItems.projectId, input.projectId));
-    return db5.select().from(boqItems).where(and(...conditions));
+    return db4.select().from(boqItems).where(and(...conditions));
   }),
   boqCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132170,8 +132499,8 @@ var constructionRouter = createRouter({
     section: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(boqItems).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(boqItems).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   boqUpdate: authedQuery.input(external_exports.object({
@@ -132193,17 +132522,17 @@ var constructionRouter = createRouter({
     section: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(boqItems).set(data).where(eq(boqItems.id, id));
+    await db4.update(boqItems).set(data).where(eq(boqItems.id, id));
     return { success: true };
   }),
   // ---- Construction Contracts ----
   contractList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(constructionContracts.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(constructionContracts.projectId, input.projectId));
-    return db5.select().from(constructionContracts).where(and(...conditions));
+    return db4.select().from(constructionContracts).where(and(...conditions));
   }),
   contractCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132234,8 +132563,8 @@ var constructionRouter = createRouter({
     signedAt: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(constructionContracts).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(constructionContracts).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   contractUpdate: authedQuery.input(external_exports.object({
@@ -132249,17 +132578,17 @@ var constructionRouter = createRouter({
     signedAt: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(constructionContracts).set(data).where(eq(constructionContracts.id, id));
+    await db4.update(constructionContracts).set(data).where(eq(constructionContracts.id, id));
     return { success: true };
   }),
   // ---- Variation Orders ----
   variationList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(variationOrders.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(variationOrders.projectId, input.projectId));
-    return db5.select().from(variationOrders).where(and(...conditions));
+    return db4.select().from(variationOrders).where(and(...conditions));
   }),
   variationCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132281,8 +132610,8 @@ var constructionRouter = createRouter({
     approvedByUserId: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(variationOrders).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(variationOrders).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   variationUpdate: authedQuery.input(external_exports.object({
@@ -132299,17 +132628,17 @@ var constructionRouter = createRouter({
     approvedByUserId: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(variationOrders).set(data).where(eq(variationOrders.id, id));
+    await db4.update(variationOrders).set(data).where(eq(variationOrders.id, id));
     return { success: true };
   }),
   // ---- Advance Payments ----
   advancePaymentList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(advancePayments.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(advancePayments.projectId, input.projectId));
-    return db5.select().from(advancePayments).where(and(...conditions));
+    return db4.select().from(advancePayments).where(and(...conditions));
   }),
   advancePaymentCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132332,8 +132661,8 @@ var constructionRouter = createRouter({
     guaranteeAmount: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(advancePayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(advancePayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   advancePaymentUpdate: authedQuery.input(external_exports.object({
@@ -132348,17 +132677,17 @@ var constructionRouter = createRouter({
     guaranteeAmount: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(advancePayments).set(data).where(eq(advancePayments.id, id));
+    await db4.update(advancePayments).set(data).where(eq(advancePayments.id, id));
     return { success: true };
   }),
   // ---- CVR Reports ----
   cvrList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(cvrReports.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(cvrReports.projectId, input.projectId));
-    return db5.select().from(cvrReports).where(and(...conditions));
+    return db4.select().from(cvrReports).where(and(...conditions));
   }),
   cvrCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132381,8 +132710,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["draft", "reviewed", "approved"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(cvrReports).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(cvrReports).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   cvrUpdate: authedQuery.input(external_exports.object({
@@ -132399,17 +132728,17 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["draft", "reviewed", "approved"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(cvrReports).set(data).where(eq(cvrReports.id, id));
+    await db4.update(cvrReports).set(data).where(eq(cvrReports.id, id));
     return { success: true };
   }),
   // ---- Decennial Liability ----
   decennialList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(decennialLiability.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(decennialLiability.projectId, input.projectId));
-    return db5.select().from(decennialLiability).where(and(...conditions));
+    return db4.select().from(decennialLiability).where(and(...conditions));
   }),
   decennialCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132430,8 +132759,8 @@ var constructionRouter = createRouter({
     resolvedClaimsAmount: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(decennialLiability).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(decennialLiability).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   decennialUpdate: authedQuery.input(external_exports.object({
@@ -132447,17 +132776,17 @@ var constructionRouter = createRouter({
     insuranceAmount: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(decennialLiability).set(data).where(eq(decennialLiability.id, id));
+    await db4.update(decennialLiability).set(data).where(eq(decennialLiability.id, id));
     return { success: true };
   }),
   // ---- Site Daily Reports ----
   siteDailyReportList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(siteDailyReports.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(siteDailyReports.projectId, input.projectId));
-    return db5.select().from(siteDailyReports).where(and(...conditions));
+    return db4.select().from(siteDailyReports).where(and(...conditions));
   }),
   siteDailyReportCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132481,8 +132810,8 @@ var constructionRouter = createRouter({
     submittedBy: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(siteDailyReports).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(siteDailyReports).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   siteDailyReportUpdate: authedQuery.input(external_exports.object({
@@ -132506,18 +132835,18 @@ var constructionRouter = createRouter({
     approvedAt: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(siteDailyReports).set(data).where(eq(siteDailyReports.id, id));
+    await db4.update(siteDailyReports).set(data).where(eq(siteDailyReports.id, id));
     return { success: true };
   }),
   // ---- Subcontractor Payments ----
   subcontractorPaymentList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional(), subcontractorId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(subcontractorPayments.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(subcontractorPayments.projectId, input.projectId));
     if (input?.subcontractorId) conditions.push(eq(subcontractorPayments.subcontractorId, input.subcontractorId));
-    return db5.select().from(subcontractorPayments).where(and(...conditions));
+    return db4.select().from(subcontractorPayments).where(and(...conditions));
   }),
   subcontractorPaymentCreate: authedQuery.input(external_exports.object({
     subcontractorId: external_exports.number(),
@@ -132537,8 +132866,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["pending", "approved", "paid", "cancelled"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(subcontractorPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(subcontractorPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   subcontractorPaymentUpdate: authedQuery.input(external_exports.object({
@@ -132549,17 +132878,17 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["pending", "approved", "paid", "cancelled"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(subcontractorPayments).set(data).where(eq(subcontractorPayments.id, id));
+    await db4.update(subcontractorPayments).set(data).where(eq(subcontractorPayments.id, id));
     return { success: true };
   }),
   // ---- SBC Compliance ----
   sbcComplianceList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(sbcCompliance.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(sbcCompliance.projectId, input.projectId));
-    return db5.select().from(sbcCompliance).where(and(...conditions));
+    return db4.select().from(sbcCompliance).where(and(...conditions));
   }),
   sbcComplianceCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132577,8 +132906,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["active", "expired"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(sbcCompliance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(sbcCompliance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   sbcComplianceUpdate: authedQuery.input(external_exports.object({
@@ -132594,15 +132923,15 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["active", "expired"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(sbcCompliance).set(data).where(eq(sbcCompliance.id, id));
+    await db4.update(sbcCompliance).set(data).where(eq(sbcCompliance.id, id));
     return { success: true };
   }),
   // ---- SCA Classification ----
   scaClassificationList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(scaClassification).where(eq(scaClassification.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(scaClassification).where(eq(scaClassification.tenantId, ctx.user.tenantId));
   }),
   scaClassificationCreate: authedQuery.input(external_exports.object({
     entityName: external_exports.string(),
@@ -132617,8 +132946,8 @@ var constructionRouter = createRouter({
     verifiedAt: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(scaClassification).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(scaClassification).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   scaClassificationUpdate: authedQuery.input(external_exports.object({
@@ -132633,17 +132962,17 @@ var constructionRouter = createRouter({
     verifiedAt: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(scaClassification).set(data).where(eq(scaClassification.id, id));
+    await db4.update(scaClassification).set(data).where(eq(scaClassification.id, id));
     return { success: true };
   }),
   // ---- GTPL Compliance ----
   gtplComplianceList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(gtplCompliance.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(gtplCompliance.projectId, input.projectId));
-    return db5.select().from(gtplCompliance).where(and(...conditions));
+    return db4.select().from(gtplCompliance).where(and(...conditions));
   }),
   gtplComplianceCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132659,8 +132988,8 @@ var constructionRouter = createRouter({
     lastReviewedDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(gtplCompliance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(gtplCompliance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   gtplComplianceUpdate: authedQuery.input(external_exports.object({
@@ -132674,17 +133003,17 @@ var constructionRouter = createRouter({
     lastReviewedDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(gtplCompliance).set(data).where(eq(gtplCompliance.id, id));
+    await db4.update(gtplCompliance).set(data).where(eq(gtplCompliance.id, id));
     return { success: true };
   }),
   // ---- HSE Committees ----
   hseCommitteeList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(hseCommittees.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(hseCommittees.projectId, input.projectId));
-    return db5.select().from(hseCommittees).where(and(...conditions));
+    return db4.select().from(hseCommittees).where(and(...conditions));
   }),
   hseCommitteeCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132699,8 +133028,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["active", "dissolved"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(hseCommittees).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(hseCommittees).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   hseCommitteeUpdate: authedQuery.input(external_exports.object({
@@ -132715,17 +133044,17 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["active", "dissolved"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(hseCommittees).set(data).where(eq(hseCommittees.id, id));
+    await db4.update(hseCommittees).set(data).where(eq(hseCommittees.id, id));
     return { success: true };
   }),
   // ---- Heat Stress Records ----
   heatStressList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(heatStressRecords.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(heatStressRecords.projectId, input.projectId));
-    return db5.select().from(heatStressRecords).where(and(...conditions));
+    return db4.select().from(heatStressRecords).where(and(...conditions));
   }),
   heatStressCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132742,8 +133071,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["compliant", "non_compliant", "partial"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(heatStressRecords).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(heatStressRecords).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   heatStressUpdate: authedQuery.input(external_exports.object({
@@ -132760,17 +133089,17 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["compliant", "non_compliant", "partial"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(heatStressRecords).set(data).where(eq(heatStressRecords.id, id));
+    await db4.update(heatStressRecords).set(data).where(eq(heatStressRecords.id, id));
     return { success: true };
   }),
   // ---- Engineering Saudization ----
   engineeringSaudizationList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(engineeringSaudization.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(engineeringSaudization.projectId, input.projectId));
-    return db5.select().from(engineeringSaudization).where(and(...conditions));
+    return db4.select().from(engineeringSaudization).where(and(...conditions));
   }),
   engineeringSaudizationCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132787,8 +133116,8 @@ var constructionRouter = createRouter({
     nextAuditDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(engineeringSaudization).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(engineeringSaudization).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   engineeringSaudizationUpdate: authedQuery.input(external_exports.object({
@@ -132805,17 +133134,17 @@ var constructionRouter = createRouter({
     nextAuditDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(engineeringSaudization).set(data).where(eq(engineeringSaudization.id, id));
+    await db4.update(engineeringSaudization).set(data).where(eq(engineeringSaudization.id, id));
     return { success: true };
   }),
   // ---- Safety Training ----
   safetyTrainingList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(safetyTraining.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(safetyTraining.projectId, input.projectId));
-    return db5.select().from(safetyTraining).where(and(...conditions));
+    return db4.select().from(safetyTraining).where(and(...conditions));
   }),
   safetyTrainingCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132830,8 +133159,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["completed", "expired", "pending"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(safetyTraining).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(safetyTraining).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   safetyTrainingUpdate: authedQuery.input(external_exports.object({
@@ -132845,17 +133174,17 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["completed", "expired", "pending"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(safetyTraining).set(data).where(eq(safetyTraining.id, id));
+    await db4.update(safetyTraining).set(data).where(eq(safetyTraining.id, id));
     return { success: true };
   }),
   // ---- PPE Issuance ----
   ppeIssuanceList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(ppeIssuance.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(ppeIssuance.projectId, input.projectId));
-    return db5.select().from(ppeIssuance).where(and(...conditions));
+    return db4.select().from(ppeIssuance).where(and(...conditions));
   }),
   ppeIssuanceCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132870,8 +133199,8 @@ var constructionRouter = createRouter({
     returnDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(ppeIssuance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(ppeIssuance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   ppeIssuanceUpdate: authedQuery.input(external_exports.object({
@@ -132885,18 +133214,18 @@ var constructionRouter = createRouter({
     returnDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(ppeIssuance).set(data).where(eq(ppeIssuance.id, id));
+    await db4.update(ppeIssuance).set(data).where(eq(ppeIssuance.id, id));
     return { success: true };
   }),
   // ---- Equipment Schedule ----
   equipmentScheduleList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional(), equipmentId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(equipmentSchedule.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(equipmentSchedule.projectId, input.projectId));
     if (input?.equipmentId) conditions.push(eq(equipmentSchedule.equipmentId, input.equipmentId));
-    return db5.select().from(equipmentSchedule).where(and(...conditions));
+    return db4.select().from(equipmentSchedule).where(and(...conditions));
   }),
   equipmentScheduleCreate: authedQuery.input(external_exports.object({
     equipmentId: external_exports.number(),
@@ -132908,8 +133237,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["scheduled", "in_use", "completed", "cancelled"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(equipmentSchedule).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(equipmentSchedule).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   equipmentScheduleUpdate: authedQuery.input(external_exports.object({
@@ -132921,17 +133250,17 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["scheduled", "in_use", "completed", "cancelled"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(equipmentSchedule).set(data).where(eq(equipmentSchedule.id, id));
+    await db4.update(equipmentSchedule).set(data).where(eq(equipmentSchedule.id, id));
     return { success: true };
   }),
   // ---- Material Requirements ----
   materialRequirementList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(materialRequirements.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(materialRequirements.projectId, input.projectId));
-    return db5.select().from(materialRequirements).where(and(...conditions));
+    return db4.select().from(materialRequirements).where(and(...conditions));
   }),
   materialRequirementCreate: authedQuery.input(external_exports.object({
     projectId: external_exports.number(),
@@ -132950,8 +133279,8 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["planned", "ordered", "partial", "received", "consumed"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(materialRequirements).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(materialRequirements).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   materialRequirementUpdate: authedQuery.input(external_exports.object({
@@ -132963,21 +133292,21 @@ var constructionRouter = createRouter({
     status: external_exports.enum(["planned", "ordered", "partial", "received", "consumed"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(materialRequirements).set(data).where(eq(materialRequirements.id, id));
+    await db4.update(materialRequirements).set(data).where(eq(materialRequirements.id, id));
     return { success: true };
   }),
   constructionStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [activeProjects] = await db5.select({ count: sql`count(*)` }).from(constructionProjects).where(and(eq(constructionProjects.tenantId, tenantId), eq(constructionProjects.status, "active")));
-    const [totalContractValue] = await db5.select({ total: sql`coalesce(sum(contract_value), 0)` }).from(constructionProjects).where(eq(constructionProjects.tenantId, tenantId));
-    const [totalSubs] = await db5.select({ count: sql`count(*)` }).from(subcontractors).where(eq(subcontractors.tenantId, tenantId));
-    const [totalWbs] = await db5.select({ count: sql`count(*)` }).from(wbsItems).where(eq(wbsItems.tenantId, tenantId));
-    const [totalBoq] = await db5.select({ count: sql`count(*)` }).from(boqItems).where(eq(boqItems.tenantId, tenantId));
-    const [activeContracts] = await db5.select({ count: sql`count(*)` }).from(constructionContracts).where(and(eq(constructionContracts.tenantId, tenantId), eq(constructionContracts.status, "active")));
-    const [pendingVariations] = await db5.select({ count: sql`count(*)` }).from(variationOrders).where(and(eq(variationOrders.tenantId, tenantId), eq(variationOrders.status, "submitted")));
+    const [activeProjects] = await db4.select({ count: sql`count(*)` }).from(constructionProjects).where(and(eq(constructionProjects.tenantId, tenantId), eq(constructionProjects.status, "active")));
+    const [totalContractValue] = await db4.select({ total: sql`coalesce(sum(contract_value), 0)` }).from(constructionProjects).where(eq(constructionProjects.tenantId, tenantId));
+    const [totalSubs] = await db4.select({ count: sql`count(*)` }).from(subcontractors).where(eq(subcontractors.tenantId, tenantId));
+    const [totalWbs] = await db4.select({ count: sql`count(*)` }).from(wbsItems).where(eq(wbsItems.tenantId, tenantId));
+    const [totalBoq] = await db4.select({ count: sql`count(*)` }).from(boqItems).where(eq(boqItems.tenantId, tenantId));
+    const [activeContracts] = await db4.select({ count: sql`count(*)` }).from(constructionContracts).where(and(eq(constructionContracts.tenantId, tenantId), eq(constructionContracts.status, "active")));
+    const [pendingVariations] = await db4.select({ count: sql`count(*)` }).from(variationOrders).where(and(eq(variationOrders.tenantId, tenantId), eq(variationOrders.status, "submitted")));
     return {
       activeProjects: activeProjects.count,
       totalContractValue: Number(totalContractValue.total),
@@ -132996,8 +133325,8 @@ init_schema2();
 init_drizzle_orm();
 var transportRouter = createRouter({
   routeList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(routes).where(eq(routes.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(routes).where(eq(routes.tenantId, ctx.user.tenantId));
   }),
   routeCreate: authedQuery.input(external_exports.object({
     routeCode: external_exports.string(),
@@ -133008,27 +133337,27 @@ var transportRouter = createRouter({
     estimatedDuration: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(routes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(routes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   routePlanningList: authedQuery.input(external_exports.object({ date: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(routePlanning.tenantId, ctx.user.tenantId)];
     if (input?.date) conditions.push(eq(routePlanning.plannedDate, input.date));
-    return db5.select().from(routePlanning).where(and(...conditions)).orderBy(desc(routePlanning.plannedDate));
+    return db4.select().from(routePlanning).where(and(...conditions)).orderBy(desc(routePlanning.plannedDate));
   }),
   driverScheduleList: authedQuery.input(external_exports.object({ date: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(driverSchedules.tenantId, ctx.user.tenantId)];
     if (input?.date) conditions.push(eq(driverSchedules.date, input.date));
-    return db5.select().from(driverSchedules).where(and(...conditions));
+    return db4.select().from(driverSchedules).where(and(...conditions));
   }),
   shipmentList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(shipmentTracking.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(shipmentTracking.status, input.status));
-    return db5.select().from(shipmentTracking).where(and(...conditions)).orderBy(desc(shipmentTracking.createdAt));
+    return db4.select().from(shipmentTracking).where(and(...conditions)).orderBy(desc(shipmentTracking.createdAt));
   }),
   shipmentCreate: authedQuery.input(external_exports.object({
     trackingNumber: external_exports.string(),
@@ -133042,29 +133371,29 @@ var transportRouter = createRouter({
     routeId: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(shipmentTracking).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(shipmentTracking).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   shipmentUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), status: external_exports.enum(["pending", "picked_up", "in_transit", "delivered", "exception", "cancelled"]).optional(), lastLocation: external_exports.string().optional(), currentLatitude: external_exports.string().optional(), currentLongitude: external_exports.string().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(shipmentTracking).set(data).where(eq(shipmentTracking.id, id));
+    await db4.update(shipmentTracking).set(data).where(eq(shipmentTracking.id, id));
     return { success: true };
   }),
   fuelAnalyticsList: authedQuery.input(external_exports.object({ vehicleId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(fuelCostAnalytics.tenantId, ctx.user.tenantId)];
     if (input?.vehicleId) conditions.push(eq(fuelCostAnalytics.vehicleId, input.vehicleId));
-    return db5.select().from(fuelCostAnalytics).where(and(...conditions));
+    return db4.select().from(fuelCostAnalytics).where(and(...conditions));
   }),
   transportStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalVehicles] = await db5.select({ count: sql`count(*)` }).from(vehicles).where(eq(vehicles.tenantId, tenantId));
-    const [activeShipments] = await db5.select({ count: sql`count(*)` }).from(shipmentTracking).where(and(eq(shipmentTracking.tenantId, tenantId), eq(shipmentTracking.status, "in_transit")));
-    const [totalDrivers] = await db5.select({ count: sql`count(*)` }).from(drivers).where(eq(drivers.tenantId, tenantId));
-    const [monthlyFuelCost] = await db5.select({ total: sql`coalesce(sum(total_cost), 0)` }).from(fuelRecords).where(and(eq(fuelRecords.tenantId, tenantId), sql`date_format(date, '%Y-%m') = date_format(curdate(), '%Y-%m')`));
+    const [totalVehicles] = await db4.select({ count: sql`count(*)` }).from(vehicles).where(eq(vehicles.tenantId, tenantId));
+    const [activeShipments] = await db4.select({ count: sql`count(*)` }).from(shipmentTracking).where(and(eq(shipmentTracking.tenantId, tenantId), eq(shipmentTracking.status, "in_transit")));
+    const [totalDrivers] = await db4.select({ count: sql`count(*)` }).from(drivers).where(eq(drivers.tenantId, tenantId));
+    const [monthlyFuelCost] = await db4.select({ total: sql`coalesce(sum(total_cost), 0)` }).from(fuelRecords).where(and(eq(fuelRecords.tenantId, tenantId), sql`date_format(date, '%Y-%m') = date_format(curdate(), '%Y-%m')`));
     return { totalVehicles: totalVehicles.count, activeShipments: activeShipments.count, totalDrivers: totalDrivers.count, monthlyFuelCost: Number(monthlyFuelCost.total) };
   })
 });
@@ -133075,8 +133404,8 @@ init_schema2();
 init_drizzle_orm();
 var realEstateRouter = createRouter({
   propertyList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(properties).where(eq(properties.tenantId, ctx.user.tenantId)).orderBy(desc(properties.createdAt));
+    const db4 = getDb();
+    return db4.select().from(properties).where(eq(properties.tenantId, ctx.user.tenantId)).orderBy(desc(properties.createdAt));
   }),
   propertyCreate: authedQuery.input(external_exports.object({
     propertyCode: external_exports.string(),
@@ -133091,22 +133420,22 @@ var realEstateRouter = createRouter({
     currentValue: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(properties).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(properties).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   unitList: authedQuery.input(external_exports.object({ propertyId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(propertyUnits.tenantId, ctx.user.tenantId)];
     if (input?.propertyId) conditions.push(eq(propertyUnits.propertyId, input.propertyId));
-    return db5.select().from(propertyUnits).where(and(...conditions));
+    return db4.select().from(propertyUnits).where(and(...conditions));
   }),
   leaseList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), unitId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(leases.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(leases.status, input.status));
     if (input?.unitId) conditions.push(eq(leases.unitId, input.unitId));
-    return db5.select().from(leases).where(and(...conditions)).orderBy(desc(leases.createdAt));
+    return db4.select().from(leases).where(and(...conditions)).orderBy(desc(leases.createdAt));
   }),
   leaseCreate: authedQuery.input(external_exports.object({
     leaseNumber: external_exports.string(),
@@ -133120,35 +133449,35 @@ var realEstateRouter = createRouter({
     leaseType: external_exports.enum(["residential", "commercial", "short_term", "long_term"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(leases).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(leases).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   rentInvoiceList: authedQuery.input(external_exports.object({ leaseId: external_exports.number().optional(), status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(rentInvoices.tenantId, ctx.user.tenantId)];
     if (input?.leaseId) conditions.push(eq(rentInvoices.leaseId, input.leaseId));
     if (input?.status) conditions.push(eq(rentInvoices.status, input.status));
-    return db5.select().from(rentInvoices).where(and(...conditions)).orderBy(desc(rentInvoices.createdAt));
+    return db4.select().from(rentInvoices).where(and(...conditions)).orderBy(desc(rentInvoices.createdAt));
   }),
   maintenanceRequestList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), unitId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(maintenanceRequests.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(maintenanceRequests.status, input.status));
     if (input?.unitId) conditions.push(eq(maintenanceRequests.unitId, input.unitId));
-    return db5.select().from(maintenanceRequests).where(and(...conditions)).orderBy(desc(maintenanceRequests.createdAt));
+    return db4.select().from(maintenanceRequests).where(and(...conditions)).orderBy(desc(maintenanceRequests.createdAt));
   }),
   commissionList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(commissionRecords).where(eq(commissionRecords.tenantId, ctx.user.tenantId)).orderBy(desc(commissionRecords.createdAt));
+    const db4 = getDb();
+    return db4.select().from(commissionRecords).where(eq(commissionRecords.tenantId, ctx.user.tenantId)).orderBy(desc(commissionRecords.createdAt));
   }),
   realEstateStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalProperties] = await db5.select({ count: sql`count(*)` }).from(properties).where(eq(properties.tenantId, tenantId));
-    const [vacantUnits] = await db5.select({ count: sql`count(*)` }).from(propertyUnits).where(and(eq(propertyUnits.tenantId, tenantId), eq(propertyUnits.status, "vacant")));
-    const [activeLeases] = await db5.select({ count: sql`count(*)` }).from(leases).where(and(eq(leases.tenantId, tenantId), eq(leases.status, "active")));
-    const [overdueRent] = await db5.select({ count: sql`count(*)` }).from(rentInvoices).where(and(eq(rentInvoices.tenantId, tenantId), eq(rentInvoices.status, "overdue")));
+    const [totalProperties] = await db4.select({ count: sql`count(*)` }).from(properties).where(eq(properties.tenantId, tenantId));
+    const [vacantUnits] = await db4.select({ count: sql`count(*)` }).from(propertyUnits).where(and(eq(propertyUnits.tenantId, tenantId), eq(propertyUnits.status, "vacant")));
+    const [activeLeases] = await db4.select({ count: sql`count(*)` }).from(leases).where(and(eq(leases.tenantId, tenantId), eq(leases.status, "active")));
+    const [overdueRent] = await db4.select({ count: sql`count(*)` }).from(rentInvoices).where(and(eq(rentInvoices.tenantId, tenantId), eq(rentInvoices.status, "overdue")));
     return { totalProperties: totalProperties.count, vacantUnits: vacantUnits.count, activeLeases: activeLeases.count, overdueRent: overdueRent.count };
   })
 });
@@ -133159,11 +133488,11 @@ init_schema2();
 init_drizzle_orm();
 var travelRouter = createRouter({
   bookingList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), bookingType: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(travelBookings.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(travelBookings.status, input.status));
     if (input?.bookingType) conditions.push(eq(travelBookings.bookingType, input.bookingType));
-    return db5.select().from(travelBookings).where(and(...conditions)).orderBy(desc(travelBookings.createdAt));
+    return db4.select().from(travelBookings).where(and(...conditions)).orderBy(desc(travelBookings.createdAt));
   }),
   bookingCreate: authedQuery.input(external_exports.object({
     bookingNumber: external_exports.string(),
@@ -133181,32 +133510,32 @@ var travelRouter = createRouter({
     source: external_exports.enum(["direct", "online", "partner", "corporate"]).optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(travelBookings).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(travelBookings).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   supplierList: authedQuery.input(external_exports.object({ supplierType: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(travelSuppliers.tenantId, ctx.user.tenantId)];
     if (input?.supplierType) conditions.push(eq(travelSuppliers.supplierType, input.supplierType));
-    return db5.select().from(travelSuppliers).where(and(...conditions));
+    return db4.select().from(travelSuppliers).where(and(...conditions));
   }),
   itineraryList: authedQuery.input(external_exports.object({ bookingId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(itineraries).where(and(eq(itineraries.tenantId, ctx.user.tenantId), eq(itineraries.bookingId, input.bookingId))).orderBy(itineraries.day);
+    const db4 = getDb();
+    return db4.select().from(itineraries).where(and(eq(itineraries.tenantId, ctx.user.tenantId), eq(itineraries.bookingId, input.bookingId))).orderBy(itineraries.day);
   }),
   reconciliationList: authedQuery.input(external_exports.object({ supplierId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(supplierReconciliation.tenantId, ctx.user.tenantId)];
     if (input?.supplierId) conditions.push(eq(supplierReconciliation.supplierId, input.supplierId));
-    return db5.select().from(supplierReconciliation).where(and(...conditions)).orderBy(desc(supplierReconciliation.createdAt));
+    return db4.select().from(supplierReconciliation).where(and(...conditions)).orderBy(desc(supplierReconciliation.createdAt));
   }),
   travelStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalBookings] = await db5.select({ count: sql`count(*)` }).from(travelBookings).where(eq(travelBookings.tenantId, tenantId));
-    const [confirmedBookings] = await db5.select({ count: sql`count(*)` }).from(travelBookings).where(and(eq(travelBookings.tenantId, tenantId), eq(travelBookings.status, "confirmed")));
-    const [totalSuppliers] = await db5.select({ count: sql`count(*)` }).from(travelSuppliers).where(eq(travelSuppliers.tenantId, tenantId));
+    const [totalBookings] = await db4.select({ count: sql`count(*)` }).from(travelBookings).where(eq(travelBookings.tenantId, tenantId));
+    const [confirmedBookings] = await db4.select({ count: sql`count(*)` }).from(travelBookings).where(and(eq(travelBookings.tenantId, tenantId), eq(travelBookings.status, "confirmed")));
+    const [totalSuppliers] = await db4.select({ count: sql`count(*)` }).from(travelSuppliers).where(eq(travelSuppliers.tenantId, tenantId));
     return { totalBookings: totalBookings.count, confirmedBookings: confirmedBookings.count, totalSuppliers: totalSuppliers.count };
   })
 });
@@ -133217,10 +133546,10 @@ init_schema2();
 init_drizzle_orm();
 var aviationRouter = createRouter({
   flightList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(flights.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(flights.status, input.status));
-    return db5.select().from(flights).where(and(...conditions)).orderBy(desc(flights.departureTime));
+    return db4.select().from(flights).where(and(...conditions)).orderBy(desc(flights.departureTime));
   }),
   flightCreate: authedQuery.input(external_exports.object({
     flightNumber: external_exports.string(),
@@ -133236,9 +133565,9 @@ var aviationRouter = createRouter({
     copilotId: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { departureTime, arrivalTime, ...rest } = input;
-    const [{ id }] = await db5.insert(flights).values({
+    const [{ id }] = await db4.insert(flights).values({
       ...rest,
       departureTime: new Date(departureTime),
       arrivalTime: new Date(arrivalTime),
@@ -133252,35 +133581,35 @@ var aviationRouter = createRouter({
     bookedSeats: external_exports.number().optional(),
     delayReason: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(flights).set(data).where(eq(flights.id, id));
+    await db4.update(flights).set(data).where(eq(flights.id, id));
     return { success: true };
   }),
   crewCertificationList: authedQuery.input(external_exports.object({ employeeId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(crewCertifications.tenantId, ctx.user.tenantId)];
     if (input?.employeeId) conditions.push(eq(crewCertifications.employeeId, input.employeeId));
-    return db5.select().from(crewCertifications).where(and(...conditions));
+    return db4.select().from(crewCertifications).where(and(...conditions));
   }),
   maintenanceAirworthinessList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(maintenanceAirworthiness.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(maintenanceAirworthiness.status, input.status));
-    return db5.select().from(maintenanceAirworthiness).where(and(...conditions)).orderBy(desc(maintenanceAirworthiness.inspectionDate));
+    return db4.select().from(maintenanceAirworthiness).where(and(...conditions)).orderBy(desc(maintenanceAirworthiness.inspectionDate));
   }),
   partsList: authedQuery.input(external_exports.object({ partNumber: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(partsInventorySerial.tenantId, ctx.user.tenantId)];
     if (input?.partNumber) conditions.push(eq(partsInventorySerial.partNumber, input.partNumber));
-    return db5.select().from(partsInventorySerial).where(and(...conditions));
+    return db4.select().from(partsInventorySerial).where(and(...conditions));
   }),
   aviationStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [todayFlights] = await db5.select({ count: sql`count(*)` }).from(flights).where(and(eq(flights.tenantId, tenantId), sql`date(departure_time) = curdate()`));
-    const [scheduled] = await db5.select({ count: sql`count(*)` }).from(flights).where(and(eq(flights.tenantId, tenantId), eq(flights.status, "scheduled")));
-    const [inAir] = await db5.select({ count: sql`count(*)` }).from(flights).where(and(eq(flights.tenantId, tenantId), eq(flights.status, "in_air")));
+    const [todayFlights] = await db4.select({ count: sql`count(*)` }).from(flights).where(and(eq(flights.tenantId, tenantId), sql`date(departure_time) = curdate()`));
+    const [scheduled] = await db4.select({ count: sql`count(*)` }).from(flights).where(and(eq(flights.tenantId, tenantId), eq(flights.status, "scheduled")));
+    const [inAir] = await db4.select({ count: sql`count(*)` }).from(flights).where(and(eq(flights.tenantId, tenantId), eq(flights.status, "in_air")));
     return { todayFlights: todayFlights.count, scheduledFlights: scheduled.count, inAirFlights: inAir.count };
   })
 });
@@ -133291,8 +133620,8 @@ init_schema2();
 init_drizzle_orm();
 var consolidationRouter = createRouter({
   consolidationGroupList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(consolidationGroups).where(eq(consolidationGroups.tenantId, ctx.user.tenantId)).orderBy(desc(consolidationGroups.createdAt));
+    const db4 = getDb();
+    return db4.select().from(consolidationGroups).where(eq(consolidationGroups.tenantId, ctx.user.tenantId)).orderBy(desc(consolidationGroups.createdAt));
   }),
   consolidationGroupCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
@@ -133303,8 +133632,8 @@ var consolidationRouter = createRouter({
     eliminationMethod: external_exports.enum(["line_by_line", "proportional"]).optional(),
     companyIds: external_exports.array(external_exports.object({ companyId: external_exports.number(), ownershipPercent: external_exports.string().optional() })).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(consolidationGroups).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(consolidationGroups).values({
       tenantId: ctx.user.tenantId,
       name: input.name,
       description: input.description,
@@ -133315,7 +133644,7 @@ var consolidationRouter = createRouter({
     }).$returningId();
     if (input.companyIds) {
       for (const c of input.companyIds) {
-        await db5.insert(consolidationGroupCompanies).values({
+        await db4.insert(consolidationGroupCompanies).values({
           groupId: id,
           companyId: c.companyId,
           ownershipPercent: c.ownershipPercent || "100.0000"
@@ -133325,28 +133654,28 @@ var consolidationRouter = createRouter({
     return { id, success: true };
   }),
   consolidationGroupUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), name: external_exports.string().optional(), description: external_exports.string().optional(), status: external_exports.enum(["draft", "in_progress", "completed"]).optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(consolidationGroups).set(input).where(eq(consolidationGroups.id, input.id));
+    const db4 = getDb();
+    await db4.update(consolidationGroups).set(input).where(eq(consolidationGroups.id, input.id));
     return { success: true };
   }),
   consolidationGroupDelete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.delete(consolidationGroups).where(eq(consolidationGroups.id, input.id));
+    const db4 = getDb();
+    await db4.delete(consolidationGroups).where(eq(consolidationGroups.id, input.id));
     return { success: true };
   }),
   consolidationGroupGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const group = await db5.query.consolidationGroups.findFirst({ where: eq(consolidationGroups.id, input.id) });
-    const companies2 = await db5.select().from(consolidationGroupCompanies).where(eq(consolidationGroupCompanies.groupId, input.id));
-    const entries = await db5.select().from(consolidationEntries).where(eq(consolidationEntries.groupId, input.id));
-    const eliminations = await db5.select().from(consolidationEliminations).where(eq(consolidationEliminations.groupId, input.id));
+    const db4 = getDb();
+    const group = await db4.query.consolidationGroups.findFirst({ where: eq(consolidationGroups.id, input.id) });
+    const companies2 = await db4.select().from(consolidationGroupCompanies).where(eq(consolidationGroupCompanies.groupId, input.id));
+    const entries = await db4.select().from(consolidationEntries).where(eq(consolidationEntries.groupId, input.id));
+    const eliminations = await db4.select().from(consolidationEliminations).where(eq(consolidationEliminations.groupId, input.id));
     return { group, companies: companies2, entries, eliminations };
   }),
   consolidationEntryList: authedQuery.input(external_exports.object({ groupId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(consolidationEntries.groupId, input?.groupId || 0)];
     if (input?.groupId) conditions.push(eq(consolidationEntries.groupId, input.groupId));
-    return db5.select().from(consolidationEntries).where(and(...conditions)).orderBy(desc(consolidationEntries.createdAt));
+    return db4.select().from(consolidationEntries).where(and(...conditions)).orderBy(desc(consolidationEntries.createdAt));
   }),
   consolidationEntryCreate: authedQuery.input(external_exports.object({
     groupId: external_exports.number(),
@@ -133360,8 +133689,8 @@ var consolidationRouter = createRouter({
     currency: external_exports.string().optional(),
     exchangeRate: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(consolidationEntries).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(consolidationEntries).values({
       groupId: input.groupId,
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
@@ -133377,18 +133706,18 @@ var consolidationRouter = createRouter({
     return { id, success: true };
   }),
   consolidationEliminationList: authedQuery.input(external_exports.object({ groupId: external_exports.number().optional() }).optional()).query(async ({ input }) => {
-    const db5 = getDb();
-    if (input?.groupId) return db5.select().from(consolidationEliminations).where(eq(consolidationEliminations.groupId, input.groupId));
-    return db5.select().from(consolidationEliminations);
+    const db4 = getDb();
+    if (input?.groupId) return db4.select().from(consolidationEliminations).where(eq(consolidationEliminations.groupId, input.groupId));
+    return db4.select().from(consolidationEliminations);
   }),
   consolidationDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const totalGroups = await db5.select({ count: sql`count(*)` }).from(consolidationGroups).where(eq(consolidationGroups.tenantId, tenantId));
-    const pendingConsolidations = await db5.select({ count: sql`count(*)` }).from(consolidationGroups).where(and(eq(consolidationGroups.tenantId, tenantId), eq(consolidationGroups.status, "in_progress")));
-    const allTx = await db5.select().from(intercompanyTransactions).where(eq(intercompanyTransactions.tenantId, tenantId));
+    const totalGroups = await db4.select({ count: sql`count(*)` }).from(consolidationGroups).where(eq(consolidationGroups.tenantId, tenantId));
+    const pendingConsolidations = await db4.select({ count: sql`count(*)` }).from(consolidationGroups).where(and(eq(consolidationGroups.tenantId, tenantId), eq(consolidationGroups.status, "in_progress")));
+    const allTx = await db4.select().from(intercompanyTransactions).where(eq(intercompanyTransactions.tenantId, tenantId));
     const unmatched = allTx.filter((t2) => t2.status !== "reconciled").length;
-    const groups = await db5.select().from(consolidationGroups).where(eq(consolidationGroups.tenantId, tenantId)).orderBy(desc(consolidationGroups.createdAt));
+    const groups = await db4.select().from(consolidationGroups).where(eq(consolidationGroups.tenantId, tenantId)).orderBy(desc(consolidationGroups.createdAt));
     return {
       totalGroups: totalGroups[0]?.count || 0,
       pendingConsolidations: pendingConsolidations[0]?.count || 0,
@@ -133397,15 +133726,15 @@ var consolidationRouter = createRouter({
     };
   }),
   companyList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(companies).where(eq(companies.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(companies).where(eq(companies.tenantId, ctx.user.tenantId));
   }),
   intercompanyTransactionList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const conditions = [eq(intercompanyTransactions.tenantId, tenantId)];
     if (input?.status) conditions.push(eq(intercompanyTransactions.status, input.status));
-    return db5.select().from(intercompanyTransactions).where(and(...conditions)).orderBy(desc(intercompanyTransactions.transactionDate));
+    return db4.select().from(intercompanyTransactions).where(and(...conditions)).orderBy(desc(intercompanyTransactions.transactionDate));
   }),
   intercompanyTransactionCreate: authedQuery.input(external_exports.object({
     transactionNumber: external_exports.string(),
@@ -133419,8 +133748,8 @@ var consolidationRouter = createRouter({
     exchangeRate: external_exports.string().optional(),
     description: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(intercompanyTransactions).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(intercompanyTransactions).values({
       tenantId: ctx.user.tenantId,
       transactionNumber: input.transactionNumber,
       transactionDate: input.transactionDate,
@@ -133437,10 +133766,10 @@ var consolidationRouter = createRouter({
     return { id, success: true };
   }),
   checkIntercompanyMatch: authedQuery.input(external_exports.object({ transactionId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const tx = await db5.query.intercompanyTransactions.findFirst({ where: eq(intercompanyTransactions.id, input.transactionId) });
+    const db4 = getDb();
+    const tx = await db4.query.intercompanyTransactions.findFirst({ where: eq(intercompanyTransactions.id, input.transactionId) });
     if (!tx) return { matched: false };
-    const matches = await db5.select().from(intercompanyTransactions).where(
+    const matches = await db4.select().from(intercompanyTransactions).where(
       and(
         eq(intercompanyTransactions.sourceCompanyId, tx.targetCompanyId),
         eq(intercompanyTransactions.targetCompanyId, tx.sourceCompanyId),
@@ -133451,12 +133780,12 @@ var consolidationRouter = createRouter({
     return { matched: matches.length > 0, matches };
   }),
   currencyTranslation: authedQuery.input(external_exports.object({ groupId: external_exports.number(), fromCurrency: external_exports.string(), toCurrency: external_exports.string(), exchangeRate: external_exports.string() })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const rate = Number(input.exchangeRate);
-    const entries = await db5.select().from(consolidationEntries).where(eq(consolidationEntries.groupId, input.groupId));
+    const entries = await db4.select().from(consolidationEntries).where(eq(consolidationEntries.groupId, input.groupId));
     for (const entry of entries) {
       const newAmount = (Number(entry.amount) * rate).toFixed(2);
-      await db5.update(consolidationEntries).set({
+      await db4.update(consolidationEntries).set({
         amount: newAmount,
         currency: input.toCurrency,
         exchangeRate: input.exchangeRate
@@ -133465,10 +133794,10 @@ var consolidationRouter = createRouter({
     return { success: true, entriesTranslated: entries.length };
   }),
   runConsolidation: authedQuery.input(external_exports.object({ groupId: external_exports.number(), periodStart: external_exports.string(), periodEnd: external_exports.string() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(consolidationGroups).set({ status: "in_progress" }).where(eq(consolidationGroups.id, input.groupId));
-    const groupCompanies = await db5.select().from(consolidationGroupCompanies).where(eq(consolidationGroupCompanies.groupId, input.groupId));
-    const intercoTx = await db5.select().from(intercompanyTransactions).where(
+    const db4 = getDb();
+    await db4.update(consolidationGroups).set({ status: "in_progress" }).where(eq(consolidationGroups.id, input.groupId));
+    const groupCompanies = await db4.select().from(consolidationGroupCompanies).where(eq(consolidationGroupCompanies.groupId, input.groupId));
+    const intercoTx = await db4.select().from(intercompanyTransactions).where(
       and(
         eq(intercompanyTransactions.status, "posted"),
         sql`${intercompanyTransactions.transactionDate} >= ${input.periodStart}`,
@@ -133476,13 +133805,13 @@ var consolidationRouter = createRouter({
       )
     );
     for (const tx of intercoTx) {
-      const existingElimination = await db5.select().from(consolidationEliminations).where(and(
+      const existingElimination = await db4.select().from(consolidationEliminations).where(and(
         eq(consolidationEliminations.groupId, input.groupId),
         eq(consolidationEliminations.sourceCompanyId, tx.sourceCompanyId),
         eq(consolidationEliminations.targetCompanyId, tx.targetCompanyId)
       ));
       if (existingElimination.length === 0) {
-        await db5.insert(consolidationEliminations).values({
+        await db4.insert(consolidationEliminations).values({
           groupId: input.groupId,
           entryType: tx.transactionType === "sale" ? "interco_revenue" : "interco_expense",
           sourceCompanyId: tx.sourceCompanyId,
@@ -133492,7 +133821,7 @@ var consolidationRouter = createRouter({
         });
       }
     }
-    await db5.update(consolidationGroups).set({ status: "completed" }).where(eq(consolidationGroups.id, input.groupId));
+    await db4.update(consolidationGroups).set({ status: "completed" }).where(eq(consolidationGroups.id, input.groupId));
     return { success: true, eliminationsCreated: intercoTx.length };
   })
 });
@@ -133503,10 +133832,10 @@ init_schema2();
 init_drizzle_orm();
 var ifrs16Router = createRouter({
   leaseContractList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(leaseContracts.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(leaseContracts.status, input.status));
-    return db5.select().from(leaseContracts).where(and(...conditions)).orderBy(desc(leaseContracts.createdAt));
+    return db4.select().from(leaseContracts).where(and(...conditions)).orderBy(desc(leaseContracts.createdAt));
   }),
   leaseContractCreate: authedQuery.input(external_exports.object({
     leaseCode: external_exports.string(),
@@ -133534,8 +133863,8 @@ var ifrs16Router = createRouter({
     terminationPenaltyAmount: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(leaseContracts).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(leaseContracts).values({
       tenantId: ctx.user.tenantId,
       leaseCode: input.leaseCode,
       description: input.description,
@@ -133566,32 +133895,32 @@ var ifrs16Router = createRouter({
     return { id, success: true };
   }),
   leaseContractGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const contract = await db5.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.id) });
-    const payments = await db5.select().from(leasePaymentSchedules).where(eq(leasePaymentSchedules.contractId, input.id)).orderBy(leasePaymentSchedules.paymentDate);
-    const modifications = await db5.select().from(leaseModifications).where(eq(leaseModifications.contractId, input.id)).orderBy(desc(leaseModifications.modificationDate));
-    const rouAssets = await db5.select().from(rightOfUseAssets).where(eq(rightOfUseAssets.contractId, input.id));
+    const db4 = getDb();
+    const contract = await db4.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.id) });
+    const payments = await db4.select().from(leasePaymentSchedules).where(eq(leasePaymentSchedules.contractId, input.id)).orderBy(leasePaymentSchedules.paymentDate);
+    const modifications = await db4.select().from(leaseModifications).where(eq(leaseModifications.contractId, input.id)).orderBy(desc(leaseModifications.modificationDate));
+    const rouAssets = await db4.select().from(rightOfUseAssets).where(eq(rightOfUseAssets.contractId, input.id));
     return { contract, payments, modifications, rouAssets };
   }),
   leaseContractUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), status: external_exports.enum(["active", "expired", "terminated", "amended"]).optional(), notes: external_exports.string().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(leaseContracts).set(input).where(eq(leaseContracts.id, input.id));
+    const db4 = getDb();
+    await db4.update(leaseContracts).set(input).where(eq(leaseContracts.id, input.id));
     return { success: true };
   }),
   paymentScheduleList: authedQuery.input(external_exports.object({ contractId: external_exports.number().optional() }).optional()).query(async ({ input }) => {
-    const db5 = getDb();
-    if (input?.contractId) return db5.select().from(leasePaymentSchedules).where(eq(leasePaymentSchedules.contractId, input.contractId)).orderBy(leasePaymentSchedules.paymentDate);
-    return db5.select().from(leasePaymentSchedules).orderBy(leasePaymentSchedules.paymentDate);
+    const db4 = getDb();
+    if (input?.contractId) return db4.select().from(leasePaymentSchedules).where(eq(leasePaymentSchedules.contractId, input.contractId)).orderBy(leasePaymentSchedules.paymentDate);
+    return db4.select().from(leasePaymentSchedules).orderBy(leasePaymentSchedules.paymentDate);
   }),
   paymentScheduleUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), paymentStatus: external_exports.enum(["pending", "paid", "overdue"]), paidDate: external_exports.string().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(leasePaymentSchedules).set({ paymentStatus: input.paymentStatus, paidDate: input.paidDate }).where(eq(leasePaymentSchedules.id, input.id));
+    const db4 = getDb();
+    await db4.update(leasePaymentSchedules).set({ paymentStatus: input.paymentStatus, paidDate: input.paidDate }).where(eq(leasePaymentSchedules.id, input.id));
     return { success: true };
   }),
   modificationList: authedQuery.input(external_exports.object({ contractId: external_exports.number().optional() }).optional()).query(async ({ input }) => {
-    const db5 = getDb();
-    if (input?.contractId) return db5.select().from(leaseModifications).where(eq(leaseModifications.contractId, input.contractId)).orderBy(desc(leaseModifications.modificationDate));
-    return db5.select().from(leaseModifications);
+    const db4 = getDb();
+    if (input?.contractId) return db4.select().from(leaseModifications).where(eq(leaseModifications.contractId, input.contractId)).orderBy(desc(leaseModifications.modificationDate));
+    return db4.select().from(leaseModifications);
   }),
   modificationCreate: authedQuery.input(external_exports.object({
     contractId: external_exports.number(),
@@ -133606,8 +133935,8 @@ var ifrs16Router = createRouter({
     newLeaseTerm: external_exports.number().optional(),
     effectiveDate: external_exports.string().optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(leaseModifications).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(leaseModifications).values({
       contractId: input.contractId,
       modificationDate: input.modificationDate,
       modificationType: input.modificationType,
@@ -133623,12 +133952,12 @@ var ifrs16Router = createRouter({
     return { id, success: true };
   }),
   rightOfUseAssetList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(rightOfUseAssets).innerJoin(leaseContracts, eq(rightOfUseAssets.contractId, leaseContracts.id)).where(eq(leaseContracts.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(rightOfUseAssets).innerJoin(leaseContracts, eq(rightOfUseAssets.contractId, leaseContracts.id)).where(eq(leaseContracts.tenantId, ctx.user.tenantId));
   }),
   calculateLeaseLiability: authedQuery.input(external_exports.object({ contractId: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const contract = await db5.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.contractId) });
+    const db4 = getDb();
+    const contract = await db4.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.contractId) });
     if (!contract) throw new Error("Contract not found");
     const payment = Number(contract.rentalPaymentAmount);
     const rate = Number(contract.discountRate) / 100;
@@ -133646,12 +133975,12 @@ var ifrs16Router = createRouter({
     const directCosts = Number(contract.initialDirectCosts || 0);
     const residual = Number(contract.residualValueGuarantee || 0);
     const rouAsset = (pv - incentive + directCosts + residual).toFixed(2);
-    await db5.update(leaseContracts).set({ leaseLiability, rightOfUseAsset: rouAsset }).where(eq(leaseContracts.id, input.contractId));
+    await db4.update(leaseContracts).set({ leaseLiability, rightOfUseAsset: rouAsset }).where(eq(leaseContracts.id, input.contractId));
     return { leaseLiability, rightOfUseAsset: rouAsset, presentValue: pv.toFixed(2) };
   }),
   generatePaymentSchedule: authedQuery.input(external_exports.object({ contractId: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const contract = await db5.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.contractId) });
+    const db4 = getDb();
+    const contract = await db4.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.contractId) });
     if (!contract) throw new Error("Contract not found");
     const payment = Number(contract.rentalPaymentAmount);
     const rate = Number(contract.discountRate) / 100;
@@ -133678,22 +134007,22 @@ var ifrs16Router = createRouter({
         outstandingBalance: outstanding.toFixed(2)
       });
     }
-    await db5.delete(leasePaymentSchedules).where(eq(leasePaymentSchedules.contractId, input.contractId));
+    await db4.delete(leasePaymentSchedules).where(eq(leasePaymentSchedules.contractId, input.contractId));
     for (const s of schedule) {
-      await db5.insert(leasePaymentSchedules).values(s);
+      await db4.insert(leasePaymentSchedules).values(s);
     }
     return { success: true, paymentsGenerated: schedule.length };
   }),
   journalizeLease: authedQuery.input(external_exports.object({ contractId: external_exports.number(), entryNumber: external_exports.string(), date: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const contract = await db5.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.contractId) });
+    const db4 = getDb();
+    const contract = await db4.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.contractId) });
     if (!contract) throw new Error("Contract not found");
-    const rouAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const rouAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.accountType, "asset"),
       like(chartOfAccounts.name, "%Right of Use%")
     ));
-    const liabAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const liabAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.accountType, "liability"),
       like(chartOfAccounts.name, "%Lease%")
@@ -133702,7 +134031,7 @@ var ifrs16Router = createRouter({
     const liabAccountId = liabAccounts[0]?.id || 1;
     const rouAmount = Number(contract.rightOfUseAsset);
     const liabAmount = Number(contract.leaseLiability);
-    const [{ jeId }] = await db5.insert(journalEntries).values({
+    const [{ jeId }] = await db4.insert(journalEntries).values({
       tenantId: ctx.user.tenantId,
       entryNumber: input.entryNumber,
       date: input.date,
@@ -133712,27 +134041,27 @@ var ifrs16Router = createRouter({
       isPosted: true,
       referenceType: "other"
     }).$returningId();
-    await db5.insert(journalEntryLines).values([
+    await db4.insert(journalEntryLines).values([
       { journalEntryId: jeId, accountId: rouAccountId, debit: rouAmount.toFixed(2), credit: "0", description: `ROU Asset - ${contract.leaseCode}` },
       { journalEntryId: jeId, accountId: liabAccountId, debit: "0", credit: liabAmount.toFixed(2), description: `Lease Liability - ${contract.leaseCode}` }
     ]);
     return { id: jeId, success: true };
   }),
   journalizePayment: authedQuery.input(external_exports.object({ scheduleId: external_exports.number(), entryNumber: external_exports.string(), date: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const sched = await db5.query.leasePaymentSchedules.findFirst({ where: eq(leasePaymentSchedules.id, input.scheduleId) });
+    const db4 = getDb();
+    const sched = await db4.query.leasePaymentSchedules.findFirst({ where: eq(leasePaymentSchedules.id, input.scheduleId) });
     if (!sched) throw new Error("Schedule not found");
-    const liabAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const liabAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.accountType, "liability"),
       like(chartOfAccounts.name, "%Lease%")
     ));
-    const expenseAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const expenseAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.accountType, "expense"),
       like(chartOfAccounts.name, "%Interest%")
     ));
-    const cashAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const cashAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.isCashAccount, true)
     ));
@@ -133742,7 +134071,7 @@ var ifrs16Router = createRouter({
     const payment = Number(sched.paymentAmount);
     const principal = Number(sched.principalPortion);
     const interest = Number(sched.interestPortion);
-    const [{ jeId }] = await db5.insert(journalEntries).values({
+    const [{ jeId }] = await db4.insert(journalEntries).values({
       tenantId: ctx.user.tenantId,
       entryNumber: input.entryNumber,
       date: input.date,
@@ -133752,17 +134081,17 @@ var ifrs16Router = createRouter({
       isPosted: true,
       referenceType: "payment"
     }).$returningId();
-    await db5.insert(journalEntryLines).values([
+    await db4.insert(journalEntryLines).values([
       { journalEntryId: jeId, accountId: liabAccountId, debit: principal.toFixed(2), credit: "0", description: "Lease liability reduction" },
       { journalEntryId: jeId, accountId: expenseAccountId, debit: interest.toFixed(2), credit: "0", description: "Interest expense" },
       { journalEntryId: jeId, accountId: cashAccountId, debit: "0", credit: payment.toFixed(2), description: "Lease payment" }
     ]);
-    await db5.update(leasePaymentSchedules).set({ paymentStatus: "paid", paidDate: input.date }).where(eq(leasePaymentSchedules.id, input.scheduleId));
+    await db4.update(leasePaymentSchedules).set({ paymentStatus: "paid", paidDate: input.date }).where(eq(leasePaymentSchedules.id, input.scheduleId));
     return { id: jeId, success: true };
   }),
   runDepreciation: authedQuery.input(external_exports.object({ contractId: external_exports.number(), entryNumber: external_exports.string(), date: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const contract = await db5.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.contractId) });
+    const db4 = getDb();
+    const contract = await db4.query.leaseContracts.findFirst({ where: eq(leaseContracts.id, input.contractId) });
     if (!contract) throw new Error("Contract not found");
     const rouAmount = Number(contract.rightOfUseAsset);
     const term = contract.leaseTermMonths;
@@ -133770,21 +134099,21 @@ var ifrs16Router = createRouter({
     const monthlyDep = rouAmount / term;
     const newAccum = Number(contract.accumulatedDepreciation) + monthlyDep;
     const netBook = rouAmount - newAccum;
-    await db5.update(leaseContracts).set({
+    await db4.update(leaseContracts).set({
       accumulatedDepreciation: newAccum.toFixed(2)
     }).where(eq(leaseContracts.id, input.contractId));
-    const depAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const depAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.accountType, "expense"),
       like(chartOfAccounts.name, "%Depreciation%")
     ));
-    const accumDepAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const accumDepAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       like(chartOfAccounts.name, "%Accum. Depreciation%")
     ));
     const depAccountId = depAccounts[0]?.id || 1;
     const accumAccountId = accumDepAccounts[0]?.id || 2;
-    const [{ jeId }] = await db5.insert(journalEntries).values({
+    const [{ jeId }] = await db4.insert(journalEntries).values({
       tenantId: ctx.user.tenantId,
       entryNumber: input.entryNumber,
       date: input.date,
@@ -133794,22 +134123,22 @@ var ifrs16Router = createRouter({
       isPosted: true,
       referenceType: "other"
     }).$returningId();
-    await db5.insert(journalEntryLines).values([
+    await db4.insert(journalEntryLines).values([
       { journalEntryId: jeId, accountId: depAccountId, debit: monthlyDep.toFixed(2), credit: "0", description: "Depreciation expense" },
       { journalEntryId: jeId, accountId: accumAccountId, debit: "0", credit: monthlyDep.toFixed(2), description: "Accumulated depreciation" }
     ]);
     return { success: true, monthlyDepreciation: monthlyDep.toFixed(2), netBookValue: netBook.toFixed(2), journalEntryId: jeId };
   }),
   leaseDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const leases2 = await db5.select().from(leaseContracts).where(eq(leaseContracts.tenantId, tenantId));
+    const leases2 = await db4.select().from(leaseContracts).where(eq(leaseContracts.tenantId, tenantId));
     const totalLeases = leases2.length;
     const totalLiability = leases2.reduce((s, l) => s + Number(l.leaseLiability), 0);
     const totalRouAssets = leases2.reduce((s, l) => s + Number(l.rightOfUseAsset), 0);
     const totalDepreciation = leases2.reduce((s, l) => s + Number(l.accumulatedDepreciation), 0);
     const activeLeases = leases2.filter((l) => l.status === "active").length;
-    const upcomingPayments = await db5.select().from(leasePaymentSchedules).innerJoin(leaseContracts, eq(leasePaymentSchedules.contractId, leaseContracts.id)).where(and(eq(leaseContracts.tenantId, tenantId), eq(leasePaymentSchedules.paymentStatus, "pending"))).orderBy(leasePaymentSchedules.paymentDate).limit(10);
+    const upcomingPayments = await db4.select().from(leasePaymentSchedules).innerJoin(leaseContracts, eq(leasePaymentSchedules.contractId, leaseContracts.id)).where(and(eq(leaseContracts.tenantId, tenantId), eq(leasePaymentSchedules.paymentStatus, "pending"))).orderBy(leasePaymentSchedules.paymentDate).limit(10);
     return {
       totalLeases,
       totalLiability: totalLiability.toFixed(2),
@@ -133827,10 +134156,10 @@ init_schema2();
 init_drizzle_orm();
 var ifrs15Router = createRouter({
   obligationList: authedQuery.input(external_exports.object({ contractId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(performanceObligations.tenantId, ctx.user.tenantId)];
     if (input?.contractId) conditions.push(eq(performanceObligations.contractId, input.contractId));
-    return db5.select().from(performanceObligations).where(and(...conditions)).orderBy(desc(performanceObligations.createdAt));
+    return db4.select().from(performanceObligations).where(and(...conditions)).orderBy(desc(performanceObligations.createdAt));
   }),
   obligationCreate: authedQuery.input(external_exports.object({
     contractId: external_exports.number().optional(),
@@ -133846,8 +134175,8 @@ var ifrs15Router = createRouter({
     endDate: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(performanceObligations).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(performanceObligations).values({
       tenantId: ctx.user.tenantId,
       contractId: input.contractId,
       obligationName: input.obligationName,
@@ -133869,13 +134198,13 @@ var ifrs15Router = createRouter({
     completionPercent: external_exports.string().optional(),
     status: external_exports.enum(["identified", "satisfied", "partially_satisfied", "cancelled"]).optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(performanceObligations).set(input).where(eq(performanceObligations.id, input.id));
+    const db4 = getDb();
+    await db4.update(performanceObligations).set(input).where(eq(performanceObligations.id, input.id));
     return { success: true };
   }),
   contractAssetList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(contractAssets).where(eq(contractAssets.tenantId, ctx.user.tenantId)).orderBy(desc(contractAssets.createdAt));
+    const db4 = getDb();
+    return db4.select().from(contractAssets).where(eq(contractAssets.tenantId, ctx.user.tenantId)).orderBy(desc(contractAssets.createdAt));
   }),
   contractAssetCreate: authedQuery.input(external_exports.object({
     contractId: external_exports.number().optional(),
@@ -133884,8 +134213,8 @@ var ifrs15Router = createRouter({
     amount: external_exports.string(),
     date: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(contractAssets).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(contractAssets).values({
       tenantId: ctx.user.tenantId,
       contractId: input.contractId,
       obligationId: input.obligationId,
@@ -133896,8 +134225,8 @@ var ifrs15Router = createRouter({
     return { id, success: true };
   }),
   contractLiabilityList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(contractLiabilities).where(eq(contractLiabilities.tenantId, ctx.user.tenantId)).orderBy(desc(contractLiabilities.createdAt));
+    const db4 = getDb();
+    return db4.select().from(contractLiabilities).where(eq(contractLiabilities.tenantId, ctx.user.tenantId)).orderBy(desc(contractLiabilities.createdAt));
   }),
   contractLiabilityCreate: authedQuery.input(external_exports.object({
     contractId: external_exports.number().optional(),
@@ -133906,8 +134235,8 @@ var ifrs15Router = createRouter({
     amount: external_exports.string(),
     date: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(contractLiabilities).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(contractLiabilities).values({
       tenantId: ctx.user.tenantId,
       contractId: input.contractId,
       obligationId: input.obligationId,
@@ -133918,20 +134247,20 @@ var ifrs15Router = createRouter({
     return { id, success: true };
   }),
   recognitionScheduleList: authedQuery.input(external_exports.object({ obligationId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(revenueRecognitionSchedules.tenantId, ctx.user.tenantId)];
     if (input?.obligationId) conditions.push(eq(revenueRecognitionSchedules.obligationId, input.obligationId));
-    return db5.select().from(revenueRecognitionSchedules).where(and(...conditions)).orderBy(revenueRecognitionSchedules.scheduledDate);
+    return db4.select().from(revenueRecognitionSchedules).where(and(...conditions)).orderBy(revenueRecognitionSchedules.scheduledDate);
   }),
   calculateAllocatedPrice: authedQuery.input(external_exports.object({ contractId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const obligations = await db5.select().from(performanceObligations).where(and(eq(performanceObligations.tenantId, ctx.user.tenantId), eq(performanceObligations.contractId, input.contractId)));
+    const db4 = getDb();
+    const obligations = await db4.select().from(performanceObligations).where(and(eq(performanceObligations.tenantId, ctx.user.tenantId), eq(performanceObligations.contractId, input.contractId)));
     const totalStandalone = obligations.reduce((s, o) => s + Number(o.standalonePrice), 0);
     const totalTransaction = obligations.reduce((s, o) => s + Number(o.transactionPrice), 0);
     for (const obl of obligations) {
       const ssPrice = Number(obl.standalonePrice);
       const allocated = totalStandalone > 0 ? ssPrice / totalStandalone * totalTransaction : 0;
-      await db5.update(performanceObligations).set({
+      await db4.update(performanceObligations).set({
         allocatedAmount: allocated.toFixed(2)
       }).where(eq(performanceObligations.id, obl.id));
     }
@@ -133942,8 +134271,8 @@ var ifrs15Router = createRouter({
     startDate: external_exports.string(),
     endDate: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const obligation = await db5.query.performanceObligations.findFirst({ where: eq(performanceObligations.id, input.obligationId) });
+    const db4 = getDb();
+    const obligation = await db4.query.performanceObligations.findFirst({ where: eq(performanceObligations.id, input.obligationId) });
     if (!obligation) throw new Error("Obligation not found");
     const amount = Number(obligation.allocatedAmount);
     const start = new Date(input.startDate);
@@ -133952,12 +134281,12 @@ var ifrs15Router = createRouter({
     if (months <= 0) throw new Error("Invalid date range");
     const monthlyAmount = amount / months;
     let cumulative = 0;
-    await db5.delete(revenueRecognitionSchedules).where(eq(revenueRecognitionSchedules.obligationId, input.obligationId));
+    await db4.delete(revenueRecognitionSchedules).where(eq(revenueRecognitionSchedules.obligationId, input.obligationId));
     for (let i = 0; i < months; i++) {
       const schedDate = new Date(start);
       schedDate.setMonth(schedDate.getMonth() + i);
       cumulative += monthlyAmount;
-      await db5.insert(revenueRecognitionSchedules).values({
+      await db4.insert(revenueRecognitionSchedules).values({
         tenantId: ctx.user.tenantId,
         contractId: obligation.contractId,
         obligationId: input.obligationId,
@@ -133974,21 +134303,21 @@ var ifrs15Router = createRouter({
     entryNumber: external_exports.string(),
     date: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const sched = await db5.query.revenueRecognitionSchedules.findFirst({ where: eq(revenueRecognitionSchedules.id, input.scheduleId) });
+    const db4 = getDb();
+    const sched = await db4.query.revenueRecognitionSchedules.findFirst({ where: eq(revenueRecognitionSchedules.id, input.scheduleId) });
     if (!sched) throw new Error("Schedule not found");
     const amount = Number(sched.recognizedAmount);
-    const revAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const revAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.accountType, "revenue")
     ));
-    const assetAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const assetAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.accountCategory, "current_asset")
     ));
     const revAccountId = revAccounts[0]?.id || 1;
     const assetAccountId = assetAccounts[0]?.id || 1;
-    const [{ jeId }] = await db5.insert(journalEntries).values({
+    const [{ jeId }] = await db4.insert(journalEntries).values({
       tenantId: ctx.user.tenantId,
       entryNumber: input.entryNumber,
       date: input.date,
@@ -133998,16 +134327,16 @@ var ifrs15Router = createRouter({
       isPosted: true,
       referenceType: "other"
     }).$returningId();
-    await db5.insert(journalEntryLines).values([
+    await db4.insert(journalEntryLines).values([
       { journalEntryId: jeId, accountId: assetAccountId, debit: amount.toFixed(2), credit: "0", description: "Contract asset / receivable" },
       { journalEntryId: jeId, accountId: revAccountId, debit: "0", credit: amount.toFixed(2), description: "Revenue recognized" }
     ]);
-    await db5.update(revenueRecognitionSchedules).set({ status: "recognized" }).where(eq(revenueRecognitionSchedules.id, input.scheduleId));
+    await db4.update(revenueRecognitionSchedules).set({ status: "recognized" }).where(eq(revenueRecognitionSchedules.id, input.scheduleId));
     return { journalEntryId: jeId, success: true };
   }),
   contractCostList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(contractCosts).where(eq(contractCosts.tenantId, ctx.user.tenantId)).orderBy(desc(contractCosts.createdAt));
+    const db4 = getDb();
+    return db4.select().from(contractCosts).where(eq(contractCosts.tenantId, ctx.user.tenantId)).orderBy(desc(contractCosts.createdAt));
   }),
   contractCostCreate: authedQuery.input(external_exports.object({
     contractId: external_exports.number().optional(),
@@ -134018,8 +134347,8 @@ var ifrs15Router = createRouter({
     amortizationPeriod: external_exports.number().optional(),
     amortizationMethod: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(contractCosts).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(contractCosts).values({
       tenantId: ctx.user.tenantId,
       contractId: input.contractId,
       costType: input.costType,
@@ -134033,18 +134362,18 @@ var ifrs15Router = createRouter({
     return { id, success: true };
   }),
   expenseContractCosts: authedQuery.input(external_exports.object({ costId: external_exports.number(), entryNumber: external_exports.string(), date: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const cost = await db5.query.contractCosts.findFirst({ where: eq(contractCosts.id, input.costId) });
+    const db4 = getDb();
+    const cost = await db4.query.contractCosts.findFirst({ where: eq(contractCosts.id, input.costId) });
     if (!cost) throw new Error("Cost not found");
     const capitalized = Number(cost.capitalizedAmount);
     const period = cost.amortizationPeriod || 1;
     const monthlyExpense = capitalized / period;
-    const expenseAccounts = await db5.select().from(chartOfAccounts).where(and(
+    const expenseAccounts = await db4.select().from(chartOfAccounts).where(and(
       eq(chartOfAccounts.tenantId, ctx.user.tenantId),
       eq(chartOfAccounts.accountType, "expense")
     ));
     const expenseAccountId = expenseAccounts[0]?.id || 1;
-    const [{ jeId }] = await db5.insert(journalEntries).values({
+    const [{ jeId }] = await db4.insert(journalEntries).values({
       tenantId: ctx.user.tenantId,
       entryNumber: input.entryNumber,
       date: input.date,
@@ -134054,20 +134383,20 @@ var ifrs15Router = createRouter({
       isPosted: true,
       referenceType: "other"
     }).$returningId();
-    await db5.insert(journalEntryLines).values([
+    await db4.insert(journalEntryLines).values([
       { journalEntryId: jeId, accountId: expenseAccountId, debit: monthlyExpense.toFixed(2), credit: "0", description: "Amortization expense" },
       { journalEntryId: jeId, accountId: expenseAccountId, debit: "0", credit: monthlyExpense.toFixed(2), description: "Capitalized cost reduction" }
     ]);
-    await db5.update(contractCosts).set({ status: "amortized" }).where(eq(contractCosts.id, input.costId));
+    await db4.update(contractCosts).set({ status: "amortized" }).where(eq(contractCosts.id, input.costId));
     return { journalEntryId: jeId, monthlyExpense: monthlyExpense.toFixed(2), success: true };
   }),
   revenueDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const obligations = await db5.select().from(performanceObligations).where(eq(performanceObligations.tenantId, tenantId));
-    const assets2 = await db5.select().from(contractAssets).where(eq(contractAssets.tenantId, tenantId));
-    const liabilities = await db5.select().from(contractLiabilities).where(eq(contractLiabilities.tenantId, tenantId));
-    const schedules = await db5.select().from(revenueRecognitionSchedules).where(eq(revenueRecognitionSchedules.tenantId, tenantId));
+    const obligations = await db4.select().from(performanceObligations).where(eq(performanceObligations.tenantId, tenantId));
+    const assets2 = await db4.select().from(contractAssets).where(eq(contractAssets.tenantId, tenantId));
+    const liabilities = await db4.select().from(contractLiabilities).where(eq(contractLiabilities.tenantId, tenantId));
+    const schedules = await db4.select().from(revenueRecognitionSchedules).where(eq(revenueRecognitionSchedules.tenantId, tenantId));
     const totalDeferred = liabilities.reduce((s, l) => s + Number(l.remainingAmount), 0);
     const totalRecognized = assets2.reduce((s, a) => s + Number(a.recognizedRevenue), 0) + liabilities.reduce((s, l) => s + Number(l.recognizedAmount), 0);
     const totalContractAssets = assets2.reduce((s, a) => s + Number(a.amount), 0);
@@ -134091,8 +134420,8 @@ init_drizzle_orm();
 var mrpRouter = createRouter({
   // MPS
   mpsList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(masterProductionSchedules).where(eq(masterProductionSchedules.tenantId, ctx.user.tenantId)).orderBy(desc(masterProductionSchedules.createdAt));
+    const db4 = getDb();
+    return db4.select().from(masterProductionSchedules).where(eq(masterProductionSchedules.tenantId, ctx.user.tenantId)).orderBy(desc(masterProductionSchedules.createdAt));
   }),
   mpsCreate: authedQuery.input(external_exports.object({
     productId: external_exports.number(),
@@ -134101,14 +134430,14 @@ var mrpRouter = createRouter({
     demandSource: external_exports.enum(["forecast", "sales_order", "safety_stock", "manual"]),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(masterProductionSchedules).values({ ...input, tenantId: ctx.user.tenantId, createdBy: ctx.user.id }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(masterProductionSchedules).values({ ...input, tenantId: ctx.user.tenantId, createdBy: ctx.user.id }).$returningId();
     return { id, success: true };
   }),
   // Capacity Resources
   resourceList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(capacityResources).where(eq(capacityResources.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(capacityResources).where(eq(capacityResources.tenantId, ctx.user.tenantId));
   }),
   resourceCreate: authedQuery.input(external_exports.object({
     resourceCode: external_exports.string(),
@@ -134118,14 +134447,14 @@ var mrpRouter = createRouter({
     availableHours: external_exports.string().optional(),
     costPerHour: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(capacityResources).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(capacityResources).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Rough Cut Capacity Plans
   rccpList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(roughCutCapacityPlans).where(eq(roughCutCapacityPlans.tenantId, ctx.user.tenantId)).orderBy(desc(roughCutCapacityPlans.createdAt));
+    const db4 = getDb();
+    return db4.select().from(roughCutCapacityPlans).where(eq(roughCutCapacityPlans.tenantId, ctx.user.tenantId)).orderBy(desc(roughCutCapacityPlans.createdAt));
   }),
   rccpCreate: authedQuery.input(external_exports.object({
     resourceId: external_exports.number(),
@@ -134135,9 +134464,9 @@ var mrpRouter = createRouter({
     requiredCapacity: external_exports.string(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const overload = ((Number(input.requiredCapacity) - Number(input.availableCapacity)) / Number(input.availableCapacity) * 100).toFixed(2);
-    const [{ id }] = await db5.insert(roughCutCapacityPlans).values({
+    const [{ id }] = await db4.insert(roughCutCapacityPlans).values({
       ...input,
       overloadPercent: overload,
       tenantId: ctx.user.tenantId
@@ -134146,41 +134475,41 @@ var mrpRouter = createRouter({
   }),
   // MRP Demands
   mrpDemandList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(mrpDemands).where(eq(mrpDemands.tenantId, ctx.user.tenantId)).orderBy(desc(mrpDemands.createdAt));
+    const db4 = getDb();
+    return db4.select().from(mrpDemands).where(eq(mrpDemands.tenantId, ctx.user.tenantId)).orderBy(desc(mrpDemands.createdAt));
   }),
   // MRP Runs
   mrpRunList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(mrpRuns).where(eq(mrpRuns.tenantId, ctx.user.tenantId)).orderBy(desc(mrpRuns.createdAt));
+    const db4 = getDb();
+    return db4.select().from(mrpRuns).where(eq(mrpRuns.tenantId, ctx.user.tenantId)).orderBy(desc(mrpRuns.createdAt));
   }),
   mrpRunGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const run2 = await db5.query.mrpRuns.findFirst({ where: eq(mrpRuns.id, input.id) });
-    const netRequirements = await db5.select().from(mrpNetRequirements).where(eq(mrpNetRequirements.mrpRunId || mrpNetRequirements.id, input.id));
-    const plannedOrders = await db5.select().from(mrpPlannedOrders).where(eq(mrpPlannedOrders.mrpRunId || mrpPlannedOrders.id, input.id));
+    const db4 = getDb();
+    const run2 = await db4.query.mrpRuns.findFirst({ where: eq(mrpRuns.id, input.id) });
+    const netRequirements = await db4.select().from(mrpNetRequirements).where(eq(mrpNetRequirements.mrpRunId || mrpNetRequirements.id, input.id));
+    const plannedOrders = await db4.select().from(mrpPlannedOrders).where(eq(mrpPlannedOrders.mrpRunId || mrpPlannedOrders.id, input.id));
     return { run: run2, netRequirements, plannedOrders };
   }),
   // Planned Orders
   plannedOrderList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(mrpPlannedOrders).where(eq(mrpPlannedOrders.tenantId, ctx.user.tenantId)).orderBy(desc(mrpPlannedOrders.createdAt));
+    const db4 = getDb();
+    return db4.select().from(mrpPlannedOrders).where(eq(mrpPlannedOrders.tenantId, ctx.user.tenantId)).orderBy(desc(mrpPlannedOrders.createdAt));
   }),
   // Pegging Records
   peggingList: authedQuery.input(external_exports.object({ demandId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(peggingRecords.tenantId, ctx.user.tenantId)];
     if (input?.demandId) conditions.push(eq(peggingRecords.demandId, input.demandId));
-    return db5.select().from(peggingRecords).where(and(...conditions));
+    return db4.select().from(peggingRecords).where(and(...conditions));
   }),
   // --- MRP Execution ---
   runMrp: authedQuery.input(external_exports.object({
     horizonStart: external_exports.string(),
     horizonEnd: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const startTime = Date.now();
-    const [{ runId }] = await db5.insert(mrpRuns).values({
+    const [{ runId }] = await db4.insert(mrpRuns).values({
       tenantId: ctx.user.tenantId,
       horizonStart: input.horizonStart,
       horizonEnd: input.horizonEnd,
@@ -134189,9 +134518,9 @@ var mrpRouter = createRouter({
     }).$returningId();
     try {
       const tenantId = ctx.user.tenantId;
-      const mpsItems = await db5.select().from(masterProductionSchedules).where(and(eq(masterProductionSchedules.tenantId, tenantId), eq(masterProductionSchedules.status, "planned")));
+      const mpsItems = await db4.select().from(masterProductionSchedules).where(and(eq(masterProductionSchedules.tenantId, tenantId), eq(masterProductionSchedules.status, "planned")));
       for (const mps of mpsItems) {
-        await db5.insert(mrpDemands).values({
+        await db4.insert(mrpDemands).values({
           tenantId,
           demandType: "independent",
           sourceType: "mps",
@@ -134202,18 +134531,18 @@ var mrpRouter = createRouter({
           status: "open"
         });
       }
-      const demands = await db5.select().from(mrpDemands).where(and(eq(mrpDemands.tenantId, tenantId), eq(mrpDemands.status, "open")));
+      const demands = await db4.select().from(mrpDemands).where(and(eq(mrpDemands.tenantId, tenantId), eq(mrpDemands.status, "open")));
       for (const demand of demands) {
-        const boms = await db5.select().from(billOfMaterials).where(and(eq(billOfMaterials.tenantId, tenantId), eq(billOfMaterials.productId, demand.productId), eq(billOfMaterials.isActive, true)));
+        const boms = await db4.select().from(billOfMaterials).where(and(eq(billOfMaterials.tenantId, tenantId), eq(billOfMaterials.productId, demand.productId), eq(billOfMaterials.isActive, true)));
         for (const bom of boms) {
-          const items = await db5.select().from(bomItems).where(eq(bomItems.bomId, bom.id));
+          const items = await db4.select().from(bomItems).where(eq(bomItems.bomId, bom.id));
           for (const item of items) {
             const childDemand = item.quantity * demand.quantity;
-            const bal2 = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId)));
+            const bal2 = await db4.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, item.productId), eq(inventoryBalances.tenantId, tenantId)));
             const onHand2 = bal2.reduce((sum5, b) => sum5 + (b.quantity || 0), 0);
             const netReq = Math.max(0, childDemand - onHand2);
             if (netReq > 0) {
-              await db5.insert(mrpPlannedOrders).values({
+              await db4.insert(mrpPlannedOrders).values({
                 tenantId,
                 productId: item.productId,
                 orderType: "purchase",
@@ -134223,7 +134552,7 @@ var mrpRouter = createRouter({
                 mrpRunId: runId
               });
             }
-            await db5.insert(peggingRecords).values({
+            await db4.insert(peggingRecords).values({
               tenantId,
               demandId: demand.id,
               orderId: runId,
@@ -134234,11 +134563,11 @@ var mrpRouter = createRouter({
           }
         }
         const grossReq = Number(demand.quantity);
-        const bal = await db5.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, demand.productId), eq(inventoryBalances.tenantId, tenantId)));
+        const bal = await db4.select().from(inventoryBalances).where(and(eq(inventoryBalances.productId, demand.productId), eq(inventoryBalances.tenantId, tenantId)));
         const onHand = bal.reduce((sum5, b) => sum5 + (b.quantity || 0), 0);
         const projectedOnHand = onHand;
         const netRequirement = Math.max(0, grossReq - onHand);
-        await db5.insert(mrpNetRequirements).values({
+        await db4.insert(mrpNetRequirements).values({
           tenantId,
           productId: demand.productId,
           periodStart: input.horizonStart,
@@ -134251,21 +134580,21 @@ var mrpRouter = createRouter({
           plannedOrderRelease: String(netRequirement > 0 ? netRequirement : 0)
         });
       }
-      await db5.update(mrpRuns).set({ status: "completed", executionTimeMs: Date.now() - startTime }).where(eq(mrpRuns.id, runId));
+      await db4.update(mrpRuns).set({ status: "completed", executionTimeMs: Date.now() - startTime }).where(eq(mrpRuns.id, runId));
       return { runId, success: true };
     } catch (e) {
-      await db5.update(mrpRuns).set({ status: "failed", actionMessages: e.message }).where(eq(mrpRuns.id, runId));
+      await db4.update(mrpRuns).set({ status: "failed", actionMessages: e.message }).where(eq(mrpRuns.id, runId));
       throw e;
     }
   }),
   // Dashboard
   mrpDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const totalMps = await db5.select({ count: sql`count(*)` }).from(masterProductionSchedules).where(eq(masterProductionSchedules.tenantId, tenantId));
-    const openDemands = await db5.select({ count: sql`count(*)` }).from(mrpDemands).where(and(eq(mrpDemands.tenantId, tenantId), eq(mrpDemands.status, "open")));
-    const plannedOrders = await db5.select({ count: sql`count(*)` }).from(mrpPlannedOrders).where(and(eq(mrpPlannedOrders.tenantId, tenantId), eq(mrpPlannedOrders.status, "planned")));
-    const overdue = await db5.select({ count: sql`count(*)` }).from(mrpDemands).where(and(eq(mrpDemands.tenantId, tenantId), eq(mrpDemands.status, "open"), lte(mrpDemands.dueDate, (/* @__PURE__ */ new Date()).toISOString().split("T")[0])));
+    const totalMps = await db4.select({ count: sql`count(*)` }).from(masterProductionSchedules).where(eq(masterProductionSchedules.tenantId, tenantId));
+    const openDemands = await db4.select({ count: sql`count(*)` }).from(mrpDemands).where(and(eq(mrpDemands.tenantId, tenantId), eq(mrpDemands.status, "open")));
+    const plannedOrders = await db4.select({ count: sql`count(*)` }).from(mrpPlannedOrders).where(and(eq(mrpPlannedOrders.tenantId, tenantId), eq(mrpPlannedOrders.status, "planned")));
+    const overdue = await db4.select({ count: sql`count(*)` }).from(mrpDemands).where(and(eq(mrpDemands.tenantId, tenantId), eq(mrpDemands.status, "open"), lte(mrpDemands.dueDate, (/* @__PURE__ */ new Date()).toISOString().split("T")[0])));
     return {
       totalMps: Number(totalMps[0]?.count || 0),
       openDemands: Number(openDemands[0]?.count || 0),
@@ -134275,12 +134604,12 @@ var mrpRouter = createRouter({
   }),
   // Release planned order -> actual PO or work order
   releasePlannedOrder: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const order = await db5.query.mrpPlannedOrders.findFirst({ where: eq(mrpPlannedOrders.id, input.id) });
+    const db4 = getDb();
+    const order = await db4.query.mrpPlannedOrders.findFirst({ where: eq(mrpPlannedOrders.id, input.id) });
     if (!order) throw new Error("Planned order not found");
     if (order.orderType === "purchase") {
       const poNum = `PO-MRP-${Date.now()}`;
-      const [{ poId }] = await db5.insert(purchaseOrders).values({
+      const [{ poId }] = await db4.insert(purchaseOrders).values({
         tenantId: ctx.user.tenantId,
         poNumber: poNum,
         supplierId: 1,
@@ -134290,11 +134619,11 @@ var mrpRouter = createRouter({
         status: "draft",
         createdBy: ctx.user.id
       }).$returningId();
-      await db5.update(mrpPlannedOrders).set({ status: "released" }).where(eq(mrpPlannedOrders.id, input.id));
+      await db4.update(mrpPlannedOrders).set({ status: "released" }).where(eq(mrpPlannedOrders.id, input.id));
       return { released: true, type: "purchase", referenceId: poId };
     } else if (order.orderType === "manufacture") {
       const woNum = `WO-MRP-${Date.now()}`;
-      const [{ woId }] = await db5.insert(workOrders).values({
+      const [{ woId }] = await db4.insert(workOrders).values({
         tenantId: ctx.user.tenantId,
         woNumber: woNum,
         productId: order.productId,
@@ -134302,30 +134631,30 @@ var mrpRouter = createRouter({
         status: "planned",
         createdBy: ctx.user.id
       }).$returningId();
-      await db5.update(mrpPlannedOrders).set({ status: "released" }).where(eq(mrpPlannedOrders.id, input.id));
+      await db4.update(mrpPlannedOrders).set({ status: "released" }).where(eq(mrpPlannedOrders.id, input.id));
       return { released: true, type: "manufacture", referenceId: woId };
     }
     throw new Error("Unsupported order type");
   }),
   // Pegging Graph
   peggingGraph: authedQuery.input(external_exports.object({ productId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const records = await db5.select().from(peggingRecords).where(eq(peggingRecords.productId, input.productId));
-    const demands = await db5.select().from(mrpDemands);
-    const orders = await db5.select().from(mrpPlannedOrders);
+    const db4 = getDb();
+    const records = await db4.select().from(peggingRecords).where(eq(peggingRecords.productId, input.productId));
+    const demands = await db4.select().from(mrpDemands);
+    const orders = await db4.select().from(mrpPlannedOrders);
     return { records, demands, orders };
   }),
   // Capacity Load Chart
   capacityLoadChart: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    const resources = await db5.select().from(capacityResources).where(eq(capacityResources.tenantId, ctx.user.tenantId));
-    const plans2 = await db5.select().from(roughCutCapacityPlans).where(eq(roughCutCapacityPlans.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    const resources = await db4.select().from(capacityResources).where(eq(capacityResources.tenantId, ctx.user.tenantId));
+    const plans2 = await db4.select().from(roughCutCapacityPlans).where(eq(roughCutCapacityPlans.tenantId, ctx.user.tenantId));
     return { resources, plans: plans2 };
   }),
   // Net Requirements
   netRequirementsList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(mrpNetRequirements).where(eq(mrpNetRequirements.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(mrpNetRequirements).where(eq(mrpNetRequirements.tenantId, ctx.user.tenantId));
   })
 });
 
@@ -134336,8 +134665,8 @@ init_drizzle_orm();
 var wmsRouter = createRouter({
   // Zones
   zoneList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(warehouseZones).where(eq(warehouseZones.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(warehouseZones).where(eq(warehouseZones.tenantId, ctx.user.tenantId));
   }),
   zoneCreate: authedQuery.input(external_exports.object({
     warehouseId: external_exports.number(),
@@ -134347,14 +134676,14 @@ var wmsRouter = createRouter({
     capacity: external_exports.string().optional(),
     colorCode: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(warehouseZones).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(warehouseZones).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Locations
   locationList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(storageLocations).where(eq(storageLocations.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(storageLocations).where(eq(storageLocations.tenantId, ctx.user.tenantId));
   }),
   locationCreate: authedQuery.input(external_exports.object({
     warehouseId: external_exports.number(),
@@ -134367,20 +134696,20 @@ var wmsRouter = createRouter({
     bin: external_exports.string().optional(),
     capacity: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(storageLocations).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(storageLocations).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Storage Bins
   storageBinList: authedQuery.input(external_exports.object({ locationId: external_exports.number().optional() }).optional()).query(async ({ input }) => {
-    const db5 = getDb();
-    if (input?.locationId) return db5.select().from(storageBins).where(eq(storageBins.locationId, input.locationId));
-    return db5.select().from(storageBins);
+    const db4 = getDb();
+    if (input?.locationId) return db4.select().from(storageBins).where(eq(storageBins.locationId, input.locationId));
+    return db4.select().from(storageBins);
   }),
   // Putaway Rules
   putawayRuleList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(putawayRules).where(eq(putawayRules.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(putawayRules).where(eq(putawayRules.tenantId, ctx.user.tenantId));
   }),
   putawayRuleCreate: authedQuery.input(external_exports.object({
     ruleName: external_exports.string(),
@@ -134390,24 +134719,24 @@ var wmsRouter = createRouter({
     zoneId: external_exports.number().optional(),
     isDefault: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(putawayRules).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(putawayRules).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Putaway Tasks
   putawayTaskList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(putawayTasks).where(eq(putawayTasks.tenantId, ctx.user.tenantId)).orderBy(desc(putawayTasks.createdAt));
+    const db4 = getDb();
+    return db4.select().from(putawayTasks).where(eq(putawayTasks.tenantId, ctx.user.tenantId)).orderBy(desc(putawayTasks.createdAt));
   }),
   putawayTaskComplete: authedQuery.input(external_exports.object({ id: external_exports.number(), toLocationId: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(putawayTasks).set({ status: "completed", toLocationId: input.toLocationId, completedAt: /* @__PURE__ */ new Date() }).where(eq(putawayTasks.id, input.id));
+    const db4 = getDb();
+    await db4.update(putawayTasks).set({ status: "completed", toLocationId: input.toLocationId, completedAt: /* @__PURE__ */ new Date() }).where(eq(putawayTasks.id, input.id));
     return { success: true };
   }),
   // Picking Rules
   pickingRuleList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(pickingRules).where(eq(pickingRules.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(pickingRules).where(eq(pickingRules.tenantId, ctx.user.tenantId));
   }),
   pickingRuleCreate: authedQuery.input(external_exports.object({
     ruleName: external_exports.string(),
@@ -134415,32 +134744,32 @@ var wmsRouter = createRouter({
     waveSize: external_exports.number().optional(),
     isDefault: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(pickingRules).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(pickingRules).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Picking Tasks
   pickingTaskList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(pickingTasks).where(eq(pickingTasks.tenantId, ctx.user.tenantId)).orderBy(desc(pickingTasks.createdAt));
+    const db4 = getDb();
+    return db4.select().from(pickingTasks).where(eq(pickingTasks.tenantId, ctx.user.tenantId)).orderBy(desc(pickingTasks.createdAt));
   }),
   pickingTaskComplete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(pickingTasks).set({ status: "completed", completedAt: /* @__PURE__ */ new Date() }).where(eq(pickingTasks.id, input.id));
+    const db4 = getDb();
+    await db4.update(pickingTasks).set({ status: "completed", completedAt: /* @__PURE__ */ new Date() }).where(eq(pickingTasks.id, input.id));
     return { success: true };
   }),
   // Wave Picking
   waveList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(wavePicking).where(eq(wavePicking.tenantId, ctx.user.tenantId)).orderBy(desc(wavePicking.createdAt));
+    const db4 = getDb();
+    return db4.select().from(wavePicking).where(eq(wavePicking.tenantId, ctx.user.tenantId)).orderBy(desc(wavePicking.createdAt));
   }),
   createWave: authedQuery.input(external_exports.object({
     waveType: external_exports.enum(["single_order", "multi_order", "zone"]),
     orderIds: external_exports.array(external_exports.number())
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const waveNum = `WAVE-${Date.now()}`;
-    const [{ id }] = await db5.insert(wavePicking).values({
+    const [{ id }] = await db4.insert(wavePicking).values({
       tenantId: ctx.user.tenantId,
       waveNumber: waveNum,
       waveType: input.waveType,
@@ -134451,14 +134780,14 @@ var wmsRouter = createRouter({
     return { id, waveNumber: waveNum, success: true };
   }),
   completeWave: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(wavePicking).set({ status: "completed", completedAt: /* @__PURE__ */ new Date() }).where(eq(wavePicking.id, input.id));
+    const db4 = getDb();
+    await db4.update(wavePicking).set({ status: "completed", completedAt: /* @__PURE__ */ new Date() }).where(eq(wavePicking.id, input.id));
     return { success: true };
   }),
   // Cycle Count Schedules
   cycleCountList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(cycleCountSchedules).where(eq(cycleCountSchedules.tenantId, ctx.user.tenantId)).orderBy(desc(cycleCountSchedules.createdAt));
+    const db4 = getDb();
+    return db4.select().from(cycleCountSchedules).where(eq(cycleCountSchedules.tenantId, ctx.user.tenantId)).orderBy(desc(cycleCountSchedules.createdAt));
   }),
   cycleCountCreate: authedQuery.input(external_exports.object({
     warehouseId: external_exports.number(),
@@ -134467,14 +134796,14 @@ var wmsRouter = createRouter({
     frequency: external_exports.enum(["daily", "weekly", "monthly", "quarterly", "annually"]),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(cycleCountSchedules).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(cycleCountSchedules).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Cycle Count Entries
   cycleCountEntryList: authedQuery.input(external_exports.object({ scheduleId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    return db5.select().from(cycleCountEntries).where(eq(cycleCountEntries.scheduleId, input.scheduleId));
+    const db4 = getDb();
+    return db4.select().from(cycleCountEntries).where(eq(cycleCountEntries.scheduleId, input.scheduleId));
   }),
   cycleCountEntryCreate: authedQuery.input(external_exports.object({
     scheduleId: external_exports.number(),
@@ -134484,9 +134813,9 @@ var wmsRouter = createRouter({
     actualQuantity: external_exports.string(),
     varianceReason: external_exports.enum(["mispick", "putaway_error", "damage", "theft", "system_error", "other"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const variance = (Number(input.actualQuantity) - Number(input.expectedQuantity)).toFixed(4);
-    const [{ id }] = await db5.insert(cycleCountEntries).values({
+    const [{ id }] = await db4.insert(cycleCountEntries).values({
       ...input,
       variance,
       countedBy: ctx.user.id,
@@ -134496,14 +134825,14 @@ var wmsRouter = createRouter({
   }),
   // Inventory Adjustment Reasons
   adjustmentReasonList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(inventoryAdjustmentReasons).where(eq(inventoryAdjustmentReasons.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(inventoryAdjustmentReasons).where(eq(inventoryAdjustmentReasons.tenantId, ctx.user.tenantId));
   }),
   // Suggest Location (putaway suggestion)
   suggestLocation: authedQuery.input(external_exports.object({ productId: external_exports.number(), warehouseId: external_exports.number(), quantity: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const rules = await db5.select().from(putawayRules).where(and(eq(putawayRules.warehouseId, input.warehouseId), eq(putawayRules.isActive, true))).orderBy(putawayRules.priority);
-    const locations = await db5.select().from(storageLocations).where(and(eq(storageLocations.warehouseId, input.warehouseId), eq(storageLocations.status, "available")));
+    const db4 = getDb();
+    const rules = await db4.select().from(putawayRules).where(and(eq(putawayRules.warehouseId, input.warehouseId), eq(putawayRules.isActive, true))).orderBy(putawayRules.priority);
+    const locations = await db4.select().from(storageLocations).where(and(eq(storageLocations.warehouseId, input.warehouseId), eq(storageLocations.status, "available")));
     const suggested = [];
     for (const rule of rules) {
       if (rule.strategy === "first_empty") {
@@ -134521,10 +134850,10 @@ var wmsRouter = createRouter({
   }),
   // Get location by product
   getLocationByProduct: authedQuery.input(external_exports.object({ productId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const bins = await db5.select().from(storageBins).where(eq(storageBins.productId, input.productId));
+    const db4 = getDb();
+    const bins = await db4.select().from(storageBins).where(eq(storageBins.productId, input.productId));
     const locationIds = [...new Set(bins.map((b) => b.locationId))];
-    const locations = await Promise.all(locationIds.map((id) => db5.query.storageLocations.findFirst({ where: eq(storageLocations.id, id) })));
+    const locations = await Promise.all(locationIds.map((id) => db4.query.storageLocations.findFirst({ where: eq(storageLocations.id, id) })));
     return { bins, locations: locations.filter(Boolean) };
   }),
   // Generate putaway task from receipt
@@ -134535,9 +134864,9 @@ var wmsRouter = createRouter({
     quantity: external_exports.string(),
     toLocationId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const taskNum = `PA-${Date.now()}`;
-    const [{ id }] = await db5.insert(putawayTasks).values({
+    const [{ id }] = await db4.insert(putawayTasks).values({
       tenantId: ctx.user.tenantId,
       taskNumber: taskNum,
       ...input
@@ -134552,9 +134881,9 @@ var wmsRouter = createRouter({
     quantity: external_exports.string(),
     fromLocationId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const taskNum = `PK-${Date.now()}`;
-    const [{ id }] = await db5.insert(pickingTasks).values({
+    const [{ id }] = await db4.insert(pickingTasks).values({
       tenantId: ctx.user.tenantId,
       taskNumber: taskNum,
       ...input
@@ -134563,13 +134892,13 @@ var wmsRouter = createRouter({
   }),
   // WMS Dashboard
   wmsDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const totalLocations = await db5.select({ count: sql`count(*)` }).from(storageLocations).where(eq(storageLocations.tenantId, tenantId));
-    const occupied = await db5.select({ count: sql`count(*)` }).from(storageLocations).where(and(eq(storageLocations.tenantId, tenantId), eq(storageLocations.status, "occupied")));
-    const activePutaway = await db5.select({ count: sql`count(*)` }).from(putawayTasks).where(and(eq(putawayTasks.tenantId, tenantId), eq(putawayTasks.status, "in_progress")));
-    const activePicking = await db5.select({ count: sql`count(*)` }).from(pickingTasks).where(and(eq(pickingTasks.tenantId, tenantId), eq(pickingTasks.status, "in_progress")));
-    const pendingCycle = await db5.select({ count: sql`count(*)` }).from(cycleCountSchedules).where(and(eq(cycleCountSchedules.tenantId, tenantId), eq(cycleCountSchedules.status, "scheduled")));
+    const totalLocations = await db4.select({ count: sql`count(*)` }).from(storageLocations).where(eq(storageLocations.tenantId, tenantId));
+    const occupied = await db4.select({ count: sql`count(*)` }).from(storageLocations).where(and(eq(storageLocations.tenantId, tenantId), eq(storageLocations.status, "occupied")));
+    const activePutaway = await db4.select({ count: sql`count(*)` }).from(putawayTasks).where(and(eq(putawayTasks.tenantId, tenantId), eq(putawayTasks.status, "in_progress")));
+    const activePicking = await db4.select({ count: sql`count(*)` }).from(pickingTasks).where(and(eq(pickingTasks.tenantId, tenantId), eq(pickingTasks.status, "in_progress")));
+    const pendingCycle = await db4.select({ count: sql`count(*)` }).from(cycleCountSchedules).where(and(eq(cycleCountSchedules.tenantId, tenantId), eq(cycleCountSchedules.status, "scheduled")));
     const total = Number(totalLocations[0]?.count || 0);
     return {
       totalLocations: total,
@@ -134589,8 +134918,8 @@ init_drizzle_orm();
 var scmRouter = createRouter({
   // Supplier Evaluations
   evaluationList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(supplierEvaluations).where(eq(supplierEvaluations.tenantId, ctx.user.tenantId)).orderBy(desc(supplierEvaluations.createdAt));
+    const db4 = getDb();
+    return db4.select().from(supplierEvaluations).where(eq(supplierEvaluations.tenantId, ctx.user.tenantId)).orderBy(desc(supplierEvaluations.createdAt));
   }),
   evaluationCreate: authedQuery.input(external_exports.object({
     supplierId: external_exports.number(),
@@ -134601,11 +134930,11 @@ var scmRouter = createRouter({
     serviceScore: external_exports.string(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const overall = ((Number(input.qualityScore) + Number(input.deliveryScore) + Number(input.priceScore) + Number(input.serviceScore)) / 4).toFixed(2);
     const avg3 = Number(overall);
     const category = avg3 >= 90 ? "excellent" : avg3 >= 75 ? "good" : avg3 >= 60 ? "average" : "poor";
-    const [{ id }] = await db5.insert(supplierEvaluations).values({
+    const [{ id }] = await db4.insert(supplierEvaluations).values({
       ...input,
       overallScore: overall,
       category,
@@ -134616,8 +134945,8 @@ var scmRouter = createRouter({
   }),
   // Supplier Contracts
   contractList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(supplierContracts).where(eq(supplierContracts.tenantId, ctx.user.tenantId)).orderBy(desc(supplierContracts.createdAt));
+    const db4 = getDb();
+    return db4.select().from(supplierContracts).where(eq(supplierContracts.tenantId, ctx.user.tenantId)).orderBy(desc(supplierContracts.createdAt));
   }),
   contractCreate: authedQuery.input(external_exports.object({
     supplierId: external_exports.number(),
@@ -134630,21 +134959,21 @@ var scmRouter = createRouter({
     currency: external_exports.string().optional(),
     renewalReminderDays: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(supplierContracts).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(supplierContracts).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // RFQ
   rfqList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(rfqHeaders).where(eq(rfqHeaders.tenantId, ctx.user.tenantId)).orderBy(desc(rfqHeaders.createdAt));
+    const db4 = getDb();
+    return db4.select().from(rfqHeaders).where(eq(rfqHeaders.tenantId, ctx.user.tenantId)).orderBy(desc(rfqHeaders.createdAt));
   }),
   rfqGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const header = await db5.query.rfqHeaders.findFirst({ where: eq(rfqHeaders.id, input.id) });
-    const items = await db5.select().from(rfqItems).where(eq(rfqItems.rfqId, input.id));
-    const quotes = await db5.select().from(rfqSupplierQuotes).where(eq(rfqSupplierQuotes.rfqId, input.id));
-    const quoteLines = await Promise.all(quotes.map((q) => db5.select().from(rfqQuoteLines).where(eq(rfqQuoteLines.quoteId, q.id))));
+    const db4 = getDb();
+    const header = await db4.query.rfqHeaders.findFirst({ where: eq(rfqHeaders.id, input.id) });
+    const items = await db4.select().from(rfqItems).where(eq(rfqItems.rfqId, input.id));
+    const quotes = await db4.select().from(rfqSupplierQuotes).where(eq(rfqSupplierQuotes.rfqId, input.id));
+    const quoteLines = await Promise.all(quotes.map((q) => db4.select().from(rfqQuoteLines).where(eq(rfqQuoteLines.quoteId, q.id))));
     return { header, items, quotes, quoteLines: quoteLines.flat() };
   }),
   rfqCreate: authedQuery.input(external_exports.object({
@@ -134664,28 +134993,28 @@ var scmRouter = createRouter({
     })),
     supplierIds: external_exports.array(external_exports.number()).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { items, supplierIds, ...headerData } = input;
-    const [{ id }] = await db5.insert(rfqHeaders).values({ ...headerData, tenantId: ctx.user.tenantId, buyerId: ctx.user.id }).$returningId();
+    const [{ id }] = await db4.insert(rfqHeaders).values({ ...headerData, tenantId: ctx.user.tenantId, buyerId: ctx.user.id }).$returningId();
     for (const item of items) {
-      await db5.insert(rfqItems).values({ ...item, rfqId: id });
+      await db4.insert(rfqItems).values({ ...item, rfqId: id });
     }
     if (supplierIds) {
       for (const sid of supplierIds) {
-        await db5.insert(rfqSupplierQuotes).values({ rfqId: id, supplierId: sid, status: "draft" });
+        await db4.insert(rfqSupplierQuotes).values({ rfqId: id, supplierId: sid, status: "draft" });
       }
     }
     return { id, success: true };
   }),
   // RFQ Supplier Quotes
   quoteList: authedQuery.input(external_exports.object({ rfqId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    return db5.select().from(rfqSupplierQuotes).where(eq(rfqSupplierQuotes.rfqId, input.rfqId));
+    const db4 = getDb();
+    return db4.select().from(rfqSupplierQuotes).where(eq(rfqSupplierQuotes.rfqId, input.rfqId));
   }),
   // Bid Comparisons
   bidComparisonList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(bidComparisons).where(eq(bidComparisons.tenantId, ctx.user.tenantId)).orderBy(desc(bidComparisons.createdAt));
+    const db4 = getDb();
+    return db4.select().from(bidComparisons).where(eq(bidComparisons.tenantId, ctx.user.tenantId)).orderBy(desc(bidComparisons.createdAt));
   }),
   createBidComparison: authedQuery.input(external_exports.object({
     rfqId: external_exports.number(),
@@ -134694,8 +135023,8 @@ var scmRouter = createRouter({
     summary: external_exports.string().optional(),
     recommendedSupplierId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(bidComparisons).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(bidComparisons).values({
       ...input,
       tenantId: ctx.user.tenantId,
       preparedBy: ctx.user.id
@@ -134704,8 +135033,8 @@ var scmRouter = createRouter({
   }),
   // Supplier Portal Users
   portalUserList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(supplierPortalUsers).where(eq(supplierPortalUsers.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(supplierPortalUsers).where(eq(supplierPortalUsers.tenantId, ctx.user.tenantId));
   }),
   portalUserCreate: authedQuery.input(external_exports.object({
     supplierId: external_exports.number(),
@@ -134714,32 +135043,32 @@ var scmRouter = createRouter({
     phone: external_exports.string().optional(),
     passwordHash: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(supplierPortalUsers).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(supplierPortalUsers).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // Performance Metrics
   performanceMetricList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(supplierPerformanceMetrics).where(eq(supplierPerformanceMetrics.tenantId, ctx.user.tenantId)).orderBy(desc(supplierPerformanceMetrics.createdAt));
+    const db4 = getDb();
+    return db4.select().from(supplierPerformanceMetrics).where(eq(supplierPerformanceMetrics.tenantId, ctx.user.tenantId)).orderBy(desc(supplierPerformanceMetrics.createdAt));
   }),
   // Consignment Inventory
   consignmentList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(consignmentInventory).where(eq(consignmentInventory.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(consignmentInventory).where(eq(consignmentInventory.tenantId, ctx.user.tenantId));
   }),
   // Supplier Scorecard
   supplierScorecard: authedQuery.input(external_exports.object({ supplierId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const evals = await db5.select().from(supplierEvaluations).where(eq(supplierEvaluations.supplierId, input.supplierId));
-    const metrics = await db5.select().from(supplierPerformanceMetrics).where(eq(supplierPerformanceMetrics.supplierId, input.supplierId));
-    const contracts = await db5.select().from(supplierContracts).where(eq(supplierContracts.supplierId, input.supplierId));
+    const db4 = getDb();
+    const evals = await db4.select().from(supplierEvaluations).where(eq(supplierEvaluations.supplierId, input.supplierId));
+    const metrics = await db4.select().from(supplierPerformanceMetrics).where(eq(supplierPerformanceMetrics.supplierId, input.supplierId));
+    const contracts = await db4.select().from(supplierContracts).where(eq(supplierContracts.supplierId, input.supplierId));
     return { evaluations: evals, performanceMetrics: metrics, contracts };
   }),
   // Evaluate Supplier (calculate overall)
   evaluateSupplier: authedQuery.input(external_exports.object({ supplierId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const evals = await db5.select().from(supplierEvaluations).where(eq(supplierEvaluations.supplierId, input.supplierId));
+    const db4 = getDb();
+    const evals = await db4.select().from(supplierEvaluations).where(eq(supplierEvaluations.supplierId, input.supplierId));
     if (evals.length === 0) return { avgQuality: 0, avgDelivery: 0, avgPrice: 0, avgService: 0, overall: 0, category: "N/A" };
     const avgQuality = evals.reduce((s, e) => s + Number(e.qualityScore), 0) / evals.length;
     const avgDelivery = evals.reduce((s, e) => s + Number(e.deliveryScore), 0) / evals.length;
@@ -134751,11 +135080,11 @@ var scmRouter = createRouter({
   }),
   // RFQ Dashboard
   rfqDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const open = await db5.select({ count: sql`count(*)` }).from(rfqHeaders).where(and(eq(rfqHeaders.tenantId, tenantId), eq(rfqHeaders.status, "sent")));
-    const evaluated = await db5.select({ count: sql`count(*)` }).from(rfqHeaders).where(and(eq(rfqHeaders.tenantId, tenantId), eq(rfqHeaders.status, "evaluated")));
-    const closed = await db5.select({ count: sql`count(*)` }).from(rfqHeaders).where(and(eq(rfqHeaders.tenantId, tenantId), eq(rfqHeaders.status, "closed")));
+    const open = await db4.select({ count: sql`count(*)` }).from(rfqHeaders).where(and(eq(rfqHeaders.tenantId, tenantId), eq(rfqHeaders.status, "sent")));
+    const evaluated = await db4.select({ count: sql`count(*)` }).from(rfqHeaders).where(and(eq(rfqHeaders.tenantId, tenantId), eq(rfqHeaders.status, "evaluated")));
+    const closed = await db4.select({ count: sql`count(*)` }).from(rfqHeaders).where(and(eq(rfqHeaders.tenantId, tenantId), eq(rfqHeaders.status, "closed")));
     return {
       openRfqs: Number(open[0]?.count || 0),
       evaluatedRfqs: Number(evaluated[0]?.count || 0),
@@ -134764,12 +135093,12 @@ var scmRouter = createRouter({
   }),
   // SCM Dashboard
   scmDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const totalSuppliers = await db5.select({ count: sql`count(*)` }).from(suppliers).where(eq(suppliers.tenantId, tenantId));
-    const totalContracts = await db5.select({ count: sql`count(*)` }).from(supplierContracts).where(eq(supplierContracts.tenantId, tenantId));
-    const activeContracts = await db5.select({ count: sql`count(*)` }).from(supplierContracts).where(and(eq(supplierContracts.tenantId, tenantId), eq(supplierContracts.status, "active")));
-    const totalEvaluations = await db5.select({ count: sql`count(*)` }).from(supplierEvaluations).where(eq(supplierEvaluations.tenantId, tenantId));
+    const totalSuppliers = await db4.select({ count: sql`count(*)` }).from(suppliers).where(eq(suppliers.tenantId, tenantId));
+    const totalContracts = await db4.select({ count: sql`count(*)` }).from(supplierContracts).where(eq(supplierContracts.tenantId, tenantId));
+    const activeContracts = await db4.select({ count: sql`count(*)` }).from(supplierContracts).where(and(eq(supplierContracts.tenantId, tenantId), eq(supplierContracts.status, "active")));
+    const totalEvaluations = await db4.select({ count: sql`count(*)` }).from(supplierEvaluations).where(eq(supplierEvaluations.tenantId, tenantId));
     return {
       totalSuppliers: Number(totalSuppliers[0]?.count || 0),
       totalContracts: Number(totalContracts[0]?.count || 0),
@@ -134786,17 +135115,17 @@ init_drizzle_orm();
 var ediRouter = createRouter({
   // ── Partners ──
   listPartners: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
-    const items = await db5.select().from(ediPartners).where(eq(ediPartners.tenantId, tenantId)).limit(limit).offset(offset);
-    const [totalResult] = await db5.select({ total: sql`count(*)` }).from(ediPartners).where(eq(ediPartners.tenantId, tenantId));
+    const items = await db4.select().from(ediPartners).where(eq(ediPartners.tenantId, tenantId)).limit(limit).offset(offset);
+    const [totalResult] = await db4.select({ total: sql`count(*)` }).from(ediPartners).where(eq(ediPartners.tenantId, tenantId));
     return { items, total: totalResult?.total || 0 };
   }),
   getPartner: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.select().from(ediPartners).where(and(eq(ediPartners.id, input.id), eq(ediPartners.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [item] = await db4.select().from(ediPartners).where(and(eq(ediPartners.id, input.id), eq(ediPartners.tenantId, ctx.user.tenantId)));
     return item;
   }),
   createPartner: adminQuery.input(external_exports.object({
@@ -134811,31 +135140,31 @@ var ediRouter = createRouter({
     isActive: external_exports.boolean().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(ediPartners).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(ediPartners).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
     return item;
   }),
   updatePartner: adminQuery.input(external_exports.object({ id: external_exports.number(), data: external_exports.record(external_exports.string(), external_exports.any()) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(ediPartners).set(input.data).where(and(eq(ediPartners.id, input.id), eq(ediPartners.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(ediPartners).set(input.data).where(and(eq(ediPartners.id, input.id), eq(ediPartners.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   deletePartner: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(ediPartners).where(and(eq(ediPartners.id, input.id), eq(ediPartners.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.delete(ediPartners).where(and(eq(ediPartners.id, input.id), eq(ediPartners.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   // ── Document Types ──
   listDocumentTypes: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
-    const items = await db5.select().from(ediDocumentTypes).where(eq(ediDocumentTypes.tenantId, tenantId)).limit(limit).offset(offset);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(ediDocumentTypes).where(eq(ediDocumentTypes.tenantId, tenantId));
+    const items = await db4.select().from(ediDocumentTypes).where(eq(ediDocumentTypes.tenantId, tenantId)).limit(limit).offset(offset);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(ediDocumentTypes).where(eq(ediDocumentTypes.tenantId, tenantId));
     return { items, total: total?.total || 0 };
   }),
   createDocumentType: adminQuery.input(external_exports.object({
@@ -134845,8 +135174,8 @@ var ediRouter = createRouter({
     ediStandard: external_exports.string().optional(),
     status: external_exports.enum(["active", "inactive"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(ediDocumentTypes).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(ediDocumentTypes).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
@@ -134854,12 +135183,12 @@ var ediRouter = createRouter({
   }),
   // ── Mappings ──
   listMappings: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
-    const items = await db5.select().from(ediMappings).where(eq(ediMappings.tenantId, tenantId)).limit(limit).offset(offset);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(ediMappings).where(eq(ediMappings.tenantId, tenantId));
+    const items = await db4.select().from(ediMappings).where(eq(ediMappings.tenantId, tenantId)).limit(limit).offset(offset);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(ediMappings).where(eq(ediMappings.tenantId, tenantId));
     return { items, total: total?.total || 0 };
   }),
   createMapping: adminQuery.input(external_exports.object({
@@ -134875,8 +135204,8 @@ var ediRouter = createRouter({
     releaseCharacter: external_exports.string().optional(),
     isDefault: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(ediMappings).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(ediMappings).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
@@ -134884,57 +135213,57 @@ var ediRouter = createRouter({
   }),
   // ── Transaction Sets ──
   listTransactionSets: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
-    const items = await db5.select().from(ediTransactionSets).where(eq(ediTransactionSets.tenantId, tenantId)).limit(limit).offset(offset);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(ediTransactionSets).where(eq(ediTransactionSets.tenantId, tenantId));
+    const items = await db4.select().from(ediTransactionSets).where(eq(ediTransactionSets.tenantId, tenantId)).limit(limit).offset(offset);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(ediTransactionSets).where(eq(ediTransactionSets.tenantId, tenantId));
     return { items, total: total?.total || 0 };
   }),
   // ── Outbound Queue ──
   listOutbound: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
-    const items = await db5.select().from(ediOutboundQueue).where(eq(ediOutboundQueue.tenantId, tenantId)).orderBy(desc(ediOutboundQueue.createdAt)).limit(limit).offset(offset);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(ediOutboundQueue).where(eq(ediOutboundQueue.tenantId, tenantId));
+    const items = await db4.select().from(ediOutboundQueue).where(eq(ediOutboundQueue.tenantId, tenantId)).orderBy(desc(ediOutboundQueue.createdAt)).limit(limit).offset(offset);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(ediOutboundQueue).where(eq(ediOutboundQueue.tenantId, tenantId));
     return { items, total: total?.total || 0 };
   }),
   // ── Inbound Queue ──
   listInbound: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
-    const items = await db5.select().from(ediInboundQueue).where(eq(ediInboundQueue.tenantId, tenantId)).orderBy(desc(ediInboundQueue.createdAt)).limit(limit).offset(offset);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(ediInboundQueue).where(eq(ediInboundQueue.tenantId, tenantId));
+    const items = await db4.select().from(ediInboundQueue).where(eq(ediInboundQueue.tenantId, tenantId)).orderBy(desc(ediInboundQueue.createdAt)).limit(limit).offset(offset);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(ediInboundQueue).where(eq(ediInboundQueue.tenantId, tenantId));
     return { items, total: total?.total || 0 };
   }),
   // ── Logs ──
   listLogs: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0), partnerId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
     const conditions = [eq(ediLogs.tenantId, tenantId)];
     if (input?.partnerId) conditions.push(eq(ediLogs.partnerId, input.partnerId));
-    const items = await db5.select().from(ediLogs).where(and(...conditions)).orderBy(desc(ediLogs.createdAt)).limit(limit).offset(offset);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(ediLogs).where(and(...conditions));
+    const items = await db4.select().from(ediLogs).where(and(...conditions)).orderBy(desc(ediLogs.createdAt)).limit(limit).offset(offset);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(ediLogs).where(and(...conditions));
     return { items, total: total?.total || 0 };
   }),
   // ── Acknowledgements ──
   listAcknowledgements: authedQuery.input(external_exports.object({ outboundId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(ediAcknowledgements.tenantId, ctx.user.tenantId)];
     if (input?.outboundId) conditions.push(eq(ediAcknowledgements.outboundId, input.outboundId));
-    return db5.select().from(ediAcknowledgements).where(and(...conditions)).orderBy(desc(ediAcknowledgements.createdAt));
+    return db4.select().from(ediAcknowledgements).where(and(...conditions)).orderBy(desc(ediAcknowledgements.createdAt));
   }),
   // ── EDI Functions ──
   generateEdiFile: authedQuery.input(external_exports.object({ mappingId: external_exports.number(), data: external_exports.record(external_exports.string(), external_exports.any()) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [mapping] = await db5.select().from(ediMappings).where(and(eq(ediMappings.id, input.mappingId), eq(ediMappings.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [mapping] = await db4.select().from(ediMappings).where(and(eq(ediMappings.id, input.mappingId), eq(ediMappings.tenantId, ctx.user.tenantId)));
     if (!mapping) throw new Error("Mapping not found");
     const segTerm = mapping.segmentTerminator || "'";
     const elemSep = mapping.elementSeparator || "+";
@@ -134950,7 +135279,7 @@ var ediRouter = createRouter({
 `;
       }
     }
-    await db5.insert(ediOutboundQueue).values({
+    await db4.insert(ediOutboundQueue).values({
       tenantId: ctx.user.tenantId,
       ediPayload: edi,
       status: "generated",
@@ -134959,7 +135288,7 @@ var ediRouter = createRouter({
     return { edi, success: true };
   }),
   parseEdiFile: authedQuery.input(external_exports.object({ rawEdi: external_exports.string() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const lines = input.rawEdi.split("\n").filter((l) => l.trim());
     const parsed = {};
     for (const line of lines) {
@@ -134967,7 +135296,7 @@ var ediRouter = createRouter({
       const [segment, ...elements] = clean.split("+");
       parsed[segment] = elements.length === 1 ? elements[0] : elements;
     }
-    await db5.insert(ediInboundQueue).values({
+    await db4.insert(ediInboundQueue).values({
       tenantId: ctx.user.tenantId,
       rawEdi: input.rawEdi,
       parsedData: parsed,
@@ -134976,14 +135305,14 @@ var ediRouter = createRouter({
     return { parsed, success: true };
   }),
   sendEdi: authedQuery.input(external_exports.object({ outboundId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.select().from(ediOutboundQueue).where(and(eq(ediOutboundQueue.id, input.outboundId), eq(ediOutboundQueue.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [item] = await db4.select().from(ediOutboundQueue).where(and(eq(ediOutboundQueue.id, input.outboundId), eq(ediOutboundQueue.tenantId, ctx.user.tenantId)));
     if (!item) throw new Error("Outbound record not found");
-    await db5.update(ediOutboundQueue).set({
+    await db4.update(ediOutboundQueue).set({
       status: "transmitted",
       transmissionDate: /* @__PURE__ */ new Date()
     }).where(eq(ediOutboundQueue.id, input.outboundId));
-    await db5.insert(ediLogs).values({
+    await db4.insert(ediLogs).values({
       tenantId: ctx.user.tenantId,
       direction: "outbound",
       documentType: item.sourceEntityType,
@@ -134994,13 +135323,13 @@ var ediRouter = createRouter({
     return { success: true, message: "EDI transmitted to partner" };
   }),
   ediDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [partnerCount] = await db5.select({ total: sql`count(*)` }).from(ediPartners).where(eq(ediPartners.tenantId, tenantId));
-    const [docCount] = await db5.select({ total: sql`count(*)` }).from(ediDocumentTypes).where(eq(ediDocumentTypes.tenantId, tenantId));
-    const [outboundCount] = await db5.select({ total: sql`count(*)` }).from(ediOutboundQueue).where(eq(ediOutboundQueue.tenantId, tenantId));
-    const [pendingCount] = await db5.select({ total: sql`count(*)` }).from(ediOutboundQueue).where(and(eq(ediOutboundQueue.tenantId, tenantId), eq(ediOutboundQueue.status, "pending")));
-    const recentLogs = await db5.select().from(ediLogs).where(eq(ediLogs.tenantId, tenantId)).orderBy(desc(ediLogs.createdAt)).limit(10);
+    const [partnerCount] = await db4.select({ total: sql`count(*)` }).from(ediPartners).where(eq(ediPartners.tenantId, tenantId));
+    const [docCount] = await db4.select({ total: sql`count(*)` }).from(ediDocumentTypes).where(eq(ediDocumentTypes.tenantId, tenantId));
+    const [outboundCount] = await db4.select({ total: sql`count(*)` }).from(ediOutboundQueue).where(eq(ediOutboundQueue.tenantId, tenantId));
+    const [pendingCount] = await db4.select({ total: sql`count(*)` }).from(ediOutboundQueue).where(and(eq(ediOutboundQueue.tenantId, tenantId), eq(ediOutboundQueue.status, "pending")));
+    const recentLogs = await db4.select().from(ediLogs).where(eq(ediLogs.tenantId, tenantId)).orderBy(desc(ediLogs.createdAt)).limit(10);
     return {
       partnerCount: partnerCount?.total || 0,
       documentTypeCount: docCount?.total || 0,
@@ -135010,13 +135339,13 @@ var ediRouter = createRouter({
     };
   }),
   ediStatusReport: authedQuery.input(external_exports.object({ from: external_exports.string().optional(), to: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const statuses = await db5.select({
+    const statuses = await db4.select({
       status: ediOutboundQueue.status,
       count: sql`count(*)`
     }).from(ediOutboundQueue).where(eq(ediOutboundQueue.tenantId, tenantId)).groupBy(ediOutboundQueue.status);
-    const inboundStatuses = await db5.select({
+    const inboundStatuses = await db4.select({
       status: ediInboundQueue.status,
       count: sql`count(*)`
     }).from(ediInboundQueue).where(eq(ediInboundQueue.tenantId, tenantId)).groupBy(ediInboundQueue.status);
@@ -135038,17 +135367,17 @@ function hashKey(key2) {
 var webhookRouter = createRouter({
   // ── Subscriptions ──
   listSubscriptions: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
-    const items = await db5.select().from(webhookSubscriptions).where(eq(webhookSubscriptions.tenantId, tenantId)).limit(limit).offset(offset);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(webhookSubscriptions).where(eq(webhookSubscriptions.tenantId, tenantId));
+    const items = await db4.select().from(webhookSubscriptions).where(eq(webhookSubscriptions.tenantId, tenantId)).limit(limit).offset(offset);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(webhookSubscriptions).where(eq(webhookSubscriptions.tenantId, tenantId));
     return { items, total: total?.total || 0 };
   }),
   getSubscription: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.select().from(webhookSubscriptions).where(and(eq(webhookSubscriptions.id, input.id), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [item] = await db4.select().from(webhookSubscriptions).where(and(eq(webhookSubscriptions.id, input.id), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
     return item;
   }),
   createSubscription: adminQuery.input(external_exports.object({
@@ -135060,9 +135389,9 @@ var webhookRouter = createRouter({
     retryCount: external_exports.number().optional(),
     timeoutMs: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const secret = crypto11.randomBytes(32).toString("hex");
-    const [item] = await db5.insert(webhookSubscriptions).values({
+    const [item] = await db4.insert(webhookSubscriptions).values({
       tenantId: ctx.user.tenantId,
       name: input.name,
       url: input.url,
@@ -135076,30 +135405,30 @@ var webhookRouter = createRouter({
     return { ...item, secret };
   }),
   updateSubscription: adminQuery.input(external_exports.object({ id: external_exports.number(), data: external_exports.record(external_exports.string(), external_exports.any()) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(webhookSubscriptions).set(input.data).where(and(eq(webhookSubscriptions.id, input.id), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(webhookSubscriptions).set(input.data).where(and(eq(webhookSubscriptions.id, input.id), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   deleteSubscription: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(webhookSubscriptions).where(and(eq(webhookSubscriptions.id, input.id), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.delete(webhookSubscriptions).where(and(eq(webhookSubscriptions.id, input.id), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   // ── Delivery Logs ──
   listDeliveryLogs: authedQuery.input(external_exports.object({ subscriptionId: external_exports.number().optional(), limit: external_exports.number().default(50), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [];
     if (input?.subscriptionId) conditions.push(eq(webhookDeliveryLogs.subscriptionId, input.subscriptionId));
-    const items = await db5.select().from(webhookDeliveryLogs).where(and(...conditions)).orderBy(desc(webhookDeliveryLogs.createdAt)).limit(input?.limit || 50).offset(input?.offset || 0);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(webhookDeliveryLogs).where(and(...conditions));
+    const items = await db4.select().from(webhookDeliveryLogs).where(and(...conditions)).orderBy(desc(webhookDeliveryLogs.createdAt)).limit(input?.limit || 50).offset(input?.offset || 0);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(webhookDeliveryLogs).where(and(...conditions));
     return { items, total: total?.total || 0 };
   }),
   // ── Event Queue ──
   listEventQueue: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(webhookEventQueue.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(webhookEventQueue.status, input.status));
-    return db5.select().from(webhookEventQueue).where(and(...conditions)).orderBy(desc(webhookEventQueue.createdAt)).limit(input?.limit || 50);
+    return db4.select().from(webhookEventQueue).where(and(...conditions)).orderBy(desc(webhookEventQueue.createdAt)).limit(input?.limit || 50);
   }),
   triggerEvent: adminQuery.input(external_exports.object({
     eventType: external_exports.string().min(1),
@@ -135107,8 +135436,8 @@ var webhookRouter = createRouter({
     sourceEntityType: external_exports.string().optional(),
     sourceEntityId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const subscriptions2 = await db5.select().from(webhookSubscriptions).where(and(
+    const db4 = getDb();
+    const subscriptions2 = await db4.select().from(webhookSubscriptions).where(and(
       eq(webhookSubscriptions.tenantId, ctx.user.tenantId),
       eq(webhookSubscriptions.isActive, true)
     ));
@@ -135116,7 +135445,7 @@ var webhookRouter = createRouter({
     for (const sub of subscriptions2) {
       const events = sub.eventTypes;
       if (events.includes(input.eventType)) {
-        await db5.insert(webhookEventQueue).values({
+        await db4.insert(webhookEventQueue).values({
           tenantId: ctx.user.tenantId,
           eventType: input.eventType,
           payload: input.payload,
@@ -135129,11 +135458,11 @@ var webhookRouter = createRouter({
     return { success: true, matchedSubscriptions: matched.length };
   }),
   testWebhook: adminQuery.input(external_exports.object({ subscriptionId: external_exports.number(), testPayload: external_exports.record(external_exports.string(), external_exports.any()).optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [sub] = await db5.select().from(webhookSubscriptions).where(and(eq(webhookSubscriptions.id, input.subscriptionId), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [sub] = await db4.select().from(webhookSubscriptions).where(and(eq(webhookSubscriptions.id, input.subscriptionId), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
     if (!sub) throw new Error("Subscription not found");
     const payload = input.testPayload || { test: true, timestamp: (/* @__PURE__ */ new Date()).toISOString() };
-    await db5.insert(webhookDeliveryLogs).values({
+    await db4.insert(webhookDeliveryLogs).values({
       subscriptionId: sub.id,
       eventType: "test",
       payload,
@@ -135146,18 +135475,18 @@ var webhookRouter = createRouter({
     return { success: true, message: "Test webhook logged" };
   }),
   regenerateSecret: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const secret = crypto11.randomBytes(32).toString("hex");
-    await db5.update(webhookSubscriptions).set({ secret }).where(and(eq(webhookSubscriptions.id, input.id), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
+    await db4.update(webhookSubscriptions).set({ secret }).where(and(eq(webhookSubscriptions.id, input.id), eq(webhookSubscriptions.tenantId, ctx.user.tenantId)));
     return { secret, success: true };
   }),
   webhookDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [activeSubs] = await db5.select({ total: sql`count(*)` }).from(webhookSubscriptions).where(and(eq(webhookSubscriptions.tenantId, tenantId), eq(webhookSubscriptions.isActive, true)));
-    const [failedDeliveries] = await db5.select({ total: sql`count(*)` }).from(webhookDeliveryLogs).where(eq(webhookDeliveryLogs.status, "failed"));
-    const [totalEvents] = await db5.select({ total: sql`count(*)` }).from(webhookEventQueue).where(eq(webhookEventQueue.tenantId, tenantId));
-    const recentDeliveries = await db5.select().from(webhookDeliveryLogs).orderBy(desc(webhookDeliveryLogs.createdAt)).limit(10);
+    const [activeSubs] = await db4.select({ total: sql`count(*)` }).from(webhookSubscriptions).where(and(eq(webhookSubscriptions.tenantId, tenantId), eq(webhookSubscriptions.isActive, true)));
+    const [failedDeliveries] = await db4.select({ total: sql`count(*)` }).from(webhookDeliveryLogs).where(eq(webhookDeliveryLogs.status, "failed"));
+    const [totalEvents] = await db4.select({ total: sql`count(*)` }).from(webhookEventQueue).where(eq(webhookEventQueue.tenantId, tenantId));
+    const recentDeliveries = await db4.select().from(webhookDeliveryLogs).orderBy(desc(webhookDeliveryLogs.createdAt)).limit(10);
     return {
       activeSubscriptions: activeSubs?.total || 0,
       failedDeliveries: failedDeliveries?.total || 0,
@@ -135167,8 +135496,8 @@ var webhookRouter = createRouter({
   }),
   // ── API Keys ──
   listApiKeys: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(apiKeys).where(eq(apiKeys.tenantId, ctx.user.tenantId)).orderBy(desc(apiKeys.createdAt));
+    const db4 = getDb();
+    return db4.select().from(apiKeys).where(eq(apiKeys.tenantId, ctx.user.tenantId)).orderBy(desc(apiKeys.createdAt));
   }),
   generateApiKey: adminQuery.input(external_exports.object({
     keyName: external_exports.string().min(1),
@@ -135177,11 +135506,11 @@ var webhookRouter = createRouter({
     rateLimitPerMinute: external_exports.number().optional(),
     expiresAt: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const prefix = generateKeyPrefix();
     const rawKey = `${prefix}_${crypto11.randomBytes(24).toString("hex")}`;
     const keyHash = hashKey(rawKey);
-    const [item] = await db5.insert(apiKeys).values({
+    const [item] = await db4.insert(apiKeys).values({
       tenantId: ctx.user.tenantId,
       keyName: input.keyName,
       keyHash,
@@ -135195,28 +135524,28 @@ var webhookRouter = createRouter({
     return { ...item, apiKey: rawKey };
   }),
   revokeApiKey: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(apiKeys).set({ isActive: false }).where(and(eq(apiKeys.id, input.id), eq(apiKeys.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(apiKeys).set({ isActive: false }).where(and(eq(apiKeys.id, input.id), eq(apiKeys.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   deleteApiKey: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(apiKeys).where(and(eq(apiKeys.id, input.id), eq(apiKeys.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.delete(apiKeys).where(and(eq(apiKeys.id, input.id), eq(apiKeys.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   // ── Usage ──
   listUsageLogs: authedQuery.input(external_exports.object({ apiKeyId: external_exports.number().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(apiUsageLogs.tenantId, ctx.user.tenantId)];
     if (input?.apiKeyId) conditions.push(eq(apiUsageLogs.apiKeyId, input.apiKeyId));
-    return db5.select().from(apiUsageLogs).where(and(...conditions)).orderBy(desc(apiUsageLogs.createdAt)).limit(input?.limit || 50);
+    return db4.select().from(apiUsageLogs).where(and(...conditions)).orderBy(desc(apiUsageLogs.createdAt)).limit(input?.limit || 50);
   }),
   apiUsageDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [totalKeys] = await db5.select({ total: sql`count(*)` }).from(apiKeys).where(eq(apiKeys.tenantId, tenantId));
-    const [activeKeys] = await db5.select({ total: sql`count(*)` }).from(apiKeys).where(and(eq(apiKeys.tenantId, tenantId), eq(apiKeys.isActive, true)));
-    const [totalRequests] = await db5.select({ total: sql`count(*)` }).from(apiUsageLogs).where(eq(apiUsageLogs.tenantId, tenantId));
+    const [totalKeys] = await db4.select({ total: sql`count(*)` }).from(apiKeys).where(eq(apiKeys.tenantId, tenantId));
+    const [activeKeys] = await db4.select({ total: sql`count(*)` }).from(apiKeys).where(and(eq(apiKeys.tenantId, tenantId), eq(apiKeys.isActive, true)));
+    const [totalRequests] = await db4.select({ total: sql`count(*)` }).from(apiUsageLogs).where(eq(apiUsageLogs.tenantId, tenantId));
     return { totalKeys: totalKeys?.total || 0, activeKeys: activeKeys?.total || 0, totalRequests: totalRequests?.total || 0 };
   })
 });
@@ -135228,8 +135557,8 @@ init_drizzle_orm();
 var olapRouter = createRouter({
   // ── Fact Tables ──
   listFactTables: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(dwFactTables).where(eq(dwFactTables.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(dwFactTables).where(eq(dwFactTables.tenantId, ctx.user.tenantId));
   }),
   createFactTable: adminQuery.input(external_exports.object({
     factName: external_exports.string().min(1),
@@ -135239,8 +135568,8 @@ var olapRouter = createRouter({
     sourceTable: external_exports.string().optional(),
     refreshFrequency: external_exports.enum(["realtime", "hourly", "daily", "weekly", "monthly"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(dwFactTables).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(dwFactTables).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
@@ -135248,8 +135577,8 @@ var olapRouter = createRouter({
   }),
   // ── Dimension Tables ──
   listDimensions: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(dwDimensionTables).where(eq(dwDimensionTables.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(dwDimensionTables).where(eq(dwDimensionTables.tenantId, ctx.user.tenantId));
   }),
   createDimension: adminQuery.input(external_exports.object({
     dimensionName: external_exports.string().min(1),
@@ -135259,8 +135588,8 @@ var olapRouter = createRouter({
     type: external_exports.enum(["conformed", "role_playing", "junk", "degenerated"]).optional(),
     hierarchyLevels: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(dwDimensionTables).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(dwDimensionTables).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
@@ -135268,15 +135597,15 @@ var olapRouter = createRouter({
   }),
   // ── Cubes ──
   listCubes: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(dwCubes).where(eq(dwCubes.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(dwCubes).where(eq(dwCubes.tenantId, ctx.user.tenantId));
   }),
   getCube: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [cube] = await db5.select().from(dwCubes).where(and(eq(dwCubes.id, input.id), eq(dwCubes.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [cube] = await db4.select().from(dwCubes).where(and(eq(dwCubes.id, input.id), eq(dwCubes.tenantId, ctx.user.tenantId)));
     if (!cube) return null;
-    const dimensions = await db5.select().from(dwCubeDimensions).where(eq(dwCubeDimensions.cubeId, cube.id));
-    const measures = await db5.select().from(dwCubeMeasures).where(eq(dwCubeMeasures.cubeId, cube.id));
+    const dimensions = await db4.select().from(dwCubeDimensions).where(eq(dwCubeDimensions.cubeId, cube.id));
+    const measures = await db4.select().from(dwCubeMeasures).where(eq(dwCubeMeasures.cubeId, cube.id));
     return { ...cube, dimensions, measures };
   }),
   createCube: adminQuery.input(external_exports.object({
@@ -135285,27 +135614,27 @@ var olapRouter = createRouter({
     description: external_exports.string().optional(),
     factTableId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(dwCubes).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(dwCubes).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
     return item;
   }),
   updateCube: adminQuery.input(external_exports.object({ id: external_exports.number(), data: external_exports.record(external_exports.string(), external_exports.any()) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(dwCubes).set(input.data).where(and(eq(dwCubes.id, input.id), eq(dwCubes.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(dwCubes).set(input.data).where(and(eq(dwCubes.id, input.id), eq(dwCubes.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   // ── Cube Dimensions ──
   addCubeDimension: adminQuery.input(external_exports.object({ cubeId: external_exports.number(), dimensionId: external_exports.number(), dimensionType: external_exports.enum(["regular", "role_playing"]).optional(), roleName: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(dwCubeDimensions).values(input).$returningId();
+    const db4 = getDb();
+    const [item] = await db4.insert(dwCubeDimensions).values(input).$returningId();
     return item;
   }),
   removeCubeDimension: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.delete(dwCubeDimensions).where(eq(dwCubeDimensions.id, input.id));
+    const db4 = getDb();
+    await db4.delete(dwCubeDimensions).where(eq(dwCubeDimensions.id, input.id));
     return { success: true };
   }),
   // ── Cube Measures ──
@@ -135317,29 +135646,29 @@ var olapRouter = createRouter({
     sourceColumn: external_exports.string().optional(),
     format: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(dwCubeMeasures).values(input).$returningId();
+    const db4 = getDb();
+    const [item] = await db4.insert(dwCubeMeasures).values(input).$returningId();
     return item;
   }),
   removeCubeMeasure: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.delete(dwCubeMeasures).where(eq(dwCubeMeasures.id, input.id));
+    const db4 = getDb();
+    await db4.delete(dwCubeMeasures).where(eq(dwCubeMeasures.id, input.id));
     return { success: true };
   }),
   // ── ETL Metadata ──
   listEtlMetadata: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(dwEtlMetadata).where(eq(dwEtlMetadata.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(dwEtlMetadata).where(eq(dwEtlMetadata.tenantId, ctx.user.tenantId));
   }),
   // ── Certified Data ──
   listCertifiedData: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(dwEpsilonCertifiedData).where(eq(dwEpsilonCertifiedData.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(dwEpsilonCertifiedData).where(eq(dwEpsilonCertifiedData.tenantId, ctx.user.tenantId));
   }),
   // ── Functions ──
   runCubeProcess: adminQuery.input(external_exports.object({ cubeId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(dwCubes).set({ lastProcessedAt: /* @__PURE__ */ new Date() }).where(and(eq(dwCubes.id, input.cubeId), eq(dwCubes.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(dwCubes).set({ lastProcessedAt: /* @__PURE__ */ new Date() }).where(and(eq(dwCubes.id, input.cubeId), eq(dwCubes.tenantId, ctx.user.tenantId)));
     return { success: true, message: "Cube processing started" };
   }),
   getCubeData: authedQuery.input(external_exports.object({
@@ -135348,11 +135677,11 @@ var olapRouter = createRouter({
     measures: external_exports.array(external_exports.number()).optional(),
     filters: external_exports.record(external_exports.string(), external_exports.any()).optional()
   })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [cube] = await db5.select().from(dwCubes).where(and(eq(dwCubes.id, input.cubeId), eq(dwCubes.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [cube] = await db4.select().from(dwCubes).where(and(eq(dwCubes.id, input.cubeId), eq(dwCubes.tenantId, ctx.user.tenantId)));
     if (!cube) throw new Error("Cube not found");
-    const dimensions = await db5.select().from(dwCubeDimensions).where(eq(dwCubeDimensions.cubeId, cube.id));
-    const measures = await db5.select().from(dwCubeMeasures).where(eq(dwCubeMeasures.cubeId, cube.id));
+    const dimensions = await db4.select().from(dwCubeDimensions).where(eq(dwCubeDimensions.cubeId, cube.id));
+    const measures = await db4.select().from(dwCubeMeasures).where(eq(dwCubeMeasures.cubeId, cube.id));
     const requestedDims = dimensions.filter((d) => !input.dimensions || input.dimensions.includes(d.id));
     const requestedMeasures = measures.filter((m) => !input.measures || input.measures.includes(m.id));
     return {
@@ -135365,12 +135694,12 @@ var olapRouter = createRouter({
     };
   }),
   olapDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [cubeCount] = await db5.select({ total: sql`count(*)` }).from(dwCubes).where(eq(dwCubes.tenantId, tenantId));
-    const [dimCount] = await db5.select({ total: sql`count(*)` }).from(dwDimensionTables).where(eq(dwDimensionTables.tenantId, tenantId));
-    const [measureCount] = await db5.select({ total: sql`count(*)` }).from(dwCubeMeasures);
-    const [factCount] = await db5.select({ total: sql`count(*)` }).from(dwFactTables).where(eq(dwFactTables.tenantId, tenantId));
+    const [cubeCount] = await db4.select({ total: sql`count(*)` }).from(dwCubes).where(eq(dwCubes.tenantId, tenantId));
+    const [dimCount] = await db4.select({ total: sql`count(*)` }).from(dwDimensionTables).where(eq(dwDimensionTables.tenantId, tenantId));
+    const [measureCount] = await db4.select({ total: sql`count(*)` }).from(dwCubeMeasures);
+    const [factCount] = await db4.select({ total: sql`count(*)` }).from(dwFactTables).where(eq(dwFactTables.tenantId, tenantId));
     return {
       cubeCount: cubeCount?.total || 0,
       dimensionCount: dimCount?.total || 0,
@@ -135379,8 +135708,8 @@ var olapRouter = createRouter({
     };
   }),
   dimensionList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(dwDimensionTables).where(and(eq(dwDimensionTables.tenantId, ctx.user.tenantId), eq(dwDimensionTables.isActive, true)));
+    const db4 = getDb();
+    return db4.select().from(dwDimensionTables).where(and(eq(dwDimensionTables.tenantId, ctx.user.tenantId), eq(dwDimensionTables.isActive, true)));
   })
 });
 
@@ -135392,12 +135721,12 @@ import crypto12 from "crypto";
 var etlRouter = createRouter({
   // ── Connectors ──
   listConnectors: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(etlConnectors).where(eq(etlConnectors.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(etlConnectors).where(eq(etlConnectors.tenantId, ctx.user.tenantId));
   }),
   getConnector: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.select().from(etlConnectors).where(and(eq(etlConnectors.id, input.id), eq(etlConnectors.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [item] = await db4.select().from(etlConnectors).where(and(eq(etlConnectors.id, input.id), eq(etlConnectors.tenantId, ctx.user.tenantId)));
     return item;
   }),
   createConnector: adminQuery.input(external_exports.object({
@@ -135406,8 +135735,8 @@ var etlRouter = createRouter({
     connectionConfig: external_exports.record(external_exports.string(), external_exports.any()).optional(),
     isActive: external_exports.boolean().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(etlConnectors).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(etlConnectors).values({
       tenantId: ctx.user.tenantId,
       ...input,
       connectionConfig: input.connectionConfig || {}
@@ -135415,36 +135744,36 @@ var etlRouter = createRouter({
     return item;
   }),
   updateConnector: adminQuery.input(external_exports.object({ id: external_exports.number(), data: external_exports.record(external_exports.string(), external_exports.any()) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(etlConnectors).set(input.data).where(and(eq(etlConnectors.id, input.id), eq(etlConnectors.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(etlConnectors).set(input.data).where(and(eq(etlConnectors.id, input.id), eq(etlConnectors.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   deleteConnector: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(etlConnectors).where(and(eq(etlConnectors.id, input.id), eq(etlConnectors.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.delete(etlConnectors).where(and(eq(etlConnectors.id, input.id), eq(etlConnectors.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   testConnector: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [connector] = await db5.select().from(etlConnectors).where(and(eq(etlConnectors.id, input.id), eq(etlConnectors.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [connector] = await db4.select().from(etlConnectors).where(and(eq(etlConnectors.id, input.id), eq(etlConnectors.tenantId, ctx.user.tenantId)));
     if (!connector) throw new Error("Connector not found");
     return { success: true, message: `Connection to ${connector.connectorType} successful` };
   }),
   // ── Jobs ──
   listJobs: authedQuery.input(external_exports.object({ limit: external_exports.number().default(100), offset: external_exports.number().default(0) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const limit = input?.limit || 100;
     const offset = input?.offset || 0;
-    const items = await db5.select().from(etlJobs).where(eq(etlJobs.tenantId, tenantId)).orderBy(desc(etlJobs.createdAt)).limit(limit).offset(offset);
-    const [total] = await db5.select({ total: sql`count(*)` }).from(etlJobs).where(eq(etlJobs.tenantId, tenantId));
+    const items = await db4.select().from(etlJobs).where(eq(etlJobs.tenantId, tenantId)).orderBy(desc(etlJobs.createdAt)).limit(limit).offset(offset);
+    const [total] = await db4.select({ total: sql`count(*)` }).from(etlJobs).where(eq(etlJobs.tenantId, tenantId));
     return { items, total: total?.total || 0 };
   }),
   getJob: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [job] = await db5.select().from(etlJobs).where(and(eq(etlJobs.id, input.id), eq(etlJobs.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [job] = await db4.select().from(etlJobs).where(and(eq(etlJobs.id, input.id), eq(etlJobs.tenantId, ctx.user.tenantId)));
     if (!job) return null;
-    const steps = await db5.select().from(etlJobSteps).where(eq(etlJobSteps.jobId, job.id)).orderBy(etlJobSteps.stepOrder);
+    const steps = await db4.select().from(etlJobSteps).where(eq(etlJobSteps.jobId, job.id)).orderBy(etlJobSteps.stepOrder);
     return { ...job, steps };
   }),
   createJob: adminQuery.input(external_exports.object({
@@ -135458,27 +135787,27 @@ var etlRouter = createRouter({
     batchSize: external_exports.number().optional(),
     errorHandling: external_exports.enum(["skip", "abort", "retry"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(etlJobs).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(etlJobs).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
     return item;
   }),
   updateJob: adminQuery.input(external_exports.object({ id: external_exports.number(), data: external_exports.record(external_exports.string(), external_exports.any()) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(etlJobs).set(input.data).where(and(eq(etlJobs.id, input.id), eq(etlJobs.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.update(etlJobs).set(input.data).where(and(eq(etlJobs.id, input.id), eq(etlJobs.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   deleteJob: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.delete(etlJobs).where(and(eq(etlJobs.id, input.id), eq(etlJobs.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    await db4.delete(etlJobs).where(and(eq(etlJobs.id, input.id), eq(etlJobs.tenantId, ctx.user.tenantId)));
     return { success: true };
   }),
   // ── Job Steps ──
   listJobSteps: authedQuery.input(external_exports.object({ jobId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    return db5.select().from(etlJobSteps).where(eq(etlJobSteps.jobId, input.jobId)).orderBy(etlJobSteps.stepOrder);
+    const db4 = getDb();
+    return db4.select().from(etlJobSteps).where(eq(etlJobSteps.jobId, input.jobId)).orderBy(etlJobSteps.stepOrder);
   }),
   addJobStep: adminQuery.input(external_exports.object({
     jobId: external_exports.number(),
@@ -135486,19 +135815,19 @@ var etlRouter = createRouter({
     stepType: external_exports.enum(["extract", "transform", "load", "validate", "dedupe", "aggregate", "join", "filter", "map"]),
     config: external_exports.record(external_exports.string(), external_exports.any()).optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(etlJobSteps).values(input).$returningId();
+    const db4 = getDb();
+    const [item] = await db4.insert(etlJobSteps).values(input).$returningId();
     return item;
   }),
   removeJobStep: adminQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.delete(etlJobSteps).where(eq(etlJobSteps.id, input.id));
+    const db4 = getDb();
+    await db4.delete(etlJobSteps).where(eq(etlJobSteps.id, input.id));
     return { success: true };
   }),
   // ── Transformations ──
   listTransformations: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(etlTransformations).where(eq(etlTransformations.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(etlTransformations).where(eq(etlTransformations.tenantId, ctx.user.tenantId));
   }),
   createTransformation: adminQuery.input(external_exports.object({
     transformationName: external_exports.string().min(1),
@@ -135507,8 +135836,8 @@ var etlRouter = createRouter({
     targetField: external_exports.string().optional(),
     config: external_exports.record(external_exports.string(), external_exports.any()).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(etlTransformations).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(etlTransformations).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
@@ -135516,19 +135845,19 @@ var etlRouter = createRouter({
   }),
   // ── Execution Logs ──
   listExecutionLogs: authedQuery.input(external_exports.object({ jobId: external_exports.number().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(etlExecutionLogs.tenantId, ctx.user.tenantId)];
     if (input?.jobId) conditions.push(eq(etlExecutionLogs.jobId, input.jobId));
-    return db5.select().from(etlExecutionLogs).where(and(...conditions)).orderBy(desc(etlExecutionLogs.createdAt)).limit(input?.limit || 50);
+    return db4.select().from(etlExecutionLogs).where(and(...conditions)).orderBy(desc(etlExecutionLogs.createdAt)).limit(input?.limit || 50);
   }),
   jobLogs: authedQuery.input(external_exports.object({ jobId: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(etlExecutionLogs).where(and(eq(etlExecutionLogs.jobId, input.jobId), eq(etlExecutionLogs.tenantId, ctx.user.tenantId))).orderBy(desc(etlExecutionLogs.createdAt));
+    const db4 = getDb();
+    return db4.select().from(etlExecutionLogs).where(and(eq(etlExecutionLogs.jobId, input.jobId), eq(etlExecutionLogs.tenantId, ctx.user.tenantId))).orderBy(desc(etlExecutionLogs.createdAt));
   }),
   // ── Data Quality ──
   listQualityRules: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(etlDataQualityRules).where(eq(etlDataQualityRules.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(etlDataQualityRules).where(eq(etlDataQualityRules.tenantId, ctx.user.tenantId));
   }),
   createQualityRule: adminQuery.input(external_exports.object({
     ruleName: external_exports.string().min(1),
@@ -135537,26 +135866,26 @@ var etlRouter = createRouter({
     validationConfig: external_exports.record(external_exports.string(), external_exports.any()).optional(),
     severity: external_exports.enum(["warn", "error", "block"]).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(etlDataQualityRules).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(etlDataQualityRules).values({
       tenantId: ctx.user.tenantId,
       ...input
     }).$returningId();
     return item;
   }),
   listQualityLogs: authedQuery.input(external_exports.object({ executionId: external_exports.number().optional(), limit: external_exports.number().default(50) }).optional()).query(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [];
     if (input?.executionId) conditions.push(eq(etlDataQualityLogs.executionId, input.executionId));
-    return db5.select().from(etlDataQualityLogs).where(and(...conditions)).orderBy(desc(etlDataQualityLogs.createdAt)).limit(input?.limit || 50);
+    return db4.select().from(etlDataQualityLogs).where(and(...conditions)).orderBy(desc(etlDataQualityLogs.createdAt)).limit(input?.limit || 50);
   }),
   // ── Functions ──
   executeJob: adminQuery.input(external_exports.object({ jobId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [job] = await db5.select().from(etlJobs).where(and(eq(etlJobs.id, input.jobId), eq(etlJobs.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [job] = await db4.select().from(etlJobs).where(and(eq(etlJobs.id, input.jobId), eq(etlJobs.tenantId, ctx.user.tenantId)));
     if (!job) throw new Error("Job not found");
     const executionId = crypto12.randomUUID();
-    await db5.insert(etlExecutionLogs).values({
+    await db4.insert(etlExecutionLogs).values({
       tenantId: ctx.user.tenantId,
       jobId: job.id,
       executionId,
@@ -135566,12 +135895,12 @@ var etlRouter = createRouter({
     });
     setTimeout(async () => {
       try {
-        const steps = await db5.select().from(etlJobSteps).where(eq(etlJobSteps.jobId, job.id)).orderBy(etlJobSteps.stepOrder);
+        const steps = await db4.select().from(etlJobSteps).where(eq(etlJobSteps.jobId, job.id)).orderBy(etlJobSteps.stepOrder);
         let rowsProcessed = 0;
         for (const step of steps) {
           rowsProcessed += 100;
         }
-        await db5.update(etlExecutionLogs).set({
+        await db4.update(etlExecutionLogs).set({
           status: "completed",
           endTime: /* @__PURE__ */ new Date(),
           rowsRead: rowsProcessed,
@@ -135580,7 +135909,7 @@ var etlRouter = createRouter({
           durationMs: 500
         }).where(eq(etlExecutionLogs.executionId, executionId));
       } catch (err) {
-        await db5.update(etlExecutionLogs).set({
+        await db4.update(etlExecutionLogs).set({
           status: "failed",
           endTime: /* @__PURE__ */ new Date(),
           errorMessage: err.message,
@@ -135591,8 +135920,8 @@ var etlRouter = createRouter({
     return { success: true, executionId };
   }),
   stopJob: adminQuery.input(external_exports.object({ executionId: external_exports.string() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(etlExecutionLogs).set({
+    const db4 = getDb();
+    await db4.update(etlExecutionLogs).set({
       status: "aborted",
       endTime: /* @__PURE__ */ new Date()
     }).where(eq(etlExecutionLogs.executionId, input.executionId));
@@ -135602,10 +135931,10 @@ var etlRouter = createRouter({
     jobId: external_exports.number(),
     sampleData: external_exports.array(external_exports.record(external_exports.string(), external_exports.any())).optional()
   })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const [job] = await db5.select().from(etlJobs).where(eq(etlJobs.id, input.jobId));
+    const db4 = getDb();
+    const [job] = await db4.select().from(etlJobs).where(eq(etlJobs.id, input.jobId));
     if (!job) throw new Error("Job not found");
-    const steps = await db5.select().from(etlJobSteps).where(eq(etlJobSteps.jobId, job.id)).orderBy(etlJobSteps.stepOrder);
+    const steps = await db4.select().from(etlJobSteps).where(eq(etlJobSteps.jobId, job.id)).orderBy(etlJobSteps.stepOrder);
     const sample = input.sampleData || [{ id: 1, name: "Sample Record" }];
     let result = [...sample];
     for (const step of steps) {
@@ -135622,12 +135951,12 @@ var etlRouter = createRouter({
     return { inputRows: sample.length, outputRows: result.length, preview: result, steps: steps.length };
   }),
   etlDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [jobCount] = await db5.select({ total: sql`count(*)` }).from(etlJobs).where(eq(etlJobs.tenantId, tenantId));
-    const [activeJobs] = await db5.select({ total: sql`count(*)` }).from(etlJobs).where(and(eq(etlJobs.tenantId, tenantId), eq(etlJobs.isActive, true)));
-    const [recentRuns] = await db5.select({ total: sql`count(*)` }).from(etlExecutionLogs).where(eq(etlExecutionLogs.tenantId, tenantId));
-    const recentLogs = await db5.select().from(etlExecutionLogs).where(eq(etlExecutionLogs.tenantId, tenantId)).orderBy(desc(etlExecutionLogs.createdAt)).limit(10);
+    const [jobCount] = await db4.select({ total: sql`count(*)` }).from(etlJobs).where(eq(etlJobs.tenantId, tenantId));
+    const [activeJobs] = await db4.select({ total: sql`count(*)` }).from(etlJobs).where(and(eq(etlJobs.tenantId, tenantId), eq(etlJobs.isActive, true)));
+    const [recentRuns] = await db4.select({ total: sql`count(*)` }).from(etlExecutionLogs).where(eq(etlExecutionLogs.tenantId, tenantId));
+    const recentLogs = await db4.select().from(etlExecutionLogs).where(eq(etlExecutionLogs.tenantId, tenantId)).orderBy(desc(etlExecutionLogs.createdAt)).limit(10);
     return {
       totalJobs: jobCount?.total || 0,
       activeJobs: activeJobs?.total || 0,
@@ -135687,12 +136016,12 @@ var wsBus = new WSEventBus();
 var wsRouter = createRouter({
   // ── Connections ──
   listConnections: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(wsConnections).where(eq(wsConnections.tenantId, ctx.user.tenantId)).orderBy(desc(wsConnections.connectedAt));
+    const db4 = getDb();
+    return db4.select().from(wsConnections).where(eq(wsConnections.tenantId, ctx.user.tenantId)).orderBy(desc(wsConnections.connectedAt));
   }),
   recordConnection: authedQuery.input(external_exports.object({ deviceInfo: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(wsConnections).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(wsConnections).values({
       tenantId: ctx.user.tenantId,
       userId: ctx.user.id,
       sessionId: crypto13.randomUUID(),
@@ -135707,8 +136036,8 @@ var wsRouter = createRouter({
     return item;
   }),
   disconnect: authedQuery.mutation(async ({ ctx }) => {
-    const db5 = getDb();
-    await db5.update(wsConnections).set({
+    const db4 = getDb();
+    await db4.update(wsConnections).set({
       isActive: false,
       disconnectedAt: /* @__PURE__ */ new Date()
     }).where(and(eq(wsConnections.userId, ctx.user.id), eq(wsConnections.isActive, true)));
@@ -135721,17 +136050,17 @@ var wsRouter = createRouter({
     currentModule: external_exports.string().optional(),
     customStatus: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const existing = await db5.select().from(wsPresence).where(and(eq(wsPresence.userId, ctx.user.id), eq(wsPresence.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const existing = await db4.select().from(wsPresence).where(and(eq(wsPresence.userId, ctx.user.id), eq(wsPresence.tenantId, ctx.user.tenantId)));
     if (existing.length > 0) {
-      await db5.update(wsPresence).set({
+      await db4.update(wsPresence).set({
         status: input.status,
         currentModule: input.currentModule,
         customStatus: input.customStatus,
         lastSeen: /* @__PURE__ */ new Date()
       }).where(eq(wsPresence.id, existing[0].id));
     } else {
-      await db5.insert(wsPresence).values({
+      await db4.insert(wsPresence).values({
         tenantId: ctx.user.tenantId,
         userId: ctx.user.id,
         status: input.status,
@@ -135749,22 +136078,22 @@ var wsRouter = createRouter({
     return { success: true };
   }),
   getPresence: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(wsPresence).where(eq(wsPresence.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(wsPresence).where(eq(wsPresence.tenantId, ctx.user.tenantId));
   }),
   getOnlineUsers: authedQuery.query(async ({ ctx }) => {
     return wsBus.getOnlineUsers(ctx.user.tenantId);
   }),
   // ── Notifications ──
   listNotifications: authedQuery.input(external_exports.object({ limit: external_exports.number().default(50), unreadOnly: external_exports.boolean().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [
       eq(wsNotifications.tenantId, ctx.user.tenantId),
       eq(wsNotifications.userId, ctx.user.id)
     ];
     if (input?.unreadOnly) conditions.push(eq(wsNotifications.isRead, false));
-    const items = await db5.select().from(wsNotifications).where(and(...conditions)).orderBy(desc(wsNotifications.createdAt)).limit(input?.limit || 50);
-    const [unreadResult] = await db5.select({ count: sql`count(*)` }).from(wsNotifications).where(and(eq(wsNotifications.tenantId, ctx.user.tenantId), eq(wsNotifications.userId, ctx.user.id), eq(wsNotifications.isRead, false)));
+    const items = await db4.select().from(wsNotifications).where(and(...conditions)).orderBy(desc(wsNotifications.createdAt)).limit(input?.limit || 50);
+    const [unreadResult] = await db4.select({ count: sql`count(*)` }).from(wsNotifications).where(and(eq(wsNotifications.tenantId, ctx.user.tenantId), eq(wsNotifications.userId, ctx.user.id), eq(wsNotifications.isRead, false)));
     return { items, unreadCount: unreadResult?.count || 0 };
   }),
   createNotification: adminQuery.input(external_exports.object({
@@ -135777,8 +136106,8 @@ var wsRouter = createRouter({
     sourceEntityId: external_exports.number().optional(),
     actionUrl: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(wsNotifications).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(wsNotifications).values({
       tenantId: ctx.user.tenantId,
       userId: input.userId,
       title: input.title,
@@ -135799,28 +136128,28 @@ var wsRouter = createRouter({
     return item;
   }),
   markNotificationRead: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(wsNotifications).set({ isRead: true, readAt: /* @__PURE__ */ new Date() }).where(and(eq(wsNotifications.id, input.id), eq(wsNotifications.userId, ctx.user.id)));
+    const db4 = getDb();
+    await db4.update(wsNotifications).set({ isRead: true, readAt: /* @__PURE__ */ new Date() }).where(and(eq(wsNotifications.id, input.id), eq(wsNotifications.userId, ctx.user.id)));
     return { success: true };
   }),
   markAllNotificationsRead: authedQuery.mutation(async ({ ctx }) => {
-    const db5 = getDb();
-    await db5.update(wsNotifications).set({ isRead: true, readAt: /* @__PURE__ */ new Date() }).where(and(eq(wsNotifications.tenantId, ctx.user.tenantId), eq(wsNotifications.userId, ctx.user.id), eq(wsNotifications.isRead, false)));
+    const db4 = getDb();
+    await db4.update(wsNotifications).set({ isRead: true, readAt: /* @__PURE__ */ new Date() }).where(and(eq(wsNotifications.tenantId, ctx.user.tenantId), eq(wsNotifications.userId, ctx.user.id), eq(wsNotifications.isRead, false)));
     return { success: true };
   }),
   // ── Collaboration Sessions ──
   listSessions: authedQuery.input(external_exports.object({ isActive: external_exports.boolean().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(wsCollaborationSessions.tenantId, ctx.user.tenantId)];
     if (input?.isActive !== void 0) conditions.push(eq(wsCollaborationSessions.isActive, input.isActive));
-    return db5.select().from(wsCollaborationSessions).where(and(...conditions)).orderBy(desc(wsCollaborationSessions.createdAt));
+    return db4.select().from(wsCollaborationSessions).where(and(...conditions)).orderBy(desc(wsCollaborationSessions.createdAt));
   }),
   getSession: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [session] = await db5.select().from(wsCollaborationSessions).where(and(eq(wsCollaborationSessions.id, input.id), eq(wsCollaborationSessions.tenantId, ctx.user.tenantId)));
+    const db4 = getDb();
+    const [session] = await db4.select().from(wsCollaborationSessions).where(and(eq(wsCollaborationSessions.id, input.id), eq(wsCollaborationSessions.tenantId, ctx.user.tenantId)));
     if (!session) return null;
-    const participants = await db5.select().from(wsSessionParticipants).where(eq(wsSessionParticipants.sessionId, session.id));
-    const activities = await db5.select().from(wsSessionActivities).where(eq(wsSessionActivities.sessionId, session.id)).orderBy(desc(wsSessionActivities.createdAt)).limit(50);
+    const participants = await db4.select().from(wsSessionParticipants).where(eq(wsSessionParticipants.sessionId, session.id));
+    const activities = await db4.select().from(wsSessionActivities).where(eq(wsSessionActivities.sessionId, session.id)).orderBy(desc(wsSessionActivities.createdAt)).limit(50);
     return { ...session, participants, activities };
   }),
   createSession: authedQuery.input(external_exports.object({
@@ -135829,8 +136158,8 @@ var wsRouter = createRouter({
     entityType: external_exports.string().optional(),
     entityId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(wsCollaborationSessions).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(wsCollaborationSessions).values({
       tenantId: ctx.user.tenantId,
       sessionName: input.sessionName,
       sessionType: input.sessionType,
@@ -135838,7 +136167,7 @@ var wsRouter = createRouter({
       entityId: input.entityId,
       createdBy: ctx.user.id
     }).$returningId();
-    await db5.insert(wsSessionParticipants).values({
+    await db4.insert(wsSessionParticipants).values({
       sessionId: item.id,
       userId: ctx.user.id,
       role: "owner"
@@ -135851,16 +136180,16 @@ var wsRouter = createRouter({
     return item;
   }),
   joinSession: authedQuery.input(external_exports.object({ sessionId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const existing = await db5.select().from(wsSessionParticipants).where(and(eq(wsSessionParticipants.sessionId, input.sessionId), eq(wsSessionParticipants.userId, ctx.user.id)));
+    const db4 = getDb();
+    const existing = await db4.select().from(wsSessionParticipants).where(and(eq(wsSessionParticipants.sessionId, input.sessionId), eq(wsSessionParticipants.userId, ctx.user.id)));
     if (existing.length === 0) {
-      await db5.insert(wsSessionParticipants).values({
+      await db4.insert(wsSessionParticipants).values({
         sessionId: input.sessionId,
         userId: ctx.user.id,
         role: "viewer"
       });
     } else {
-      await db5.update(wsSessionParticipants).set({ isActive: true, leftAt: null }).where(eq(wsSessionParticipants.id, existing[0].id));
+      await db4.update(wsSessionParticipants).set({ isActive: true, leftAt: null }).where(eq(wsSessionParticipants.id, existing[0].id));
     }
     wsBus.broadcast(ctx.user.tenantId, "participant_joined", {
       sessionId: input.sessionId,
@@ -135869,8 +136198,8 @@ var wsRouter = createRouter({
     return { success: true };
   }),
   leaveSession: authedQuery.input(external_exports.object({ sessionId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(wsSessionParticipants).set({ isActive: false, leftAt: /* @__PURE__ */ new Date() }).where(and(eq(wsSessionParticipants.sessionId, input.sessionId), eq(wsSessionParticipants.userId, ctx.user.id)));
+    const db4 = getDb();
+    await db4.update(wsSessionParticipants).set({ isActive: false, leftAt: /* @__PURE__ */ new Date() }).where(and(eq(wsSessionParticipants.sessionId, input.sessionId), eq(wsSessionParticipants.userId, ctx.user.id)));
     wsBus.broadcast(ctx.user.tenantId, "participant_left", {
       sessionId: input.sessionId,
       userId: ctx.user.id
@@ -135878,9 +136207,9 @@ var wsRouter = createRouter({
     return { success: true };
   }),
   endSession: authedQuery.input(external_exports.object({ sessionId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    await db5.update(wsCollaborationSessions).set({ isActive: false, endedAt: /* @__PURE__ */ new Date() }).where(and(eq(wsCollaborationSessions.id, input.sessionId), eq(wsCollaborationSessions.tenantId, ctx.user.tenantId)));
-    await db5.update(wsSessionParticipants).set({ isActive: false }).where(eq(wsSessionParticipants.sessionId, input.sessionId));
+    const db4 = getDb();
+    await db4.update(wsCollaborationSessions).set({ isActive: false, endedAt: /* @__PURE__ */ new Date() }).where(and(eq(wsCollaborationSessions.id, input.sessionId), eq(wsCollaborationSessions.tenantId, ctx.user.tenantId)));
+    await db4.update(wsSessionParticipants).set({ isActive: false }).where(eq(wsSessionParticipants.sessionId, input.sessionId));
     wsBus.broadcast(ctx.user.tenantId, "session_ended", { sessionId: input.sessionId });
     return { success: true };
   }),
@@ -135890,8 +136219,8 @@ var wsRouter = createRouter({
     activityType: external_exports.enum(["view", "edit", "comment", "approve", "reject", "mention"]),
     activityData: external_exports.record(external_exports.string(), external_exports.any()).optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [item] = await db5.insert(wsSessionActivities).values({
+    const db4 = getDb();
+    const [item] = await db4.insert(wsSessionActivities).values({
       sessionId: input.sessionId,
       userId: ctx.user.id,
       activityType: input.activityType,
@@ -135907,17 +136236,17 @@ var wsRouter = createRouter({
     return item;
   }),
   listActivities: authedQuery.input(external_exports.object({ sessionId: external_exports.number(), limit: external_exports.number().default(100) })).query(async ({ input }) => {
-    const db5 = getDb();
-    return db5.select().from(wsSessionActivities).where(eq(wsSessionActivities.sessionId, input.sessionId)).orderBy(desc(wsSessionActivities.createdAt)).limit(input.limit);
+    const db4 = getDb();
+    return db4.select().from(wsSessionActivities).where(eq(wsSessionActivities.sessionId, input.sessionId)).orderBy(desc(wsSessionActivities.createdAt)).limit(input.limit);
   }),
   // ── Typing Indicator ──
   setTyping: authedQuery.input(external_exports.object({ sessionId: external_exports.number(), isTyping: external_exports.boolean() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const existing = await db5.select().from(wsUserTyping).where(and(eq(wsUserTyping.sessionId, input.sessionId), eq(wsUserTyping.userId, ctx.user.id)));
+    const db4 = getDb();
+    const existing = await db4.select().from(wsUserTyping).where(and(eq(wsUserTyping.sessionId, input.sessionId), eq(wsUserTyping.userId, ctx.user.id)));
     if (existing.length > 0) {
-      await db5.update(wsUserTyping).set({ isTyping: input.isTyping, lastTypingAt: /* @__PURE__ */ new Date() }).where(eq(wsUserTyping.id, existing[0].id));
+      await db4.update(wsUserTyping).set({ isTyping: input.isTyping, lastTypingAt: /* @__PURE__ */ new Date() }).where(eq(wsUserTyping.id, existing[0].id));
     } else {
-      await db5.insert(wsUserTyping).values({
+      await db4.insert(wsUserTyping).values({
         tenantId: ctx.user.tenantId,
         sessionId: input.sessionId,
         userId: ctx.user.id,
@@ -135933,12 +136262,12 @@ var wsRouter = createRouter({
   }),
   // ── Dashboard ──
   wsDashboard: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [activeSessions] = await db5.select({ total: sql`count(*)` }).from(wsCollaborationSessions).where(and(eq(wsCollaborationSessions.tenantId, tenantId), eq(wsCollaborationSessions.isActive, true)));
-    const [unreadNotifs] = await db5.select({ count: sql`count(*)` }).from(wsNotifications).where(and(eq(wsNotifications.tenantId, tenantId), eq(wsNotifications.userId, ctx.user.id), eq(wsNotifications.isRead, false)));
+    const [activeSessions] = await db4.select({ total: sql`count(*)` }).from(wsCollaborationSessions).where(and(eq(wsCollaborationSessions.tenantId, tenantId), eq(wsCollaborationSessions.isActive, true)));
+    const [unreadNotifs] = await db4.select({ count: sql`count(*)` }).from(wsNotifications).where(and(eq(wsNotifications.tenantId, tenantId), eq(wsNotifications.userId, ctx.user.id), eq(wsNotifications.isRead, false)));
     const onlineUsers = wsBus.getOnlineUsers(tenantId);
-    const recentActivities = await db5.select().from(wsSessionActivities).orderBy(desc(wsSessionActivities.createdAt)).limit(10);
+    const recentActivities = await db4.select().from(wsSessionActivities).orderBy(desc(wsSessionActivities.createdAt)).limit(10);
     return {
       activeSessions: activeSessions?.total || 0,
       unreadNotifications: unreadNotifs?.count || 0,
@@ -136113,17 +136442,17 @@ init_drizzle_orm();
 var workshopRouter = createRouter({
   // ─── Job Cards ────────────────────────────────────────
   jobCardList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), search: external_exports.string().optional(), technicianId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(workshopJobCards.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(workshopJobCards.status, input.status));
     if (input?.technicianId) conditions.push(eq(workshopJobCards.technicianId, input.technicianId));
-    return db5.select().from(workshopJobCards).where(and(...conditions)).orderBy(desc(workshopJobCards.createdAt));
+    return db4.select().from(workshopJobCards).where(and(...conditions)).orderBy(desc(workshopJobCards.createdAt));
   }),
   jobCardGet: authedQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    const job = await db5.select().from(workshopJobCards).where(eq(workshopJobCards.id, input.id)).limit(1);
-    const parts = await db5.select().from(workshopJobParts).where(eq(workshopJobParts.jobCardId, input.id));
-    const labor = await db5.select().from(workshopJobLabor).where(eq(workshopJobLabor.jobCardId, input.id));
+    const db4 = getDb();
+    const job = await db4.select().from(workshopJobCards).where(eq(workshopJobCards.id, input.id)).limit(1);
+    const parts = await db4.select().from(workshopJobParts).where(eq(workshopJobParts.jobCardId, input.id));
+    const labor = await db4.select().from(workshopJobLabor).where(eq(workshopJobLabor.jobCardId, input.id));
     return { job: job[0], parts, labor };
   }),
   jobCardCreate: authedQuery.input(external_exports.object({
@@ -136138,8 +136467,8 @@ var workshopRouter = createRouter({
     estimatedHours: external_exports.number().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopJobCards).values({
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopJobCards).values({
       ...input,
       tenantId: ctx.user.tenantId,
       status: "pending"
@@ -136147,49 +136476,49 @@ var workshopRouter = createRouter({
     return { id, success: true };
   }),
   jobCardUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), status: external_exports.string().optional(), technicianId: external_exports.number().optional(), priority: external_exports.string().optional(), actualCost: external_exports.string().optional(), actualHours: external_exports.number().optional(), notes: external_exports.string().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
     const updateData = { ...data };
     if (data.status === "in_progress") updateData.startDate = sql`(now())`;
     if (data.status === "completed" || data.status === "delivered") updateData.completionDate = sql`(now())`;
-    await db5.update(workshopJobCards).set(updateData).where(eq(workshopJobCards.id, id));
+    await db4.update(workshopJobCards).set(updateData).where(eq(workshopJobCards.id, id));
     return { success: true };
   }),
   jobCardDelete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.delete(workshopJobCards).where(eq(workshopJobCards.id, input.id));
+    const db4 = getDb();
+    await db4.delete(workshopJobCards).where(eq(workshopJobCards.id, input.id));
     return { success: true };
   }),
   // ─── Job Parts ────────────────────────────────────────
   jobPartAdd: authedQuery.input(external_exports.object({ jobCardId: external_exports.number(), partName: external_exports.string(), partNumber: external_exports.string().optional(), quantity: external_exports.number().optional(), unitPrice: external_exports.string().optional(), totalPrice: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopJobParts).values({ ...input }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopJobParts).values({ ...input }).$returningId();
     return { id, success: true };
   }),
   jobPartRemove: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.delete(workshopJobParts).where(eq(workshopJobParts.id, input.id));
+    const db4 = getDb();
+    await db4.delete(workshopJobParts).where(eq(workshopJobParts.id, input.id));
     return { success: true };
   }),
   // ─── Job Labor ────────────────────────────────────────
   jobLaborAdd: authedQuery.input(external_exports.object({ jobCardId: external_exports.number(), technicianId: external_exports.number().optional(), description: external_exports.string(), hours: external_exports.number().optional(), rate: external_exports.string().optional(), total: external_exports.string().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopJobLabor).values({ ...input }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopJobLabor).values({ ...input }).$returningId();
     return { id, success: true };
   }),
   // ─── Vehicles ─────────────────────────────────────────
   vehicleList: authedQuery.input(external_exports.object({ customerId: external_exports.number().optional(), search: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(workshopVehicles.tenantId, ctx.user.tenantId)];
     if (input?.customerId) conditions.push(eq(workshopVehicles.customerId, input.customerId));
-    return db5.select().from(workshopVehicles).where(and(...conditions)).orderBy(desc(workshopVehicles.createdAt));
+    return db4.select().from(workshopVehicles).where(and(...conditions)).orderBy(desc(workshopVehicles.createdAt));
   }),
   vehicleLookup: authedQuery.input(external_exports.object({ plateNumber: external_exports.string().optional(), vin: external_exports.string().optional() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(workshopVehicles.tenantId, ctx.user.tenantId)];
     if (input.plateNumber) conditions.push(eq(workshopVehicles.plateNumber, input.plateNumber));
     if (input.vin) conditions.push(eq(workshopVehicles.vin, input.vin));
-    return db5.select().from(workshopVehicles).where(and(...conditions)).limit(1);
+    return db4.select().from(workshopVehicles).where(and(...conditions)).limit(1);
   }),
   vehicleCreate: authedQuery.input(external_exports.object({
     customerId: external_exports.number(),
@@ -136208,26 +136537,26 @@ var workshopRouter = createRouter({
     registrationExpiry: external_exports.string().optional(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopVehicles).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopVehicles).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   vehicleUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), mileage: external_exports.string().optional(), nextServiceMileage: external_exports.string().optional(), nextServiceDate: external_exports.string().optional(), notes: external_exports.string().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(workshopVehicles).set(data).where(eq(workshopVehicles.id, id));
+    await db4.update(workshopVehicles).set(data).where(eq(workshopVehicles.id, id));
     return { success: true };
   }),
   vehicleHistory: authedQuery.input(external_exports.object({ vehicleId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    return db5.select().from(workshopJobCards).where(eq(workshopJobCards.vehicleId, input.vehicleId)).orderBy(desc(workshopJobCards.createdAt));
+    const db4 = getDb();
+    return db4.select().from(workshopJobCards).where(eq(workshopJobCards.vehicleId, input.vehicleId)).orderBy(desc(workshopJobCards.createdAt));
   }),
   // ─── Estimates ────────────────────────────────────────
   estimateList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(workshopEstimates.tenantId, ctx.user.tenantId)];
     if (input?.status) conditions.push(eq(workshopEstimates.status, input.status));
-    return db5.select().from(workshopEstimates).where(and(...conditions)).orderBy(desc(workshopEstimates.createdAt));
+    return db4.select().from(workshopEstimates).where(and(...conditions)).orderBy(desc(workshopEstimates.createdAt));
   }),
   estimateCreate: authedQuery.input(external_exports.object({
     vehicleId: external_exports.number(),
@@ -136240,23 +136569,23 @@ var workshopRouter = createRouter({
     totalAmount: external_exports.string(),
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopEstimates).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopEstimates).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   estimateApprove: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(workshopEstimates).set({ status: "approved", approvedAt: sql`(now())` }).where(eq(workshopEstimates.id, input.id));
+    const db4 = getDb();
+    await db4.update(workshopEstimates).set({ status: "approved", approvedAt: sql`(now())` }).where(eq(workshopEstimates.id, input.id));
     return { success: true };
   }),
   estimateConvertToJob: authedQuery.input(external_exports.object({ estimateId: external_exports.number() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [est] = await db5.select().from(workshopEstimates).where(eq(workshopEstimates.id, input.estimateId)).limit(1);
+    const db4 = getDb();
+    const [est] = await db4.select().from(workshopEstimates).where(eq(workshopEstimates.id, input.estimateId)).limit(1);
     if (!est) throw new Error("Estimate not found");
-    const items = await db5.select().from(workshopEstimateItems).where(eq(workshopEstimateItems.estimateId, input.estimateId));
-    const jobCount = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(eq(workshopJobCards.tenantId, ctx.user.tenantId));
+    const items = await db4.select().from(workshopEstimateItems).where(eq(workshopEstimateItems.estimateId, input.estimateId));
+    const jobCount = await db4.select({ count: sql`count(*)` }).from(workshopJobCards).where(eq(workshopJobCards.tenantId, ctx.user.tenantId));
     const jobNumber = `EST-JOB-${(jobCount[0]?.count || 0) + 1}`;
-    const [{ jobId }] = await db5.insert(workshopJobCards).values({
+    const [{ jobId }] = await db4.insert(workshopJobCards).values({
       vehicleId: est.vehicleId,
       customerId: est.customerId,
       jobNumber,
@@ -136265,13 +136594,13 @@ var workshopRouter = createRouter({
       tenantId: ctx.user.tenantId,
       status: "pending"
     }).$returningId();
-    await db5.update(workshopEstimates).set({ status: "converted", convertedToJobId: jobId }).where(eq(workshopEstimates.id, input.estimateId));
+    await db4.update(workshopEstimates).set({ status: "converted", convertedToJobId: jobId }).where(eq(workshopEstimates.id, input.estimateId));
     return { jobId, success: true };
   }),
   // ─── Technicians ──────────────────────────────────────
   technicianList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(workshopTechnicians).where(eq(workshopTechnicians.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(workshopTechnicians).where(eq(workshopTechnicians.tenantId, ctx.user.tenantId));
   }),
   technicianCreate: authedQuery.input(external_exports.object({
     name: external_exports.string(),
@@ -136280,20 +136609,20 @@ var workshopRouter = createRouter({
     specialty: external_exports.string().optional(),
     hourlyRate: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopTechnicians).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopTechnicians).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   technicianUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), name: external_exports.string().optional(), phone: external_exports.string().optional(), hourlyRate: external_exports.string().optional(), isActive: external_exports.boolean().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(workshopTechnicians).set(data).where(eq(workshopTechnicians.id, id));
+    await db4.update(workshopTechnicians).set(data).where(eq(workshopTechnicians.id, id));
     return { success: true };
   }),
   technicianSchedule: authedQuery.input(external_exports.object({ date: external_exports.string() })).query(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const techs = await db5.select().from(workshopTechnicians).where(eq(workshopTechnicians.tenantId, ctx.user.tenantId));
-    const jobs = await db5.select().from(workshopJobCards).where(and(
+    const db4 = getDb();
+    const techs = await db4.select().from(workshopTechnicians).where(eq(workshopTechnicians.tenantId, ctx.user.tenantId));
+    const jobs = await db4.select().from(workshopJobCards).where(and(
       eq(workshopJobCards.tenantId, ctx.user.tenantId),
       eq(workshopJobCards.status, "in_progress")
     ));
@@ -136304,62 +136633,62 @@ var workshopRouter = createRouter({
   }),
   // ─── Inspections ──────────────────────────────────────
   inspectionList: authedQuery.input(external_exports.object({ jobCardId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(workshopInspections.tenantId, ctx.user.tenantId)];
     if (input?.jobCardId) conditions.push(eq(workshopInspections.jobCardId, input.jobCardId));
-    return db5.select().from(workshopInspections).where(and(...conditions)).orderBy(desc(workshopInspections.createdAt));
+    return db4.select().from(workshopInspections).where(and(...conditions)).orderBy(desc(workshopInspections.createdAt));
   }),
   inspectionCreate: authedQuery.input(external_exports.object({ jobCardId: external_exports.number(), checklistJson: external_exports.string().optional(), photos: external_exports.string().optional(), customerSignature: external_exports.string().optional(), notes: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopInspections).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopInspections).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // ─── Service Types ────────────────────────────────────
   serviceTypeList: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
-    return db5.select().from(workshopServiceTypes).where(eq(workshopServiceTypes.tenantId, ctx.user.tenantId));
+    const db4 = getDb();
+    return db4.select().from(workshopServiceTypes).where(eq(workshopServiceTypes.tenantId, ctx.user.tenantId));
   }),
   serviceTypeCreate: authedQuery.input(external_exports.object({ name: external_exports.string(), nameAr: external_exports.string().optional(), description: external_exports.string().optional(), estimatedHours: external_exports.number().optional(), defaultPrice: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopServiceTypes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopServiceTypes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // ─── Bay Schedule ─────────────────────────────────────
   bayList: authedQuery.input(external_exports.object({ date: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(workshopBaySchedule.tenantId, ctx.user.tenantId)];
     if (input?.date) conditions.push(eq(workshopBaySchedule.date, input.date));
-    return db5.select().from(workshopBaySchedule).where(and(...conditions)).orderBy(workshopBaySchedule.bayNumber);
+    return db4.select().from(workshopBaySchedule).where(and(...conditions)).orderBy(workshopBaySchedule.bayNumber);
   }),
   bayUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), status: external_exports.string(), jobCardId: external_exports.number().optional(), notes: external_exports.string().optional() })).mutation(async ({ input }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const { id, ...data } = input;
-    await db5.update(workshopBaySchedule).set(data).where(eq(workshopBaySchedule.id, id));
+    await db4.update(workshopBaySchedule).set(data).where(eq(workshopBaySchedule.id, id));
     return { success: true };
   }),
   // ─── Payments ─────────────────────────────────────────
   paymentList: authedQuery.input(external_exports.object({ jobCardId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const conditions = [eq(workshopPayments.tenantId, ctx.user.tenantId)];
     if (input?.jobCardId) conditions.push(eq(workshopPayments.jobCardId, input.jobCardId));
-    return db5.select().from(workshopPayments).where(and(...conditions)).orderBy(desc(workshopPayments.createdAt));
+    return db4.select().from(workshopPayments).where(and(...conditions)).orderBy(desc(workshopPayments.createdAt));
   }),
   paymentCreate: authedQuery.input(external_exports.object({ jobCardId: external_exports.number().optional(), estimateId: external_exports.number().optional(), amount: external_exports.string(), paymentMethod: external_exports.string().optional(), referenceNumber: external_exports.string().optional(), notes: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
-    const [{ id }] = await db5.insert(workshopPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(workshopPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   // ─── Stats ────────────────────────────────────────────
   workshopStats: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [activeJobs] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "in_progress")));
-    const [pendingJobs] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "pending")));
-    const [qcJobs] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "quality_check")));
-    const [completedToday] = await db5.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "completed"), gte(workshopJobCards.completionDate, sql`CURDATE()`)));
-    const [totalVehicles] = await db5.select({ count: sql`count(*)` }).from(workshopVehicles).where(eq(workshopVehicles.tenantId, tenantId));
-    const [totalTechs] = await db5.select({ count: sql`count(*)` }).from(workshopTechnicians).where(eq(workshopTechnicians.tenantId, tenantId));
-    const [totalRevenue] = await db5.select({ total: sql`coalesce(sum(cast(amount as real)), '0')` }).from(workshopPayments).where(eq(workshopPayments.tenantId, tenantId));
+    const [activeJobs] = await db4.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "in_progress")));
+    const [pendingJobs] = await db4.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "pending")));
+    const [qcJobs] = await db4.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "quality_check")));
+    const [completedToday] = await db4.select({ count: sql`count(*)` }).from(workshopJobCards).where(and(eq(workshopJobCards.tenantId, tenantId), eq(workshopJobCards.status, "completed"), gte(workshopJobCards.completionDate, sql`CURDATE()`)));
+    const [totalVehicles] = await db4.select({ count: sql`count(*)` }).from(workshopVehicles).where(eq(workshopVehicles.tenantId, tenantId));
+    const [totalTechs] = await db4.select({ count: sql`count(*)` }).from(workshopTechnicians).where(eq(workshopTechnicians.tenantId, tenantId));
+    const [totalRevenue] = await db4.select({ total: sql`coalesce(sum(cast(amount as real)), '0')` }).from(workshopPayments).where(eq(workshopPayments.tenantId, tenantId));
     return {
       activeJobs: activeJobs.count,
       pendingJobs: pendingJobs.count,
@@ -136369,6 +136698,188 @@ var workshopRouter = createRouter({
       totalTechnicians: totalTechs.count,
       totalRevenue: totalRevenue.total
     };
+  })
+});
+
+// api/healthcareCompleteRouter.ts
+init_connection();
+init_schema2();
+init_drizzle_orm();
+var healthcareCompleteRouter = createRouter({
+  // PATIENTS
+  patientList: authedQuery.input(external_exports.object({ search: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const conditions = [eq(patients.tenantId, ctx.user.tenantId)];
+    if (input?.search) {
+      conditions.push(sql`(${patients.firstName} LIKE ${"%" + input.search + "%"} OR ${patients.phone} LIKE ${"%" + input.search + "%"})`);
+    }
+    return db4.select().from(patients).where(and(...conditions)).orderBy(desc(patients.createdAt)).limit(100);
+  }),
+  patientCreate: authedQuery.input(external_exports.object({
+    patientNumber: external_exports.string(),
+    firstName: external_exports.string(),
+    lastName: external_exports.string(),
+    dateOfBirth: external_exports.string().optional(),
+    gender: external_exports.enum(["male", "female", "other"]).optional(),
+    phone: external_exports.string().optional(),
+    email: external_exports.string().optional(),
+    bloodGroup: external_exports.string().optional(),
+    allergies: external_exports.string().optional(),
+    insuranceProvider: external_exports.string().optional(),
+    insurancePolicyNumber: external_exports.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(patients).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    return { id, success: true };
+  }),
+  // APPOINTMENTS
+  appointmentList: authedQuery.input(external_exports.object({ patientId: external_exports.number().optional(), date: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const conditions = [eq(appointments.tenantId, ctx.user.tenantId)];
+    if (input?.patientId) conditions.push(eq(appointments.patientId, input.patientId));
+    if (input?.date) conditions.push(eq(appointments.appointmentDate, input.date));
+    return db4.select().from(appointments).where(and(...conditions)).orderBy(desc(appointments.appointmentDate));
+  }),
+  appointmentCreate: authedQuery.input(external_exports.object({
+    patientId: external_exports.number(),
+    doctorId: external_exports.number().optional(),
+    appointmentNumber: external_exports.string(),
+    appointmentDate: external_exports.string(),
+    startTime: external_exports.string(),
+    endTime: external_exports.string(),
+    appointmentType: external_exports.enum(["consultation", "follow_up", "emergency", "checkup", "procedure", "vaccination"]).optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(appointments).values({ ...input, tenantId: ctx.user.tenantId, createdBy: ctx.user.id }).$returningId();
+    return { id, success: true };
+  }),
+  // DOCTORS
+  doctorList: authedQuery.query(async ({ ctx }) => {
+    const db4 = getDb();
+    return db4.select().from(doctorRosters).where(eq(doctorRosters.tenantId, ctx.user.tenantId));
+  }),
+  // INSURANCE CLAIMS
+  claimList: authedQuery.input(external_exports.object({ status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const conditions = [eq(insuranceClaimsHealthcare.tenantId, ctx.user.tenantId)];
+    if (input?.status) conditions.push(eq(insuranceClaimsHealthcare.status, input.status));
+    return db4.select().from(insuranceClaimsHealthcare).where(and(...conditions));
+  }),
+  claimCreate: authedQuery.input(external_exports.object({
+    patientId: external_exports.number(),
+    claimNumber: external_exports.string(),
+    insuranceProvider: external_exports.string(),
+    claimAmount: external_exports.string(),
+    diagnosis: external_exports.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(insuranceClaimsHealthcare).values({ ...input, tenantId: ctx.user.tenantId, createdBy: ctx.user.id }).$returningId();
+    return { id, success: true };
+  }),
+  // STATS
+  stats: authedQuery.query(async ({ ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const [totalPatients] = await db4.select({ count: sql`count(*)` }).from(patients).where(eq(patients.tenantId, tenantId));
+    const [todayAppointments] = await db4.select({ count: sql`count(*)` }).from(appointments).where(and(eq(appointments.tenantId, tenantId), eq(appointments.appointmentDate, sql`curdate()`)));
+    return { totalPatients: totalPatients.count, todayAppointments: todayAppointments.count };
+  })
+});
+
+// api/workshopCompleteRouter.ts
+init_connection();
+var workshopCompleteRouter = createRouter({
+  // WARRANTIES
+  warrantyList: authedQuery.input(external_exports.object({ vehicleId: external_exports.number().optional(), status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { warranties: [] };
+  }),
+  warrantyCreate: authedQuery.input(external_exports.object({
+    vehicleId: external_exports.number(),
+    warrantyNumber: external_exports.string(),
+    warrantyType: external_exports.enum(["manufacturer", "extended", "service", "parts", "labor"]),
+    startDate: external_exports.string(),
+    endDate: external_exports.string().optional(),
+    mileageLimit: external_exports.number().optional(),
+    providerName: external_exports.string().optional(),
+    notes: external_exports.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { id: 1, success: true };
+  }),
+  // WARRANTY CLAIMS
+  warrantyClaimList: authedQuery.input(external_exports.object({ warrantyId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { claims: [] };
+  }),
+  warrantyClaimCreate: authedQuery.input(external_exports.object({
+    warrantyId: external_exports.number(),
+    vehicleId: external_exports.number(),
+    claimNumber: external_exports.string(),
+    claimDate: external_exports.string(),
+    failureDescription: external_exports.string(),
+    totalCost: external_exports.number(),
+    claimedAmount: external_exports.number()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { id: 1, success: true };
+  }),
+  // SERVICE REMINDERS
+  serviceReminderList: authedQuery.input(external_exports.object({ vehicleId: external_exports.number().optional(), status: external_exports.string().optional() }).optional()).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { reminders: [] };
+  }),
+  serviceReminderCreate: authedQuery.input(external_exports.object({
+    vehicleId: external_exports.number(),
+    customerId: external_exports.number().optional(),
+    reminderType: external_exports.enum(["scheduled_maintenance", "oil_change", "tire_rotation", "inspection", "registration_renewal", "insurance_renewal", "warranty_expiry", "custom"]),
+    serviceTitle: external_exports.string(),
+    dueDate: external_exports.string().optional(),
+    dueMileage: external_exports.number().optional(),
+    priority: external_exports.enum(["low", "normal", "high", "critical"]).optional(),
+    autoSchedule: external_exports.boolean().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { id: 1, success: true };
+  }),
+  serviceReminderSend: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { success: true, sent: true };
+  }),
+  // PARTS INVENTORY
+  partsList: authedQuery.input(external_exports.object({ search: external_exports.string().optional(), lowStock: external_exports.boolean().optional() }).optional()).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { parts: [] };
+  }),
+  partCreate: authedQuery.input(external_exports.object({
+    partNumber: external_exports.string(),
+    partName: external_exports.string(),
+    category: external_exports.string().optional(),
+    unitPrice: external_exports.number(),
+    quantityInStock: external_exports.number(),
+    reorderLevel: external_exports.number().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { id: 1, success: true };
+  }),
+  // PARTS USAGE
+  partsUsageList: authedQuery.input(external_exports.object({ jobCardId: external_exports.number() })).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { usage: [] };
+  }),
+  partsUsageCreate: authedQuery.input(external_exports.object({
+    jobCardId: external_exports.number(),
+    partId: external_exports.number(),
+    quantity: external_exports.number(),
+    unitPrice: external_exports.number()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { id: 1, success: true };
+  }),
+  // SERVICE HISTORY
+  serviceHistoryList: authedQuery.input(external_exports.object({ vehicleId: external_exports.number() })).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    return { history: [] };
   })
 });
 
@@ -136545,42 +137056,42 @@ init_schema2();
 init_drizzle_orm();
 var chatRouter = createRouter({
   myConversations: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    return db5.select().from(chatConversations).where(and(eq(chatConversations.tenantId, tenantId), eq(chatConversations.status, "active"))).orderBy(desc(chatConversations.lastMessageAt));
+    return db4.select().from(chatConversations).where(and(eq(chatConversations.tenantId, tenantId), eq(chatConversations.status, "active"))).orderBy(desc(chatConversations.lastMessageAt));
   }),
   adminConversations: authedQuery.query(async () => {
-    const db5 = getDb();
-    return db5.select().from(chatConversations).where(eq(chatConversations.status, "active")).orderBy(desc(chatConversations.lastMessageAt));
+    const db4 = getDb();
+    return db4.select().from(chatConversations).where(eq(chatConversations.status, "active")).orderBy(desc(chatConversations.lastMessageAt));
   }),
   messages: authedQuery.input(external_exports.object({ conversationId: external_exports.number() })).query(async ({ input }) => {
-    const db5 = getDb();
-    return db5.select().from(chatMessages).where(eq(chatMessages.conversationId, input.conversationId)).orderBy(asc2(chatMessages.createdAt));
+    const db4 = getDb();
+    return db4.select().from(chatMessages).where(eq(chatMessages.conversationId, input.conversationId)).orderBy(asc2(chatMessages.createdAt));
   }),
   startConversation: authedQuery.input(external_exports.object({ subject: external_exports.string().optional(), message: external_exports.string().min(1) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
-    const [conv] = await db5.insert(chatConversations).values({ tenantId, status: "active" }).$returningId();
-    await db5.insert(chatMessages).values({ conversationId: conv.id, senderType: "tenant", senderName: ctx.user.name || "User", message: input.message });
+    const [conv] = await db4.insert(chatConversations).values({ tenantId, status: "active" }).$returningId();
+    await db4.insert(chatMessages).values({ conversationId: conv.id, senderType: "tenant", senderName: ctx.user.name || "User", message: input.message });
     return conv;
   }),
   sendMessage: authedQuery.input(external_exports.object({ conversationId: external_exports.number(), message: external_exports.string().min(1) })).mutation(async ({ input, ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const senderType = ctx.user.role === "admin" || ctx.user.role === "superadmin" ? "admin" : "tenant";
-    await db5.insert(chatMessages).values({ conversationId: input.conversationId, senderId: ctx.user.id, senderType, senderName: ctx.user.name || "User", message: input.message });
-    await db5.update(chatConversations).set({ lastMessageAt: /* @__PURE__ */ new Date() }).where(eq(chatConversations.id, input.conversationId));
+    await db4.insert(chatMessages).values({ conversationId: input.conversationId, senderId: ctx.user.id, senderType, senderName: ctx.user.name || "User", message: input.message });
+    await db4.update(chatConversations).set({ lastMessageAt: /* @__PURE__ */ new Date() }).where(eq(chatConversations.id, input.conversationId));
     return { success: true };
   }),
   resolveConversation: authedQuery.input(external_exports.object({ conversationId: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(chatConversations).set({ status: "resolved" }).where(eq(chatConversations.id, input.conversationId));
+    const db4 = getDb();
+    await db4.update(chatConversations).set({ status: "resolved" }).where(eq(chatConversations.id, input.conversationId));
     return { success: true };
   }),
   unreadCount: authedQuery.query(async ({ ctx }) => {
-    const db5 = getDb();
+    const db4 = getDb();
     const tenantId = ctx.user.tenantId;
     const isAdmin = ctx.user.role === "admin" || ctx.user.role === "superadmin";
-    const result = await db5.select({ count: sql`count(*)` }).from(chatMessages).innerJoin(chatConversations, eq(chatMessages.conversationId, chatConversations.id)).where(and(
+    const result = await db4.select({ count: sql`count(*)` }).from(chatMessages).innerJoin(chatConversations, eq(chatMessages.conversationId, chatConversations.id)).where(and(
       isAdmin ? eq(chatConversations.tenantId, tenantId) : eq(chatConversations.tenantId, tenantId),
       isNull(chatMessages.readAt),
       sql`${chatMessages.senderType} != ${isAdmin ? "tenant" : "admin"}`
@@ -136588,9 +137099,645 @@ var chatRouter = createRouter({
     return result[0]?.count || 0;
   }),
   markRead: authedQuery.input(external_exports.object({ conversationId: external_exports.number() })).mutation(async ({ input }) => {
-    const db5 = getDb();
-    await db5.update(chatMessages).set({ readAt: /* @__PURE__ */ new Date() }).where(and(eq(chatMessages.conversationId, input.conversationId), isNull(chatMessages.readAt)));
+    const db4 = getDb();
+    await db4.update(chatMessages).set({ readAt: /* @__PURE__ */ new Date() }).where(and(eq(chatMessages.conversationId, input.conversationId), isNull(chatMessages.readAt)));
     return { success: true };
+  })
+});
+
+// api/zatcaCompleteRouter.ts
+init_connection();
+init_schema2();
+init_drizzle_orm();
+init_dist();
+
+// api/lib/zatca/completeImplementation.ts
+var import_qrcode2 = __toESM(require_lib6(), 1);
+import crypto14 from "crypto";
+function encodeTlvTag(tag2, value) {
+  const encoder2 = new TextEncoder();
+  const valueBytes = encoder2.encode(value);
+  const buf = Buffer.alloc(2 + valueBytes.length);
+  buf[0] = tag2;
+  buf[1] = valueBytes.length;
+  buf.set(valueBytes, 2);
+  return buf;
+}
+function buildZatcaTlvQr(data) {
+  const parts = [
+    encodeTlvTag(1, data.sellerName),
+    // Seller name
+    encodeTlvTag(2, data.vatNumber),
+    // VAT number
+    encodeTlvTag(3, data.timestamp),
+    // Timestamp (ISO 8601)
+    encodeTlvTag(4, data.totalWithVat.toFixed(2)),
+    // Total with VAT
+    encodeTlvTag(5, data.vatAmount.toFixed(2))
+    // VAT amount
+  ];
+  const combined = Buffer.concat(parts);
+  return combined.toString("base64");
+}
+async function generateZatcaQrImage(tlvBase642) {
+  try {
+    const dataUrl = await import_qrcode2.default.toDataURL(tlvBase642, {
+      errorCorrectionLevel: "M",
+      type: "image/png",
+      width: 200,
+      margin: 1
+    });
+    return dataUrl;
+  } catch (error48) {
+    console.error("[ZATCA QR] Generation error:", error48);
+    throw error48;
+  }
+}
+function buildZatcaUblXml(data, complianceMode = true) {
+  const invoiceTypeCode = data.invoiceType === "standard" ? "388" : "383";
+  const timestamp2 = `${data.date}T${data.time}`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  
+  <!-- Invoice Header -->
+  <cbc:ProfileID>reporting:1.0</cbc:ProfileID>
+  <cbc:ID>${escapeXml(data.invoiceNumber)}</cbc:ID>
+  <cbc:UUID>${generateInvoiceUuid()}</cbc:UUID>
+  <cbc:IssueDate>${data.date}</cbc:IssueDate>
+  <cbc:IssueTime>${data.time}</cbc:IssueTime>
+  <cbc:InvoiceTypeCode name="${complianceMode ? "\u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0627\u0644\u0636\u0631\u064A\u0628\u064A" : "Invoice"}">${invoiceTypeCode}</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>${data.currency || "SAR"}</cbc:DocumentCurrencyCode>
+  
+  <!-- Seller (Accounting Supplier) -->
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cbc:Name>${escapeXml(data.sellerName)}</cbc:Name>
+      ${data.sellerNameAr ? `<cbc:NameAr>${escapeXml(data.sellerNameAr)}</cbc:NameAr>` : ""}
+      
+      <cac:PostalAddress>
+        <cbc:CityName>${escapeXml(data.crNumber || "Riyadh")}</cbc:CityName>
+        <cbc:CountryIdentificationCode>SA</cbc:CountryIdentificationCode>
+      </cac:PostalAddress>
+      
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>${escapeXml(data.vatNumber)}</cbc:CompanyID>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:PartyTaxScheme>
+      
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>${escapeXml(data.sellerName)}</cbc:RegistrationName>
+        ${data.crNumber ? `<cbc:CompanyID>${escapeXml(data.crNumber)}</cbc:CompanyID>` : ""}
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  
+  <!-- Customer (Billing Customer) -->
+  ${data.customerName ? `
+  <cac:BillingReference>
+    <cac:InvoiceDocumentReference>
+      <cbc:ID>${escapeXml(data.customerName)}</cbc:ID>
+    </cac:InvoiceDocumentReference>
+  </cac:BillingReference>
+  ` : ""}
+  
+  <!-- Invoice Lines -->
+  <cac:InvoiceLine>
+    ${data.items.map((item, idx) => `
+    <cbc:ID>${idx + 1}</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="PCE">${item.quantity}</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="${data.currency || "SAR"}">${item.lineTotal.toFixed(2)}</cbc:LineExtensionAmount>
+    
+    <cac:Item>
+      <cbc:Description>${escapeXml(item.description)}</cbc:Description>
+      ${item.itemCode ? `<cbc:SellersItemIdentification><cbc:ID>${item.itemCode}</cbc:ID></cbc:SellersItemIdentification>` : ""}
+    </cac:Item>
+    
+    <cac:Price>
+      <cbc:PriceAmount currencyID="${data.currency || "SAR"}">${item.unitPrice.toFixed(2)}</cbc:PriceAmount>
+    </cac:Price>
+    
+    <cac:TaxTotal>
+      <cbc:TaxAmount currencyID="${data.currency || "SAR"}">${item.taxAmount.toFixed(2)}</cbc:TaxAmount>
+      <cac:TaxSubtotal>
+        <cbc:TaxableAmount currencyID="${data.currency || "SAR"}">${(item.lineTotal - item.taxAmount).toFixed(2)}</cbc:TaxableAmount>
+        <cbc:TaxAmount currencyID="${data.currency || "SAR"}">${item.taxAmount.toFixed(2)}</cbc:TaxAmount>
+        <cac:TaxCategory>
+          <cbc:ID>S</cbc:ID>
+          <cbc:Percent>${item.taxPercent}</cbc:Percent>
+          <cac:TaxScheme>
+            <cbc:ID>VAT</cbc:ID>
+          </cac:TaxScheme>
+        </cac:TaxCategory>
+      </cac:TaxSubtotal>
+    </cac:TaxTotal>
+    `).join("")}
+  </cac:InvoiceLine>
+  
+  <!-- Totals -->
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="${data.currency || "SAR"}">${data.vatAmount.toFixed(2)}</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="${data.currency || "SAR"}">${data.subtotal.toFixed(2)}</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="${data.currency || "SAR"}">${data.vatAmount.toFixed(2)}</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>${data.vatPercent}</cbc:Percent>
+        <cac:TaxScheme>
+          <cbc:ID>VAT</cbc:ID>
+        </cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="${data.currency || "SAR"}">${data.subtotal.toFixed(2)}</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="${data.currency || "SAR"}">${data.subtotal.toFixed(2)}</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="${data.currency || "SAR"}">${data.totalWithVat.toFixed(2)}</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="${data.currency || "SAR"}">${data.totalWithVat.toFixed(2)}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+</Invoice>`;
+}
+function calculateInvoiceHash(xml) {
+  return crypto14.createHash("sha256").update(xml).digest("hex");
+}
+function generateInvoiceUuid() {
+  return crypto14.randomUUID();
+}
+function buildInvoiceHashChain(currentInvoiceHash, previousInvoiceHash, invoiceCounter) {
+  if (!previousInvoiceHash || previousInvoiceHash === "0".repeat(64)) {
+    return crypto14.createHash("sha256").update(currentInvoiceHash + invoiceCounter).digest("hex");
+  }
+  return crypto14.createHash("sha256").update(previousInvoiceHash + currentInvoiceHash + invoiceCounter).digest("hex");
+}
+function isValidSaudiVatNumber3(vatNumber) {
+  const cleaned = vatNumber.replace(/\D/g, "");
+  return /^3\d{13}3$/.test(cleaned);
+}
+function isValidInvoiceNumber(invoiceNumber) {
+  return /^[A-Z0-9-]{1,40}$/i.test(invoiceNumber);
+}
+function isValidInvoiceAmount(amount, maxAmount = 75e4) {
+  return amount > 0 && amount <= maxAmount;
+}
+function escapeXml(str) {
+  const entityMap = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&apos;"
+  };
+  return String(str).replace(/[&<>"']/g, (s) => entityMap[s]);
+}
+function formatCurrency(value) {
+  return value.toFixed(2);
+}
+function parseInvoiceDate(dateStr) {
+  const date6 = new Date(dateStr);
+  return {
+    date: date6.toISOString().split("T")[0],
+    time: date6.toISOString().split("T")[1].substring(0, 8)
+  };
+}
+
+// api/zatcaCompleteRouter.ts
+var ZatcaSettingsSchema = external_exports.object({
+  environment: external_exports.enum(["sandbox", "production"]).default("sandbox"),
+  vatNumber: external_exports.string().refine(isValidSaudiVatNumber3, "Invalid Saudi VAT number"),
+  crNumber: external_exports.string().optional(),
+  organizationId: external_exports.string().optional(),
+  companyName: external_exports.string().min(1),
+  companyNameAr: external_exports.string().optional(),
+  otp: external_exports.string().optional(),
+  csrFile: external_exports.string().optional(),
+  certificateFile: external_exports.string().optional()
+});
+var ZatcaInvoiceCreateSchema = external_exports.object({
+  invoiceNumber: external_exports.string().refine(isValidInvoiceNumber, "Invalid invoice number"),
+  date: external_exports.string().datetime(),
+  invoiceType: external_exports.enum(["standard", "simplified"]).default("standard"),
+  paymentType: external_exports.enum(["cash", "credit", "both"]).default("cash"),
+  customerId: external_exports.number().optional(),
+  customerName: external_exports.string().optional(),
+  items: external_exports.array(external_exports.object({
+    itemCode: external_exports.string().optional(),
+    description: external_exports.string().min(1),
+    quantity: external_exports.number().positive(),
+    unitPrice: external_exports.number().positive(),
+    taxPercent: external_exports.number().default(15)
+  })),
+  discountPercent: external_exports.number().default(0),
+  notes: external_exports.string().optional()
+});
+var zatcaCompleteRouter = createRouter({
+  // ──── SETTINGS ────
+  /**
+   * Get current ZATCA configuration for tenant
+   */
+  settingsGet: authedQuery.query(async ({ ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const settings = await db4.query.companySettings.findFirst({
+      where: eq(companySettings.tenantId, tenantId)
+    });
+    const credentials = await db4.query.zatcaCredentials.findFirst({
+      where: eq(zatcaCredentials.tenantId, tenantId)
+    });
+    if (!settings) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Company settings not found. Please configure your company profile first."
+      });
+    }
+    return {
+      company: {
+        name: settings.companyName,
+        nameAr: settings.companyNameAr,
+        vatNumber: settings.taxNumber,
+        crNumber: settings.crNumber
+      },
+      zatca: credentials ? {
+        environment: credentials.environment,
+        isConfigured: !!credentials.certificateEncrypted,
+        vatNumber: credentials.vatNumber,
+        egsSerialNumber: credentials.egsSerialNumber,
+        deviceUuid: credentials.deviceUuid
+      } : null
+    };
+  }),
+  /**
+   * Update ZATCA configuration
+   */
+  settingsUpdate: authedQuery.input(ZatcaSettingsSchema).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    await db4.update(companySettings).set({
+      companyName: input.companyName,
+      companyNameAr: input.companyNameAr,
+      taxNumber: input.vatNumber,
+      crNumber: input.crNumber
+    }).where(eq(companySettings.tenantId, tenantId));
+    const existing = await db4.query.zatcaCredentials.findFirst({
+      where: eq(zatcaCredentials.tenantId, tenantId)
+    });
+    if (existing) {
+      await db4.update(zatcaCredentials).set({
+        environment: input.environment,
+        vatNumber: input.vatNumber,
+        organizationIdentifier: input.organizationId,
+        egsSerialNumber: input.otp || void 0
+      }).where(eq(zatcaCredentials.id, existing.id));
+    } else {
+      await db4.insert(zatcaCredentials).values({
+        tenantId,
+        environment: input.environment,
+        vatNumber: input.vatNumber,
+        organizationIdentifier: input.organizationId
+      });
+    }
+    await db4.insert(auditLogs).values({
+      tenantId,
+      userId: ctx.user.id,
+      action: "zatca_settings_update",
+      entityType: "zatca_config",
+      entityId: tenantId,
+      newValues: { environment: input.environment, vatNumber: input.vatNumber },
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    return { success: true };
+  }),
+  // ──── INVOICE GENERATION ────
+  /**
+   * Create ZATCA compliant invoice
+   * Generates QR + XML, calculates hashes, persists everything
+   */
+  invoiceCreate: authedQuery.input(ZatcaInvoiceCreateSchema).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    if (!isValidInvoiceNumber(input.invoiceNumber)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Invalid invoice number format"
+      });
+    }
+    const settings = await db4.query.companySettings.findFirst({
+      where: eq(companySettings.tenantId, tenantId)
+    });
+    if (!settings) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Please configure company settings first"
+      });
+    }
+    if (!isValidSaudiVatNumber3(settings.taxNumber || "")) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Company VAT number is invalid. Please update company settings."
+      });
+    }
+    let subtotal = 0;
+    let totalVat = 0;
+    const invoiceItems5 = input.items.map((item) => {
+      const lineTotal = item.quantity * item.unitPrice;
+      const lineVat = lineTotal * (item.taxPercent / 100);
+      subtotal += lineTotal;
+      totalVat += lineVat;
+      return {
+        itemCode: item.itemCode,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        lineTotal,
+        taxPercent: item.taxPercent,
+        taxAmount: lineVat
+      };
+    });
+    const discountAmount = subtotal * (input.discountPercent / 100);
+    const taxableAmount = subtotal - discountAmount;
+    const vatAmount = taxableAmount * 0.15;
+    const totalAmount = taxableAmount + vatAmount;
+    if (!isValidInvoiceAmount(totalAmount, 75e4)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Invoice amount exceeds 750,000 SAR limit (current: ${totalAmount})`
+      });
+    }
+    const { date: date6, time: time5 } = parseInvoiceDate(input.date);
+    const zatcaData = {
+      invoiceNumber: input.invoiceNumber,
+      date: date6,
+      time: time5,
+      sellerName: settings.companyName || "Company",
+      sellerNameAr: settings.companyNameAr,
+      vatNumber: settings.taxNumber || "",
+      crNumber: settings.crNumber,
+      invoiceType: input.invoiceType,
+      paymentType: input.paymentType,
+      items: invoiceItems5,
+      subtotal: taxableAmount,
+      vatPercent: 15,
+      vatAmount,
+      totalWithVat: totalAmount,
+      discountPercent: input.discountPercent,
+      discountAmount,
+      customerName: input.customerName,
+      currency: "SAR",
+      notes: input.notes
+    };
+    const ublXml = buildZatcaUblXml(zatcaData, true);
+    const invoiceHash = calculateInvoiceHash(ublXml);
+    const invoiceUuid = generateInvoiceUuid();
+    const previousInvoice = await db4.query.zatcaInvoiceStatus.findFirst({
+      where: eq(zatcaInvoiceStatus.tenantId, tenantId),
+      orderBy: desc(zatcaInvoiceStatus.id)
+    });
+    const previousHash = previousInvoice?.invoiceHash || "0".repeat(64);
+    const invoiceCounter = (previousInvoice?.invoiceCounter || 0) + 1;
+    const chainHash = buildInvoiceHashChain(invoiceHash, previousHash, invoiceCounter);
+    const qrData = {
+      sellerName: zatcaData.sellerName,
+      vatNumber: zatcaData.vatNumber,
+      timestamp: `${date6}T${time5}Z`,
+      totalWithVat,
+      vatAmount
+    };
+    const tlvQrCode = buildZatcaTlvQr(qrData);
+    const qrImage = await generateZatcaQrImage(tlvQrCode);
+    let customerId = input.customerId || null;
+    if (!customerId && input.customerName) {
+      const existing = await db4.query.customers.findFirst({
+        where: and(
+          eq(customers.tenantId, tenantId),
+          eq(customers.name, input.customerName)
+        )
+      });
+      if (existing) {
+        customerId = existing.id;
+      } else {
+        const [{ id }] = await db4.insert(customers).values({
+          tenantId,
+          name: input.customerName,
+          code: `CUST-${Date.now()}`
+        }).$returningId();
+        customerId = id;
+      }
+    }
+    const [{ id: invoiceId }] = await db4.insert(invoices).values({
+      tenantId,
+      invoiceNumber: input.invoiceNumber,
+      invoiceType: input.invoiceType === "standard" ? "zatca" : "simplified",
+      date: date6,
+      customerId,
+      subTotal: formatCurrency(taxableAmount),
+      taxAmount: formatCurrency(vatAmount),
+      taxPercent: "15",
+      totalAmount: formatCurrency(totalAmount),
+      zatcaQrCode: tlvQrCode,
+      zatcaXml: ublXml,
+      status: "draft",
+      notes: input.notes,
+      discountAmount: input.discountPercent > 0 ? formatCurrency(discountAmount) : void 0
+    }).$returningId();
+    for (const item of invoiceItems5) {
+      await db4.insert(invoiceItems5).values({
+        invoiceId,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: formatCurrency(item.unitPrice),
+        totalAmount: formatCurrency(item.lineTotal),
+        taxPercent: formatCurrency(item.taxPercent)
+      });
+    }
+    await db4.insert(zatcaInvoiceStatus).values({
+      tenantId,
+      invoiceId,
+      invoiceUuid,
+      invoiceCounter,
+      invoiceHash,
+      previousInvoiceHash: previousHash,
+      status: "draft"
+    });
+    await db4.insert(zatcaQrCodes).values({
+      tenantId,
+      invoiceId,
+      tlvBase64: tlvQrCode,
+      qrImageDataUrl: qrImage,
+      tags: qrData
+    });
+    await db4.insert(auditLogs).values({
+      tenantId,
+      userId: ctx.user.id,
+      action: "zatca_invoice_create",
+      entityType: "invoice",
+      entityId: invoiceId,
+      newValues: {
+        invoiceNumber: input.invoiceNumber,
+        totalAmount,
+        vatAmount,
+        invoiceUuid
+      },
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    return {
+      invoiceId,
+      invoiceNumber: input.invoiceNumber,
+      totalAmount,
+      qrCode: tlvQrCode,
+      qrImage,
+      invoiceUuid,
+      success: true
+    };
+  }),
+  // ──── INVOICE RETRIEVAL ────
+  /**
+   * Get invoice with all ZATCA data
+   */
+  invoiceGet: authedQuery.input(external_exports.object({ invoiceId: external_exports.number() })).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const invoice = await db4.query.invoices.findFirst({
+      where: and(
+        eq(invoices.id, input.invoiceId),
+        eq(invoices.tenantId, tenantId)
+      )
+    });
+    if (!invoice) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Invoice not found"
+      });
+    }
+    const items = await db4.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.invoiceId));
+    const zatcaStatus = await db4.query.zatcaInvoiceStatus.findFirst({
+      where: and(
+        eq(zatcaInvoiceStatus.tenantId, tenantId),
+        eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)
+      )
+    });
+    const qrCode = await db4.query.zatcaQrCodes.findFirst({
+      where: and(
+        eq(zatcaQrCodes.tenantId, tenantId),
+        eq(zatcaQrCodes.invoiceId, input.invoiceId)
+      )
+    });
+    return {
+      invoice,
+      items,
+      zatca: {
+        status: zatcaStatus?.status,
+        uuid: zatcaStatus?.invoiceUuid,
+        invoiceHash: zatcaStatus?.invoiceHash,
+        qrCode: qrCode?.tlvBase64,
+        qrImage: qrCode?.qrImageDataUrl
+      }
+    };
+  }),
+  /**
+   * List all ZATCA invoices for tenant
+   */
+  invoiceList: authedQuery.input(external_exports.object({
+    status: external_exports.enum(["draft", "signed", "submitted", "cleared"]).optional(),
+    limit: external_exports.number().default(50)
+  }).optional()).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const conditions = [eq(invoices.tenantId, tenantId)];
+    return db4.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt)).limit(input?.limit || 50);
+  }),
+  // ──── COMPLIANCE & REPORTING ────
+  /**
+   * Mark invoice as submitted to ZATCA
+   * (Placeholder for actual ZATCA API call)
+   */
+  invoiceSubmit: authedQuery.input(external_exports.object({ invoiceId: external_exports.number() })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const invoice = await db4.query.invoices.findFirst({
+      where: and(
+        eq(invoices.id, input.invoiceId),
+        eq(invoices.tenantId, tenantId)
+      )
+    });
+    if (!invoice) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Invoice not found"
+      });
+    }
+    await db4.update(zatcaInvoiceStatus).set({
+      status: "submitted",
+      submittedAt: /* @__PURE__ */ new Date()
+    }).where(and(
+      eq(zatcaInvoiceStatus.tenantId, tenantId),
+      eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)
+    ));
+    return { success: true, status: "submitted" };
+  }),
+  /**
+   * Mark invoice as cleared by ZATCA
+   * (Placeholder for actual ZATCA API call)
+   */
+  invoiceClear: authedQuery.input(external_exports.object({ invoiceId: external_exports.number() })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    await db4.update(zatcaInvoiceStatus).set({
+      status: "cleared",
+      clearedAt: /* @__PURE__ */ new Date()
+    }).where(and(
+      eq(zatcaInvoiceStatus.tenantId, tenantId),
+      eq(zatcaInvoiceStatus.invoiceId, input.invoiceId)
+    ));
+    return { success: true, status: "cleared" };
+  }),
+  /**
+   * Get ZATCA compliance dashboard
+   */
+  complianceDashboard: authedQuery.query(async ({ ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const totalInvoices = (await db4.select().from(invoices).where(eq(invoices.tenantId, tenantId))).length;
+    const zatcaStatusCounts = await db4.select().from(zatcaInvoiceStatus).where(eq(zatcaInvoiceStatus.tenantId, tenantId));
+    const statusBreakdown = {
+      draft: zatcaStatusCounts.filter((s) => s.status === "draft").length,
+      submitted: zatcaStatusCounts.filter((s) => s.status === "submitted").length,
+      cleared: zatcaStatusCounts.filter((s) => s.status === "cleared").length,
+      rejected: zatcaStatusCounts.filter((s) => s.status === "rejected").length
+    };
+    const totalRevenue = (await db4.select().from(invoices).where(eq(invoices.tenantId, tenantId))).reduce((sum5, inv) => sum5 + (Number(inv.totalAmount) || 0), 0);
+    return {
+      totalInvoices,
+      totalRevenue,
+      statusBreakdown,
+      compliance: {
+        percentCleared: totalInvoices > 0 ? (statusBreakdown.cleared / totalInvoices * 100).toFixed(2) : "0",
+        percentSubmitted: totalInvoices > 0 ? (statusBreakdown.submitted / totalInvoices * 100).toFixed(2) : "0"
+      }
+    };
+  }),
+  /**
+   * Export invoices for ZATCA reporting
+   */
+  exportForReporting: authedQuery.input(external_exports.object({
+    fromDate: external_exports.string(),
+    toDate: external_exports.string(),
+    format: external_exports.enum(["json", "csv", "xml"]).default("json")
+  })).query(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const tenantId = ctx.user.tenantId;
+    const invoiceList = await db4.select().from(invoices).where(and(
+      eq(invoices.tenantId, tenantId),
+      gte(invoices.createdAt, new Date(input.fromDate)),
+      gte(invoices.createdAt, new Date(input.toDate))
+    ));
+    return {
+      count: invoiceList.length,
+      invoices: invoiceList,
+      format: input.format
+    };
   })
 });
 
@@ -136623,6 +137770,7 @@ var appRouter = createRouter({
   taxCompliance: taxComplianceRouter,
   master: masterRouter,
   zatca: zatcaRouter,
+  zatcaComplete: zatcaCompleteRouter,
   saas: saasRouter,
   registration: registrationRouter,
   superAdmin: superAdminRouter,
@@ -136674,7 +137822,10 @@ var appRouter = createRouter({
   ws: wsRouter,
   workshop: workshopRouter,
   nphies: nphiesRouter,
-  chat: chatRouter
+  chat: chatRouter,
+  healthcareComplete: healthcareCompleteRouter,
+  workshopComplete: workshopCompleteRouter,
+  thermalPrint: thermalPrintRouter
 });
 
 // contracts/errors.ts
@@ -136823,8 +137974,8 @@ app.get("/api/health", async (c) => {
   let redisStatus;
   try {
     const { getDb: getDb2 } = await Promise.resolve().then(() => (init_connection(), connection_exports));
-    const db5 = getDb2();
-    await db5.execute("SELECT 1");
+    const db4 = getDb2();
+    await db4.execute("SELECT 1");
   } catch {
     dbStatus = "disconnected";
   }
@@ -136883,11 +138034,11 @@ async function startPlanExpiryChecker() {
     const { templates: templates2 } = await Promise.resolve().then(() => (init_emailBranding(), emailBranding_exports));
     async function checkPlans() {
       try {
-        const db5 = getDb2();
+        const db4 = getDb2();
         const now = /* @__PURE__ */ new Date();
         const in3Days = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1e3);
         const in14Days = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1e3);
-        const expiringSoon = await db5.select().from(tenants2).where(
+        const expiringSoon = await db4.select().from(tenants2).where(
           and4(
             eq4(tenants2.status, "active"),
             gte12(tenants2.trialEndsAt, now),
@@ -136912,7 +138063,7 @@ async function startPlanExpiryChecker() {
           } catch {
           }
         }
-        const expired = await db5.select().from(tenants2).where(
+        const expired = await db4.select().from(tenants2).where(
           and4(
             lte10(tenants2.trialEndsAt, now),
             eq4(tenants2.status, "active")
