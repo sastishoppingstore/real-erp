@@ -9,6 +9,7 @@
     "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "build:frontend": "vite build",
     "build:backend": "esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && esbuild api/queue/email.queue.ts --platform=node --bundle --format=esm --outdir=dist/queue --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && esbuild api/queue/tax.queue.ts --platform=node --bundle --format=esm --outdir=dist/queue --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && esbuild api/queue/report.queue.ts --platform=node --bundle --format=esm --outdir=dist/queue --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
+    "build:desktop": "esbuild desktop/backend/server.ts --platform=node --bundle --format=esm --outfile=dist/desktop-boot.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "build:tauri": "npm run build && npx tauri build",
     "lint": "eslint .",
     "preview": "vite preview",

@@ -626,9 +626,14 @@ export const products = mysqlTable("products", {
   image: mediumtext("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+  localUuid: varchar("local_uuid", { length: 255 }),
+  version: int("version").default(1),
+  serverId: bigint("server_id", { mode: "number", unsigned: true }),
+  deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("prod_tenant_idx").on(table.tenantId),
   index("prod_sku_idx").on(table.sku),
+  index("prod_luuid_idx").on(table.localUuid),
 ]);
 
 export const inventoryBalances = mysqlTable("inventory_balances", {
@@ -740,6 +745,10 @@ export const customers = mysqlTable("customers", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+  localUuid: varchar("local_uuid", { length: 255 }),
+  version: int("version").default(1),
+  serverId: bigint("server_id", { mode: "number", unsigned: true }),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const salesQuotations = mysqlTable("sales_quotations", {
@@ -834,6 +843,10 @@ export const invoices = mysqlTable("invoices", {
   status: mysqlEnum("status", ["draft", "sent", "paid", "partial", "overdue", "cancelled", "credit_note"]).default("draft").notNull(),
   createdBy: bigint("created_by", { mode: "number", unsigned: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  localUuid: varchar("local_uuid", { length: 255 }),
+  version: int("version").default(1),
+  serverId: bigint("server_id", { mode: "number", unsigned: true }),
+  deletedAt: timestamp("deleted_at"),
 }, (table) => ({
   tenantIdx: index("inv_tenant_idx").on(table.tenantId),
   dateIdx: index("inv_date_idx").on(table.date),
@@ -851,6 +864,10 @@ export const invoiceItems = mysqlTable("invoice_items", {
   taxPercent: decimal("tax_percent", { precision: 5, scale: 2 }).default("15").notNull(),
   totalAmount: decimal("total_amount", { precision: 18, scale: 4 }).default("0").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  localUuid: varchar("local_uuid", { length: 255 }),
+  version: int("version").default(1),
+  serverId: bigint("server_id", { mode: "number", unsigned: true }),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const creditNotes = mysqlTable("credit_notes", {

@@ -73,18 +73,22 @@ pub fn run() {
 
 fn start_local_backend(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
   let resource_dir = normalize_node_path(&app.path().resource_dir()?);
-  let boot_script = resource_dir.join("dist").join("boot.js");
+  let boot_script = resource_dir.join("dist").join("desktop-boot.js");
   let static_dir = resource_dir.join("dist").join("public");
+  let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| resource_dir.clone());
+  let _ = std::fs::create_dir_all(&app_data_dir);
+  let db_path = app_data_dir.join("erp.sqlite");
   let backend_log = std::env::temp_dir().join("erp-system-backend.log");
   let backend_port = "32145";
 
   write_backend_log(
     &backend_log,
     &format!(
-      "Starting backend\nresource_dir={}\nboot_script={}\nstatic_dir={}\n",
+      "Starting desktop backend\nresource_dir={}\nboot_script={}\nstatic_dir={}\ndb_path={}\n",
       resource_dir.display(),
       boot_script.display(),
       static_dir.display(),
+      db_path.display(),
     ),
   );
 
@@ -99,15 +103,11 @@ fn start_local_backend(app: &mut tauri::App) -> Result<(), Box<dyn std::error::E
     .env("PORT", backend_port)
     .env("ERP_BACKEND_LOG", &backend_log)
     .env("ERP_STATIC_DIR", static_dir)
+    .env("ERP_DB_PATH", db_path.to_string_lossy().to_string())
     .env("APP_ID", std::env::var("APP_ID").unwrap_or_else(|_| "desktop_app".into()))
     .env(
       "APP_SECRET",
       std::env::var("APP_SECRET").unwrap_or_else(|_| "desktop_local_secret".into()),
-    )
-    .env(
-      "DATABASE_URL",
-      std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "mysql://erp:erp123@localhost:3306/erp".into()),
     )
     .spawn()?;
 
