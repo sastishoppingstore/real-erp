@@ -103,10 +103,22 @@ export default function SuppliersPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = {
+      name: form.name,
+      nameAr: form.nameAr,
+      taxNumber: form.vatNumber || form.crNumber,
+      email: form.email,
+      phone: form.phone,
+      mobile: form.whatsapp,
+      address: form.address,
+      city: form.city,
+      creditLimit: form.creditLimit,
+      paymentTerms: form.paymentTerms,
+    };
     if (editingId) {
-      updateSupplier.mutate({ id: editingId, ...form });
+      updateSupplier.mutate({ id: editingId, ...payload });
     } else {
-      createSupplier.mutate(form);
+      createSupplier.mutate(payload);
     }
     setOpen(false);
     resetForm();

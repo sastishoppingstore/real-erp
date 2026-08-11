@@ -29,8 +29,28 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><h2 className="text-2xl font-bold">Products</h2><p className="text-slate-500">Manage your product catalog</p></div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Add Product</Button></DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={newCatMode} onOpenChange={setNewCatMode}>
+            <DialogTrigger asChild><Button variant="outline"><Plus className="w-4 h-4 mr-2" />Add Category</Button></DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>New Category</DialogTitle></DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div><Label>Category Name</Label><Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="e.g. Electronics" /></div>
+                <div><Label>Category Image (Optional)</Label><ImageUpload value={newCatImage} onChange={setNewCatImage} /></div>
+                <Button className="w-full" onClick={() => {
+                  const name = newCatName.trim();
+                  if (!name) return;
+                  createCategory.mutate({ name, image: newCatImage || undefined }, { 
+                    onSuccess: () => { setNewCatMode(false); setNewCatName(""); setNewCatImage(""); } 
+                  });
+                }} disabled={!newCatName.trim() || createCategory.isPending}>
+                  {createCategory.isPending ? "Creating..." : "Create Category"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Add Product</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); createProduct.mutate({ ...form }); setOpen(false); }} className="space-y-4">
@@ -86,7 +106,8 @@ export default function ProductsPage() {
               <Button type="submit" className="w-full">Create Product</Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
       <Card>
         <CardHeader className="pb-2"><div className="relative max-w-sm"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><Input placeholder="Search products..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} /></div></CardHeader>

@@ -11,11 +11,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Car, Search, ArrowLeft, AlertTriangle, Calendar, Timer } from "lucide-react";
 import ActionButton3D from "@/components/ui/ActionButton3D";
+import { toast } from "sonner";
 
 export default function VehiclesPage() {
   const navigate = useNavigate();
   const { data: vehicles, refetch } = trpc.workshop.vehicleList.useQuery(undefined);
-  const createVehicle = trpc.workshop.vehicleCreate.useMutation({ onSuccess: () => { refetch(); setOpen(false); } });
+  const createVehicle = trpc.workshop.vehicleCreate.useMutation({
+    onSuccess: () => { refetch(); setOpen(false); toast.success("Vehicle registered successfully"); },
+    onError: (e) => toast.error(e.message)
+  });
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [form, setForm] = useState({
@@ -117,13 +121,13 @@ export default function VehiclesPage() {
           <form onSubmit={(e) => {
             e.preventDefault();
             createVehicle.mutate({
-              customerId: parseInt(form.customerId), make: form.make, model: form.model,
-              year: form.year, plateNumber: form.plateNumber, vin: form.vin,
-              color: form.color, mileage: form.mileage,
-              nextServiceMileage: form.nextServiceMileage, nextServiceDate: form.nextServiceDate,
-              insuranceCompany: form.insuranceCompany, policyNumber: form.policyNumber,
-              insuranceExpiry: form.insuranceExpiry, registrationExpiry: form.registrationExpiry,
-              notes: form.notes,
+              customerId: parseInt(form.customerId) || 1, make: form.make, model: form.model,
+              year: form.year, plateNumber: form.plateNumber || undefined, vin: form.vin || undefined,
+              color: form.color || undefined, mileage: form.mileage || undefined,
+              nextServiceMileage: form.nextServiceMileage || undefined, nextServiceDate: form.nextServiceDate || undefined,
+              insuranceCompany: form.insuranceCompany || undefined, policyNumber: form.policyNumber || undefined,
+              insuranceExpiry: form.insuranceExpiry || undefined, registrationExpiry: form.registrationExpiry || undefined,
+              notes: form.notes || undefined,
             });
           }} className="space-y-3">
             <div className="grid grid-cols-3 gap-4">

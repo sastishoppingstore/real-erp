@@ -52,7 +52,18 @@ export default function SubcontractorManagement() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>{isAr ? "إضافة مقاول باطن" : "Add Subcontractor"}</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMut.mutate(form as any); }} className="space-y-4">
+            <form onSubmit={(e) => { 
+              e.preventDefault(); 
+              createMut.mutate({
+                name: form.name + (form.nameAr ? ` / ${form.nameAr}` : ""),
+                code: `SUB-${Date.now().toString().slice(-6)}`,
+                email: form.email,
+                phone: form.phone,
+                trade: form.specialty,
+                licenseNumber: form.crNumber,
+                notes: `Trade Name: ${form.tradeName}, VAT: ${form.vatNumber}, Address: ${form.address}, ${form.city}`,
+              }); 
+            }} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>{isAr ? "الاسم (إنجليزي)" : "Name (EN)"}</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required /></div>
                 <div><Label>{isAr ? "الاسم (عربي)" : "Name (AR)"}</Label><Input value={form.nameAr} onChange={e => setForm({...form, nameAr: e.target.value})} dir="rtl" /></div>
@@ -111,17 +122,17 @@ export default function SubcontractorManagement() {
                 </TableCell></TableRow>
               ) : filtered.map(s => (
                 <TableRow key={s.id}>
-                  <TableCell className="font-mono text-sm">{s.subcontractorCode}</TableCell>
+                  <TableCell className="font-mono text-sm">{s.code || "—"}</TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{s.name}</p>
-                      {s.tradeName && <p className="text-xs text-muted-foreground">{s.tradeName}</p>}
+                      {s.contactPerson && <p className="text-xs text-muted-foreground">{s.contactPerson}</p>}
                     </div>
                   </TableCell>
-                  <TableCell>{s.specialty || "—"}</TableCell>
+                  <TableCell>{s.trade || "—"}</TableCell>
                   <TableCell>{s.phone || "—"}</TableCell>
-                  <TableCell className="text-right font-mono">{s.creditLimit ? Number(s.creditLimit).toLocaleString() : "—"}</TableCell>
-                  <TableCell><Badge className={statusColors[s.status] || ""}>{s.status}</Badge></TableCell>
+                  <TableCell className="text-right font-mono">{s.contractAmount ? Number(s.contractAmount).toLocaleString() : "—"}</TableCell>
+                  <TableCell><Badge className={statusColors[s.isActive ? "active" : "inactive"] || ""}>{s.isActive ? "active" : "inactive"}</Badge></TableCell>
                 </TableRow>
               ))}
             </TableBody>

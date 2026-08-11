@@ -3,6 +3,7 @@ import { createRouter, authedQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { roomTypes, roomInventory, hotelBookings, bookingCalendar, housekeepingSchedule, folioCharges } from "@db/schema";
 import { eq, and, desc, sql, between } from "drizzle-orm";
+import { cleanInput } from "./cleanInput";
 
 export const hotelRouter = createRouter({
   roomTypeList: authedQuery
@@ -23,7 +24,7 @@ export const hotelRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(roomTypes).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(roomTypes).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -69,7 +70,7 @@ export const hotelRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(hotelBookings).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(hotelBookings).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -126,7 +127,7 @@ export const hotelRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(folioCharges).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(folioCharges).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 

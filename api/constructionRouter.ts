@@ -8,6 +8,7 @@ import {
   heatStressRecords, engineeringSaudization, safetyTraining, ppeIssuance, equipmentSchedule, materialRequirements,
 } from "@db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { cleanInput } from "./cleanInput";
 
 export const constructionRouter = createRouter({
   projectList: authedQuery
@@ -34,7 +35,8 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(constructionProjects).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const clean = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== "" && v !== null && v !== undefined));
+      const [{ id }] = await db.insert(constructionProjects).values({ ...clean, tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -68,7 +70,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(subcontractors).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(subcontractors).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -79,6 +81,23 @@ export const constructionRouter = createRouter({
       const conditions = [eq(equipmentTracking.tenantId, ctx.user.tenantId!)];
       if (input?.projectId) conditions.push(eq(equipmentTracking.projectId, input.projectId));
       return db.select().from(equipmentTracking).where(and(...conditions));
+    }),
+
+  equipmentCreate: authedQuery
+    .input(z.object({
+      equipmentCode: z.string(),
+      name: z.string(),
+      type: z.string().optional(),
+      hourlyRate: z.string().optional(),
+      dailyRate: z.string().optional(),
+      status: z.enum(["available", "in_use", "maintenance", "retired"]).optional(),
+      location: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const [{ id }] = await db.insert(equipmentTracking).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
+      return { id, success: true };
     }),
 
   progressBillingList: authedQuery
@@ -130,7 +149,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(wbsItems).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(wbsItems).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -191,7 +210,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(boqItems).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(boqItems).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -264,7 +283,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(constructionContracts).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(constructionContracts).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -320,7 +339,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(variationOrders).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(variationOrders).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -380,7 +399,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(advancePayments).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(advancePayments).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -438,7 +457,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(cvrReports).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(cvrReports).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -496,7 +515,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(decennialLiability).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(decennialLiability).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -556,7 +575,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(siteDailyReports).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(siteDailyReports).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -621,7 +640,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(subcontractorPayments).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(subcontractorPayments).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -670,7 +689,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(sbcCompliance).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(sbcCompliance).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -718,7 +737,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(scaClassification).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(scaClassification).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -769,7 +788,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(gtplCompliance).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(gtplCompliance).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -818,7 +837,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(hseCommittees).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(hseCommittees).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -870,7 +889,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(heatStressRecords).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(heatStressRecords).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -924,7 +943,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(engineeringSaudization).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(engineeringSaudization).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -976,7 +995,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(safetyTraining).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(safetyTraining).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -1025,7 +1044,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(ppeIssuance).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(ppeIssuance).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -1072,7 +1091,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(equipmentSchedule).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(equipmentSchedule).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 
@@ -1123,7 +1142,7 @@ export const constructionRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(materialRequirements).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const [{ id }] = await db.insert(materialRequirements).values({ ...cleanInput(input), tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
     }),
 

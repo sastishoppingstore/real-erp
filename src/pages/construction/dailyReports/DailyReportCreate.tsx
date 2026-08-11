@@ -19,14 +19,33 @@ export default function DailyReportCreate() {
     supervisor: "", activities: "", notes: "",
   });
 
+  const createReport = trpc.construction.siteDailyReportCreate.useMutation({
+    onSuccess: () => {
+      toast.success("Daily report created successfully");
+      navigate("/app/construction/daily-reports");
+    },
+    onError: (e) => toast.error(e.message)
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.projectId || !form.reportDate) {
       toast.error("Please fill in required fields");
       return;
     }
-    toast.success("Daily report created successfully");
-    navigate("/app/construction/daily-reports");
+    
+    createReport.mutate({
+      projectId: parseInt(form.projectId),
+      reportDate: form.reportDate,
+      reportNumber: `DR-${Date.now()}`,
+      weatherCondition: form.weather,
+      temperature: form.temperature,
+      workDescription: form.activities,
+      laborCount: form.workersCount ? parseInt(form.workersCount) : undefined,
+      supervisorName: form.supervisor,
+      notes: form.notes,
+      status: "draft"
+    });
   };
 
   return (

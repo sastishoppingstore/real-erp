@@ -19,14 +19,29 @@ export default function AdvancePaymentCreate() {
     payeeName: "", amount: "", notes: "",
   });
 
+  const createPayment = trpc.construction.advancePaymentCreate.useMutation({
+    onSuccess: () => {
+      toast.success("Advance payment recorded successfully");
+      navigate("/app/construction/advance-payments");
+    },
+    onError: (e) => toast.error(e.message)
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.projectId || !form.amount) {
       toast.error("Please fill in required fields");
       return;
     }
-    toast.success("Advance payment recorded successfully");
-    navigate("/app/construction/advance-payments");
+    
+    createPayment.mutate({
+      projectId: parseInt(form.projectId),
+      paymentNumber: `ADV-${Date.now()}`,
+      paymentType: "advance",
+      amount: form.amount,
+      notes: form.notes + (form.payeeName ? ` (Payee: ${form.payeeName}, Type: ${form.payeeType})` : ""),
+      status: "requested"
+    });
   };
 
   return (

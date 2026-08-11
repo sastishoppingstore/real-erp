@@ -18,14 +18,32 @@ export default function VariationCreate() {
     amount: "", reason: "",
   });
 
+  const createVariation = trpc.construction.variationCreate.useMutation({
+    onSuccess: () => {
+      toast.success("Variation order created successfully");
+      navigate("/app/construction/variations");
+    },
+    onError: (e) => toast.error(e.message)
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.projectId || !form.title || !form.amount) {
       toast.error("Please fill in required fields");
       return;
     }
-    toast.success("Variation order created successfully");
-    navigate("/app/construction/variations");
+    
+    createVariation.mutate({
+      projectId: parseInt(form.projectId),
+      voNumber: `VO-${Date.now()}`,
+      title: form.title,
+      description: form.description,
+      changeType: form.type as any,
+      reason: "other",
+      changeValue: form.amount,
+      notes: form.reason ? `Reason: ${form.reason}` : undefined,
+      status: "draft"
+    });
   };
 
   return (

@@ -14,6 +14,7 @@ import {
   Search, AlertTriangle, ArrowRight, Clock, DollarSign, CheckCircle
 } from "lucide-react";
 import ActionButton3D from "@/components/ui/ActionButton3D";
+import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -34,7 +35,10 @@ export default function WorkshopDashboard() {
   const { data: stats } = trpc.workshop.workshopStats.useQuery(undefined);
   const { data: vehicles } = trpc.workshop.vehicleList.useQuery(undefined);
   const { data: technicians } = trpc.workshop.technicianList.useQuery(undefined);
-  const createJobCard = trpc.workshop.jobCardCreate.useMutation({ onSuccess: () => { refetch(); setOpen(false); } });
+  const createJobCard = trpc.workshop.jobCardCreate.useMutation({ 
+    onSuccess: () => { refetch(); setOpen(false); toast.success("Job card created"); },
+    onError: (e) => toast.error(e.message) 
+  });
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ vehicleId: "", customerId: "", jobNumber: "", serviceType: "", description: "", estimatedCost: "", technicianId: "", priority: "normal" });
 
@@ -136,7 +140,7 @@ export default function WorkshopDashboard() {
           <form onSubmit={(e) => {
             e.preventDefault();
             createJobCard.mutate({
-              vehicleId: parseInt(form.vehicleId), customerId: parseInt(form.customerId) || 1,
+              vehicleId: parseInt(form.vehicleId) || 0, customerId: parseInt(form.customerId) || 1,
               jobNumber: form.jobNumber, serviceType: form.serviceType,
               description: form.description, estimatedCost: form.estimatedCost,
               technicianId: form.technicianId ? parseInt(form.technicianId) : undefined,

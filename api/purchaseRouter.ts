@@ -33,6 +33,7 @@ export const purchaseRouter = createRouter({
     .input(z.object({
       code: z.string().optional(),
       name: z.string(),
+      nameAr: z.string().optional(),
       email: z.string().optional(),
       phone: z.string().optional(),
       mobile: z.string().optional(),
@@ -46,6 +47,28 @@ export const purchaseRouter = createRouter({
       const db = getDb();
       const [{ id }] = await db.insert(suppliers).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
       return { id, success: true };
+    }),
+
+  supplierUpdate: authedQuery
+    .input(z.object({
+      id: z.number(),
+      code: z.string().optional(),
+      name: z.string(),
+      nameAr: z.string().optional(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+      mobile: z.string().optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      taxNumber: z.string().optional(),
+      creditLimit: z.string().optional(),
+      paymentTerms: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const { id, ...data } = input;
+      await db.update(suppliers).set(data).where(and(eq(suppliers.id, id), eq(suppliers.tenantId, ctx.user.tenantId!)));
+      return { success: true };
     }),
 
   // Purchase Orders

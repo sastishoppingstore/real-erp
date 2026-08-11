@@ -23,14 +23,30 @@ export default function CVRCreate() {
   const cpi = acwpNum > 0 ? bcwpNum / acwpNum : 0;
   const spi = bcwsNum > 0 ? bcwpNum / bcwsNum : 0;
 
+  const createCVR = trpc.construction.cvrCreate.useMutation({
+    onSuccess: () => {
+      toast.success("CVR report created successfully");
+      navigate("/app/construction/cvr");
+    },
+    onError: (e) => toast.error(e.message)
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.projectId || !form.period) {
       toast.error("Please fill in required fields");
       return;
     }
-    toast.success("CVR report created successfully");
-    navigate("/app/construction/cvr");
+    
+    createCVR.mutate({
+      projectId: parseInt(form.projectId),
+      reportNumber: `CVR-${Date.now()}`,
+      periodStart: form.period,
+      workCompletedValue: form.bcwp,
+      totalCostToDate: form.acwp,
+      notes: form.notes + (form.bcws ? ` (BCWS: ${form.bcws})` : ""),
+      status: "draft"
+    });
   };
 
   return (

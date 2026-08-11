@@ -35,14 +35,34 @@ export default function BOQCreate() {
 
   const totalValue = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const createBOQ = trpc.construction.boqCreate.useMutation();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectId || !title) {
+    if (!projectId || !title || items.length === 0) {
       toast.error("Please fill in required fields");
       return;
     }
-    toast.success("BOQ created successfully");
-    navigate("/app/construction/boq");
+    
+    try {
+      await Promise.all(items.map(item => 
+        createBOQ.mutateAsync({
+          projectId: parseInt(projectId),
+          itemCode: item.code || `BOQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          description: item.description || title,
+          unit: item.unit,
+          quantity: item.quantity,
+          unitRate: item.unitPrice,
+          totalAmount: (Number(item.quantity) * Number(item.unitPrice)).toString(),
+          section: title,
+          status: "estimated"
+        })
+      ));
+      toast.success("BOQ created successfully");
+      navigate("/app/construction/boq");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to create BOQ items");
+    }
   };
 
   return (

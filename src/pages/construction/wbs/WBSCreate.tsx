@@ -14,14 +14,30 @@ export default function WBSCreate() {
   const { data: projects } = trpc.construction.projectList.useQuery(undefined);
   const [form, setForm] = useState({ projectId: "", code: "", name: "", description: "", parentId: "" });
 
+  const createWBS = trpc.construction.wbsCreate.useMutation({
+    onSuccess: () => {
+      toast.success("WBS item created successfully");
+      navigate("/app/construction/wbs");
+    },
+    onError: (e) => toast.error(e.message)
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.projectId || !form.code || !form.name) {
       toast.error("Please fill in required fields");
       return;
     }
-    toast.success("WBS item created successfully");
-    navigate("/app/construction/wbs");
+    
+    createWBS.mutate({
+      projectId: parseInt(form.projectId),
+      parentId: form.parentId ? parseInt(form.parentId) : undefined,
+      code: form.code,
+      name: form.name,
+      description: form.description || undefined,
+      level: form.code.split(".").length,
+      status: "planned",
+    });
   };
 
   return (
