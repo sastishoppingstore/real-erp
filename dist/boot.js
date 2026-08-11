@@ -127819,9 +127819,8 @@ var DocumentEngine = class {
       tenantId,
       documentId,
       userId,
-      accessType,
-      isAllowed: allowed,
-      reason,
+      action: accessType,
+      metadata: JSON.stringify({ allowed, reason: reason ?? void 0 }).slice(0, 2e3),
       createdAt: /* @__PURE__ */ new Date()
     });
   }

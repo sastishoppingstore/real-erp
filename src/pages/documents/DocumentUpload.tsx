@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,25 @@ export default function DocumentUpload() {
   const editId = searchParams.get("documentId");
   const { data: categories } = trpc.documents.getCategories.useQuery();
   const { data: docTypes } = trpc.documents.getDocumentTypes.useQuery();
+  const editDoc = trpc.documents.get.useQuery({ id: Number(editId) }, { enabled: !!editId });
   const createDoc = trpc.documents.create.useMutation({ onSuccess: () => navigate("/app/documents") });
   const updateDoc = trpc.documents.update.useMutation({ onSuccess: () => navigate("/app/documents") });
 
   const [form, setForm] = useState({ categoryId: "", title: "", description: "", fileName: "", fileSize: 0, mimeType: "", relatedType: "", relatedId: "" });
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
+
+  useEffect(() => {
+    if (editId && editDoc.data) {
+      setForm(f => ({
+        ...f,
+        title: editDoc.data.title || "",
+        description: editDoc.data.description || "",
+        categoryId: editDoc.data.categoryId ? String(editDoc.data.categoryId) : "",
+        fileName: editDoc.data.fileName || "",
+      }));
+    }
+  }, [editId, editDoc.data]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

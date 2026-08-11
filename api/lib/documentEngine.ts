@@ -103,8 +103,9 @@ export class DocumentEngine {
   async logAccess(tenantId: number, documentId: number, userId: number | null, accessType: string, allowed = true, reason?: string) {
     const db = getDb();
     await db.insert(schema.documentAccessLogs).values({
-      tenantId, documentId, userId, accessType: accessType as any,
-      isAllowed: allowed, reason, createdAt: new Date(),
+      tenantId, documentId, userId, action: accessType,
+      metadata: JSON.stringify({ allowed, reason: reason ?? undefined }).slice(0, 2000),
+      createdAt: new Date(),
     });
   }
 
