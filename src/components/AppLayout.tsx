@@ -81,6 +81,8 @@ import {
   HeartHandshake,
   Ship,
   Mountain,
+  ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
 
 import { SyncStatusBar } from "./sync/SyncStatusBar";
@@ -851,6 +853,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-white/10 text-white"
+              aria-label={rtl ? "Back" : "Back"}
+              title={rtl ? "رجوع" : "Back"}
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate("/app");
+                }
+              }}
+            >
+              {rtl ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
             </Button>
             <div className="min-w-0">
               <h1 className="text-sm font-semibold text-white">

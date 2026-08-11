@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cleanInput } from "./cleanInput";
 import { createRouter, authedQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import {
@@ -10,6 +11,7 @@ import { eq, sql, and, desc } from "drizzle-orm";
 
 function combineDateTime(dateValue: string, timeValue?: string) {
   if (!timeValue) return undefined;
+  if (timeValue.includes("T") && timeValue.length > 10) return new Date(timeValue);
   return new Date(`${dateValue}T${timeValue}:00`);
 }
 
@@ -150,7 +152,7 @@ export const hrmRouter = createRouter({
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const [{ id }] = await db.insert(attendance).values({
-        ...input,
+        ...cleanInput(input),
         tenantId: ctx.user.tenantId!,
         checkIn: combineDateTime(input.date, input.checkIn),
         checkOut: combineDateTime(input.date, input.checkOut),

@@ -228,10 +228,11 @@ export const posSharedRouter = createRouter({
 
   shiftCurrent: authedQuery.query(async ({ ctx }) => {
     const db = getDb();
-    return db.query.posShifts.findFirst({
+    const shift = await db.query.posShifts.findFirst({
       where: and(eq(posShifts.tenantId, ctx.user.tenantId!), eq(posShifts.userId, ctx.user.id), eq(posShifts.status, "open")),
       orderBy: desc(posShifts.openedAt),
     });
+    return shift ?? null;
   }),
 
   shiftCashIn: authedQuery

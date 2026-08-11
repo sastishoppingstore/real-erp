@@ -117673,6 +117673,7 @@ var purchaseRouter = createRouter({
   supplierCreate: authedQuery.input(external_exports.object({
     code: external_exports.string().optional(),
     name: external_exports.string(),
+    nameAr: external_exports.string().optional(),
     email: external_exports.string().optional(),
     phone: external_exports.string().optional(),
     mobile: external_exports.string().optional(),
@@ -117685,6 +117686,25 @@ var purchaseRouter = createRouter({
     const db4 = getDb();
     const [{ id }] = await db4.insert(suppliers).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
+  }),
+  supplierUpdate: authedQuery.input(external_exports.object({
+    id: external_exports.number(),
+    code: external_exports.string().optional(),
+    name: external_exports.string(),
+    nameAr: external_exports.string().optional(),
+    email: external_exports.string().optional(),
+    phone: external_exports.string().optional(),
+    mobile: external_exports.string().optional(),
+    address: external_exports.string().optional(),
+    city: external_exports.string().optional(),
+    taxNumber: external_exports.string().optional(),
+    creditLimit: external_exports.string().optional(),
+    paymentTerms: external_exports.number().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const { id, ...data } = input;
+    await db4.update(suppliers).set(data).where(and(eq(suppliers.id, id), eq(suppliers.tenantId, ctx.user.tenantId)));
+    return { success: true };
   }),
   // Purchase Orders
   poList: authedQuery.input(external_exports.object({
@@ -117937,12 +117957,20 @@ var crmRouter = createRouter({
   })
 });
 
+// api/cleanInput.ts
+function cleanInput(input) {
+  return Object.fromEntries(
+    Object.entries(input).filter(([, v]) => v !== "" && v !== null && v !== void 0)
+  );
+}
+
 // api/hrmRouter.ts
 init_connection();
 init_schema2();
 init_drizzle_orm();
 function combineDateTime(dateValue, timeValue) {
   if (!timeValue) return void 0;
+  if (timeValue.includes("T") && timeValue.length > 10) return new Date(timeValue);
   return /* @__PURE__ */ new Date(`${dateValue}T${timeValue}:00`);
 }
 var hrmRouter = createRouter({
@@ -118055,7 +118083,7 @@ var hrmRouter = createRouter({
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
     const [{ id }] = await db4.insert(attendance).values({
-      ...input,
+      ...cleanInput(input),
       tenantId: ctx.user.tenantId,
       checkIn: combineDateTime(input.date, input.checkIn),
       checkOut: combineDateTime(input.date, input.checkOut)
@@ -120224,10 +120252,11 @@ var posSharedRouter = createRouter({
   }),
   shiftCurrent: authedQuery.query(async ({ ctx }) => {
     const db4 = getDb();
-    return db4.query.posShifts.findFirst({
+    const shift = await db4.query.posShifts.findFirst({
       where: and(eq(posShifts.tenantId, ctx.user.tenantId), eq(posShifts.userId, ctx.user.id), eq(posShifts.status, "open")),
       orderBy: desc(posShifts.openedAt)
     });
+    return shift ?? null;
   }),
   shiftCashIn: authedQuery.input(external_exports.object({ shiftId: external_exports.number(), amount: external_exports.string(), description: external_exports.string().optional() })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
@@ -132269,7 +132298,7 @@ var hotelRouter = createRouter({
     amenities: external_exports.any().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(roomTypes).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(roomTypes).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   roomInventoryList: authedQuery.input(external_exports.object({ status: external_exports.string().optional(), roomTypeId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
@@ -132306,7 +132335,7 @@ var hotelRouter = createRouter({
     specialRequests: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(hotelBookings).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(hotelBookings).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   bookingUpdate: authedQuery.input(external_exports.object({
@@ -132348,7 +132377,7 @@ var hotelRouter = createRouter({
     chargeDate: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(folioCharges).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(folioCharges).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   hotelStats: authedQuery.query(async ({ ctx }) => {
@@ -132386,7 +132415,8 @@ var constructionRouter = createRouter({
     projectType: external_exports.enum(["residential", "commercial", "industrial", "infrastructure", "renovation"]).optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(constructionProjects).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const clean = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== "" && v !== null && v !== void 0));
+    const [{ id }] = await db4.insert(constructionProjects).values({ ...clean, tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   projectUpdate: authedQuery.input(external_exports.object({ id: external_exports.number(), progress: external_exports.number().optional(), status: external_exports.enum(["planning", "tendering", "active", "on_hold", "completed", "cancelled"]).optional(), actualCost: external_exports.string().optional() })).mutation(async ({ input }) => {
@@ -132412,7 +132442,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(subcontractors).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(subcontractors).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   equipmentList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
@@ -132420,6 +132450,20 @@ var constructionRouter = createRouter({
     const conditions = [eq(equipmentTracking.tenantId, ctx.user.tenantId)];
     if (input?.projectId) conditions.push(eq(equipmentTracking.projectId, input.projectId));
     return db4.select().from(equipmentTracking).where(and(...conditions));
+  }),
+  equipmentCreate: authedQuery.input(external_exports.object({
+    equipmentCode: external_exports.string(),
+    name: external_exports.string(),
+    type: external_exports.string().optional(),
+    hourlyRate: external_exports.string().optional(),
+    dailyRate: external_exports.string().optional(),
+    status: external_exports.enum(["available", "in_use", "maintenance", "retired"]).optional(),
+    location: external_exports.string().optional(),
+    notes: external_exports.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db4 = getDb();
+    const [{ id }] = await db4.insert(equipmentTracking).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
+    return { id, success: true };
   }),
   progressBillingList: authedQuery.input(external_exports.object({ projectId: external_exports.number().optional() }).optional()).query(async ({ input, ctx }) => {
     const db4 = getDb();
@@ -132459,7 +132503,7 @@ var constructionRouter = createRouter({
     responsiblePersonId: external_exports.number().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(wbsItems).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(wbsItems).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   wbsUpdate: authedQuery.input(external_exports.object({
@@ -132511,7 +132555,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(boqItems).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(boqItems).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   boqUpdate: authedQuery.input(external_exports.object({
@@ -132575,7 +132619,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(constructionContracts).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(constructionContracts).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   contractUpdate: authedQuery.input(external_exports.object({
@@ -132622,7 +132666,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(variationOrders).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(variationOrders).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   variationUpdate: authedQuery.input(external_exports.object({
@@ -132673,7 +132717,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(advancePayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(advancePayments).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   advancePaymentUpdate: authedQuery.input(external_exports.object({
@@ -132722,7 +132766,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(cvrReports).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(cvrReports).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   cvrUpdate: authedQuery.input(external_exports.object({
@@ -132771,7 +132815,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(decennialLiability).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(decennialLiability).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   decennialUpdate: authedQuery.input(external_exports.object({
@@ -132822,7 +132866,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(siteDailyReports).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(siteDailyReports).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   siteDailyReportUpdate: authedQuery.input(external_exports.object({
@@ -132878,7 +132922,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(subcontractorPayments).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(subcontractorPayments).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   subcontractorPaymentUpdate: authedQuery.input(external_exports.object({
@@ -132918,7 +132962,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(sbcCompliance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(sbcCompliance).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   sbcComplianceUpdate: authedQuery.input(external_exports.object({
@@ -132958,7 +133002,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(scaClassification).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(scaClassification).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   scaClassificationUpdate: authedQuery.input(external_exports.object({
@@ -133000,7 +133044,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(gtplCompliance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(gtplCompliance).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   gtplComplianceUpdate: authedQuery.input(external_exports.object({
@@ -133040,7 +133084,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(hseCommittees).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(hseCommittees).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   hseCommitteeUpdate: authedQuery.input(external_exports.object({
@@ -133083,7 +133127,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(heatStressRecords).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(heatStressRecords).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   heatStressUpdate: authedQuery.input(external_exports.object({
@@ -133128,7 +133172,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(engineeringSaudization).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(engineeringSaudization).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   engineeringSaudizationUpdate: authedQuery.input(external_exports.object({
@@ -133171,7 +133215,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(safetyTraining).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(safetyTraining).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   safetyTrainingUpdate: authedQuery.input(external_exports.object({
@@ -133211,7 +133255,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(ppeIssuance).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(ppeIssuance).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   ppeIssuanceUpdate: authedQuery.input(external_exports.object({
@@ -133249,7 +133293,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(equipmentSchedule).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(equipmentSchedule).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   equipmentScheduleUpdate: authedQuery.input(external_exports.object({
@@ -133291,7 +133335,7 @@ var constructionRouter = createRouter({
     notes: external_exports.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
-    const [{ id }] = await db4.insert(materialRequirements).values({ ...input, tenantId: ctx.user.tenantId }).$returningId();
+    const [{ id }] = await db4.insert(materialRequirements).values({ ...cleanInput(input), tenantId: ctx.user.tenantId }).$returningId();
     return { id, success: true };
   }),
   materialRequirementUpdate: authedQuery.input(external_exports.object({
@@ -134519,11 +134563,14 @@ var mrpRouter = createRouter({
     horizonEnd: external_exports.string()
   })).mutation(async ({ input, ctx }) => {
     const db4 = getDb();
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const horizonStart = input.horizonStart || today;
+    const horizonEnd = input.horizonEnd || today;
     const startTime = Date.now();
-    const [{ runId }] = await db4.insert(mrpRuns).values({
+    const [{ id: runId }] = await db4.insert(mrpRuns).values({
       tenantId: ctx.user.tenantId,
-      horizonStart: input.horizonStart,
-      horizonEnd: input.horizonEnd,
+      horizonStart,
+      horizonEnd,
       status: "running",
       createdBy: ctx.user.id
     }).$returningId();

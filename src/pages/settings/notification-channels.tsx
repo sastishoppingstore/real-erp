@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/providers/trpc";
+import { Link } from "react-router";
 import { Mail, MessageSquare, MessageCircle, Phone, Save, CheckCircle2 } from "lucide-react";
 
 export default function NotificationChannelsPage() {

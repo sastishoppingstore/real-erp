@@ -11,6 +11,7 @@ import { Building2, Receipt, Palette, Shield, Bot, Eye, EyeOff, LayoutDashboard,
 import { TaxComplianceSettings } from "./TaxComplianceSettings";
 import ThemeSelector from "@/components/ThemeSelector";
 import { useLayoutTheme } from "@/providers/layoutTheme";
+import { useLanguage } from "@/providers/language";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
 export default function SettingsPage() {
