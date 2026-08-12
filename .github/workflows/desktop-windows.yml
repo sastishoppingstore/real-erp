@@ -37,6 +37,10 @@ jobs:
           Invoke-WebRequest -Uri "https://nodejs.org/dist/v24.19.0/win-x64/node.exe" -OutFile "src-tauri/binaries/node-x86_64-pc-windows-msvc.exe"
 
       - name: Build Tauri App (Windows MSI + NSIS)
+        env:
+          ADMIN_USERNAME: "wafaweb"
+          ADMIN_PASSWORD: "Wafa@1122"
+          ERP_REMOTE_URL: "https://www.yasco.tech"
         run: npx tauri build --bundles msi --bundles nsis
 
       - name: Upload Windows installer artifacts
