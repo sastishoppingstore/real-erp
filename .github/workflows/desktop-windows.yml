@@ -28,16 +28,22 @@ jobs:
       - name: Build backend & frontend
         run: |
           npm run build:desktop
-          npm run build
+          npm run build:backend
+          npm run build:frontend
 
       - name: Download Windows Node.js sidecar binary
         run: |
           New-Item -ItemType Directory -Force -Path "src-tauri/binaries"
           Invoke-WebRequest -Uri "https://nodejs.org/dist/v22.5.0/win-x64/node.exe" -OutFile "src-tauri/binaries/node-x86_64-pc-windows-msvc.exe"
 
-      - name: Build Tauri App (Windows MSI/NSIS)
-        uses: tauri-apps/tauri-action@v0.5.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Tauri App (Windows MSI + NSIS)
+        run: npx tauri build --bundles msi --bundles nsis
+
+      - name: Upload Windows installer artifacts
+        uses: actions/upload-artifact@v4
         with:
-          args: --bundle msi
+          name: yasco-erp-windows-installers
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: warn
