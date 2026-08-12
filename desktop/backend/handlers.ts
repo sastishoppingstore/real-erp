@@ -752,6 +752,38 @@ function companySettingsGet() {
   };
 }
 
+// dashboard
+function dashboardStats() {
+  const d = getDb();
+  const sales = (d.prepare("SELECT SUM(total_amount) AS s FROM invoices WHERE status != 'cancelled' AND deleted_at IS NULL").get() as { s: string | null })?.s ?? "0";
+  const customers = (d.prepare("SELECT COUNT(*) AS c FROM customers WHERE deleted_at IS NULL").get() as { c: number })?.c ?? 0;
+  const products = (d.prepare("SELECT COUNT(*) AS c FROM products WHERE deleted_at IS NULL").get() as { c: number })?.c ?? 0;
+  const invoices = (d.prepare("SELECT COUNT(*) AS c FROM invoices WHERE deleted_at IS NULL").get() as { c: number })?.c ?? 0;
+  return { totalSales: Number(sales), totalCustomers: customers, totalProducts: products, totalInvoices: invoices };
+}
+
+function dashboardRevenueByMonth() {
+  return [];
+}
+
+function dashboardRecentInvoices(input: { limit?: number } = {}) {
+  const d = getDb();
+  const limit = input.limit ?? 5;
+  const rows = d.prepare("SELECT * FROM invoices WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT ?").all(limit) as Record<string, unknown>[];
+  return rows.map((r) => invoiceListRow(d, r));
+}
+
+function dashboardTopCustomers() {
+  return [];
+}
+
+function zatcaDashboard() {
+  const d = getDb();
+  const cleared = (d.prepare("SELECT COUNT(*) AS c FROM invoices WHERE zatca_status = 'cleared' AND deleted_at IS NULL").get() as { c: number })?.c ?? 0;
+  const pending = (d.prepare("SELECT COUNT(*) AS c FROM invoices WHERE zatca_status IN ('pending', 'pending_local') AND deleted_at IS NULL").get() as { c: number })?.c ?? 0;
+  return { clearedCount: cleared, pendingCount: pending, rejectedCount: 0 };
+}
+
 // zatca (offline stubs — real clearance via sync engine against remote)
 function zatcaGenerateQrCode(input: { invoiceId: number; invoiceMode?: string }) {
   const d = getDb();
@@ -872,7 +904,8 @@ export const AUTH_REQUIRED = new Set<string>([
   "pos.createSaleInvoice", "pos.todaySalesSummary", "pos.sessionCurrent", "pos.heldSalesList", "pos.holdSale", "pos.resumeHold",
   "thermalPrint.generateThermal",
   "settings.companySettingsGet",
-  "zatca.generateQrCode", "zatca.syncStatus",
+  "zatca.generateQrCode", "zatca.syncStatus", "zatca.dashboard",
+  "dashboard.stats", "dashboard.revenueByMonth", "dashboard.recentInvoices", "dashboard.topCustomers",
   "sync.registerDevice", "sync.push", "sync.pull", "sync.resolveConflict", "sync.status", "sync.listDevices", "sync.deactivateDevice",
 ]);
 
@@ -906,6 +939,11 @@ export const handlers: Record<string, Handler> = {
   "settings.companySettingsGet": companySettingsGet,
   "zatca.generateQrCode": zatcaGenerateQrCode,
   "zatca.syncStatus": zatcaSyncStatus,
+  "zatca.dashboard": zatcaDashboard,
+  "dashboard.stats": dashboardStats,
+  "dashboard.revenueByMonth": dashboardRevenueByMonth,
+  "dashboard.recentInvoices": dashboardRecentInvoices,
+  "dashboard.topCustomers": dashboardTopCustomers,
   "sync.registerDevice": syncRegisterDevice,
   "sync.push": syncPush,
   "sync.pull": syncPull,
