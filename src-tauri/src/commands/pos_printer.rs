@@ -27,8 +27,8 @@ fn open_printer(printer_name: Option<&str>) -> Result<Printer<FileDriver>, Strin
   let driver = FileDriver::open(Path::new(&path))
     .map_err(|e| format!("Failed to open printer port: {e}"))?;
 
-  Printer::new(driver, Protocol::default())
-    .map_err(|e| format!("Failed to create printer instance: {e}"))
+  let printer = Printer::new(driver, Protocol::default());
+  Ok(printer)
 }
 
 #[tauri::command]

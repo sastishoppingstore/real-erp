@@ -1,5 +1,5 @@
 use sha2::{Digest, Sha256};
-use sysinfo::{Disks, MacAddr, Networks, System};
+use sysinfo::{Disks, Networks, System};
 
 #[tauri::command]
 pub fn get_hardware_id() -> Result<String, String> {
@@ -109,10 +109,9 @@ pub fn get_mac_address() -> Result<String, String> {
       && !name.starts_with("br-")
     {
       let mac = data.mac_address();
-      let mac_bytes: [u8; 6] = mac.into();
-      if mac_bytes != [0u8; 6] {
-        let hex: Vec<String> = mac_bytes.iter().map(|b| format!("{b:02x}")).collect();
-        return Ok(hex.join(":"));
+      let hex = mac.to_string();
+      if hex != "00:00:00:00:00:00" {
+        return Ok(hex);
       }
     }
   }
@@ -120,10 +119,9 @@ pub fn get_mac_address() -> Result<String, String> {
   // Fallback to any interface
   for (_name, data) in &networks {
     let mac = data.mac_address();
-    let mac_bytes: [u8; 6] = mac.into();
-    if mac_bytes != [0u8; 6] {
-      let hex: Vec<String> = mac_bytes.iter().map(|b| format!("{b:02x}")).collect();
-      return Ok(hex.join(":"));
+    let hex = mac.to_string();
+    if hex != "00:00:00:00:00:00" {
+      return Ok(hex);
     }
   }
 
