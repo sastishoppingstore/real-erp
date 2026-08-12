@@ -54,8 +54,8 @@ export function mapUser(r: Record<string, unknown>): UserRow {
 }
 
 const APP_SECRET = process.env.APP_SECRET || "yasco-desktop-secret-change-me";
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "wafaweb";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Wafa@1122";
 const SESSION_COOKIE = "erp_sid";
 
 function signSession(unionId: string, clientId: string): string {
