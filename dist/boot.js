@@ -11493,10 +11493,15 @@ var init_schema2 = __esm({
       dimensions: varchar("dimensions", { length: 100 }),
       image: mediumtext("image"),
       createdAt: timestamp("created_at").defaultNow().notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => /* @__PURE__ */ new Date())
+      updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => /* @__PURE__ */ new Date()),
+      localUuid: varchar("local_uuid", { length: 255 }),
+      version: int2("version").default(1),
+      serverId: bigint4("server_id", { mode: "number", unsigned: true }),
+      deletedAt: timestamp("deleted_at")
     }, (table) => [
       index("prod_tenant_idx").on(table.tenantId),
-      index("prod_sku_idx").on(table.sku)
+      index("prod_sku_idx").on(table.sku),
+      index("prod_luuid_idx").on(table.localUuid)
     ]);
     inventoryBalances = mysqlTable("inventory_balances", {
       id: serial("id").primaryKey(),
@@ -11604,7 +11609,11 @@ var init_schema2 = __esm({
       customerGroup: varchar("customer_group", { length: 100 }),
       isActive: boolean4("is_active").default(true),
       createdAt: timestamp("created_at").defaultNow().notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => /* @__PURE__ */ new Date())
+      updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => /* @__PURE__ */ new Date()),
+      localUuid: varchar("local_uuid", { length: 255 }),
+      version: int2("version").default(1),
+      serverId: bigint4("server_id", { mode: "number", unsigned: true }),
+      deletedAt: timestamp("deleted_at")
     });
     salesQuotations = mysqlTable("sales_quotations", {
       id: serial("id").primaryKey(),
@@ -11693,7 +11702,11 @@ var init_schema2 = __esm({
       terms: text("terms"),
       status: mysqlEnum("status", ["draft", "sent", "paid", "partial", "overdue", "cancelled", "credit_note"]).default("draft").notNull(),
       createdBy: bigint4("created_by", { mode: "number", unsigned: true }),
-      createdAt: timestamp("created_at").defaultNow().notNull()
+      createdAt: timestamp("created_at").defaultNow().notNull(),
+      localUuid: varchar("local_uuid", { length: 255 }),
+      version: int2("version").default(1),
+      serverId: bigint4("server_id", { mode: "number", unsigned: true }),
+      deletedAt: timestamp("deleted_at")
     }, (table) => ({
       tenantIdx: index("inv_tenant_idx").on(table.tenantId),
       dateIdx: index("inv_date_idx").on(table.date),
@@ -11709,7 +11722,11 @@ var init_schema2 = __esm({
       discountPercent: decimal("discount_percent", { precision: 5, scale: 2 }).default("0").notNull(),
       taxPercent: decimal("tax_percent", { precision: 5, scale: 2 }).default("15").notNull(),
       totalAmount: decimal("total_amount", { precision: 18, scale: 4 }).default("0").notNull(),
-      createdAt: timestamp("created_at").defaultNow().notNull()
+      createdAt: timestamp("created_at").defaultNow().notNull(),
+      localUuid: varchar("local_uuid", { length: 255 }),
+      version: int2("version").default(1),
+      serverId: bigint4("server_id", { mode: "number", unsigned: true }),
+      deletedAt: timestamp("deleted_at")
     });
     creditNotes = mysqlTable("credit_notes", {
       id: serial("id").primaryKey(),
