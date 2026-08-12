@@ -208,7 +208,7 @@ async function passwordLogin(input: { username: string; password: string }, req:
   return { success: true, user: mapUser(user) };
 }
 
-function me(req: { headers: Record<string, string | undefined>; cookies: Record<string, string> }) {
+function me(_input: unknown, req: { headers: Record<string, string | undefined>; cookies: Record<string, string> }) {
   return currentUserFromRequest(req);
 }
 
