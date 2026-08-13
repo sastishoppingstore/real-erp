@@ -109,7 +109,9 @@ function createLocalUser(d: DatabaseSync, unionId: string, name: string, email: 
 }
 
 function currentUserFromRequest(req: { headers: Record<string, string | undefined>; cookies: Record<string, string> }): UserRow {
-  const token = req.cookies[SESSION_COOKIE] ?? req.headers.cookie?.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`))?.[1];
+  const authHeader = req.headers.authorization ?? req.headers.Authorization;
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const token = bearerToken ?? req.cookies[SESSION_COOKIE] ?? req.headers.cookie?.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`))?.[1];
   if (!token) unauthorized();
   const session = verifySession(token!);
   if (!session) unauthorized();
@@ -204,8 +206,9 @@ async function passwordLogin(input: { username: string; password: string }, req:
   }
   const lastLogin = now();
   d.prepare("UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?").run(lastLogin, now(), user.id);
-  setCookie(SESSION_COOKIE, signSession(unionId, "desktop"), { maxAge: 365 * 24 * 3600, httpOnly: true, path: "/", sameSite: "Lax" });
-  return { success: true, user: mapUser(user) };
+  const token = signSession(unionId, "desktop");
+  setCookie(SESSION_COOKIE, token, { maxAge: 365 * 24 * 3600, httpOnly: true, path: "/", sameSite: "Lax" });
+  return { success: true, user: mapUser(user), token };
 }
 
 function me(_input: unknown, req: { headers: Record<string, string | undefined>; cookies: Record<string, string> }) {
