@@ -126,8 +126,12 @@ export const authRouter = createRouter({
         email: env.adminEmail || undefined,
         role: isSuperAdmin ? "super_admin" : "admin",
       });
+      const token = await signSessionToken({
+        unionId,
+        clientId: env.appId || LOCAL_CLIENT_ID,
+      });
       await setLocalSession(ctx, unionId);
-      return { success: true, user };
+      return { success: true, user, token };
     }),
 
   requestEmailOtp: publicQuery
