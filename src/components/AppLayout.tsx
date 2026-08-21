@@ -86,7 +86,6 @@ import {
 } from "lucide-react";
 
 import { SyncStatusBar } from "./sync/SyncStatusBar";
-import { ChatBubble } from "./ChatBubble";
 import { LayoutThemeSwitcher } from "./LayoutThemeSwitcher";
 import {
   getEnabledSidebarPathPrefixes,
@@ -936,9 +935,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           {children}
         </main>
-      </div>
+       </div>
 
-      <ChatBubble />
+      {/* AI chat agent (ChatBubble) intentionally removed per requirements. */}
+
 
       <CommandDialog open={searchOpen} onOpenChange={setSearchOpen} title={rtl ? "بحث" : "Search"}>
         <CommandInput placeholder={rtl ? "ابحث في القوائم والصفحات..." : "Search menus and pages..."} />

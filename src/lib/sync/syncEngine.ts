@@ -26,10 +26,15 @@ class SyncEngine {
       }
     });
     window.setInterval(() => {
-      if (connectionDetector.isOnline()) {
+      if (connectionDetector.isOnline() && this.hasSession()) {
         this.sync();
       }
     }, 60_000);
+  }
+
+  /** Only authenticated sessions can pull/push from the server. */
+  private hasSession(): boolean {
+    return typeof window !== "undefined" && !!localStorage.getItem("erp_sid");
   }
 
   private async loadStatus() {
@@ -63,6 +68,9 @@ class SyncEngine {
 
   async sync() {
     if (this.syncing) return;
+    // Skip the whole offline-sync cycle when there is no authenticated session,
+    // preventing repeated sync.pull 401 storms on login/register pages.
+    if (!this.hasSession()) return;
     if (!connectionDetector.isOnline()) {
       console.log("[Sync] Offline, skipping sync");
       return;

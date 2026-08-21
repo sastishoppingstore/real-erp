@@ -54,7 +54,7 @@ app.use("*", async (c, next) => {
   c.header("X-Frame-Options", "SAMEORIGIN");
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  c.header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https:; worker-src 'self' blob:; manifest-src 'self';");
+  c.header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https:; worker-src 'self' blob:; manifest-src 'self';");
 
   if (c.req.method === "OPTIONS") {
     return c.text("", 204);

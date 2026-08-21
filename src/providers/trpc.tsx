@@ -9,15 +9,29 @@ export const trpc = createTRPCReact<AppRouter>();
 
 let isRedirectingToLogin = false;
 
+// Public/guest routes where being unauthenticated is expected.
+// On these pages a 401 (e.g. settings.themeGet / sync.pull / auth.me) must
+// NOT trigger a redirect to /login. That previously bounced /register away
+// before the submit could react, so the user saw "no response".
+const PUBLIC_AUTH_ROUTES = [
+  "/login", "/register", "/forgot-password", "/reset-password",
+  "/verify-otp", "/select-plan", "/company-onboarding",
+];
+function isPublicAuthRoute(path: string) {
+  return PUBLIC_AUTH_ROUTES.includes(path) || path === "/" || path.startsWith("/reset-password");
+}
+
 function handleUnauthorized() {
   if (isRedirectingToLogin) return;
+  const currentPath = window.location.pathname;
+  if (isPublicAuthRoute(currentPath)) {
+    // Guest flows: silently swallow the 401 instead of bouncing pages.
+    return;
+  }
   isRedirectingToLogin = true;
   try {
     localStorage.removeItem("language");
-    const currentPath = window.location.pathname;
-    if (currentPath !== "/login") {
-      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
-    }
+    window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
   } finally {
     setTimeout(() => { isRedirectingToLogin = false; }, 2000);
   }
