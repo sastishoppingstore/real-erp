@@ -64,7 +64,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 const businessTypes = [
   { value: "sole_proprietorship", label: "Sole Proprietorship", labelAr: "مؤسسة فردية" },
-  { value: "llc", label: "Limited Liability Company", labelAr: "شركة ذات مسؤولية محدودة" },
+  { value: "llc", label: "Limited Liability Company (LLC)", labelAr: "شركة ذات مسؤولية محدودة (LLC)" },
+  { value: "pllc", label: "Professional LLC (LTP)", labelAr: "شركة ذات مسؤولية محدودة مهنية (LTP)" },
+  { value: "ltd", label: "Private Limited (Pvt Ltd)", labelAr: "شركة خاصة محدودة (Pvt Ltd)" },
+  { value: "llp", label: "Limited Liability Partnership (LLP)", labelAr: "شراكة ذات مسؤولية محدودة (LLP)" },
+  { value: "plc", label: "Public Limited Company (PLC)", labelAr: "شركة محدودة عامة (PLC)" },
   { value: "corporation", label: "Corporation", labelAr: "شركة مساهمة" },
   { value: "partnership", label: "Partnership", labelAr: "شركة تضامن" },
   { value: "branch", label: "Branch", labelAr: "فرع شركة" },
