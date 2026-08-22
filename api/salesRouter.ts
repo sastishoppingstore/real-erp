@@ -366,7 +366,11 @@ export const salesRouter = createRouter({
       taxableAmount: z.string().optional(),
       discountAmount: z.string().optional(),
       totalAmount: z.string(),
-      notes: z.string().optional(),
+      notes: z.string().optional(),      customerName: z.string().optional(),
+      customerPhone: z.string().optional(),
+      customerAddress: z.string().optional(),
+      customerVat: z.string().optional(),
+
       items: z.array(z.object({
         productId: z.number().optional(),
         description: z.string(),
@@ -491,22 +495,38 @@ export const salesRouter = createRouter({
         ? invoiceData.customerId
         : null;
       if (!resolvedCustomerId) {
-        // Try to find or create walk-in customer
-        const walkIn = await db.query.customers.findFirst({
-          where: and(eq(customers.tenantId, tenantId), eq(customers.code, "WALK-IN")),
-        });
-        if (walkIn) {
-          resolvedCustomerId = walkIn.id;
-        } else {
+        if (invoiceData.customerName) {
+          // Persist the customer details the user typed so the printed
+          // invoice shows their Name / Phone / Address / VAT (not walk-in).
           const [{ id: wid }] = await db.insert(customers).values({
             tenantId,
-            code: "WALK-IN",
-            name: "Walk-in Customer",
-            nameAr: "عميل نقدي",
+            code: `WALK-${Date.now().toString().slice(-6)}`,
+            name: invoiceData.customerName,
+            nameAr: invoiceData.customerName,
+            phone: invoiceData.customerPhone || null,
+            address: invoiceData.customerAddress || null,
+            vatNumber: invoiceData.customerVat || null,
             country: settings?.country || "Saudi Arabia",
             isActive: true,
           }).$returningId();
           resolvedCustomerId = wid;
+        } else {
+          const walkIn = await db.query.customers.findFirst({
+            where: and(eq(customers.tenantId, tenantId), eq(customers.code, "WALK-IN")),
+          });
+          if (walkIn) {
+            resolvedCustomerId = walkIn.id;
+          } else {
+            const [{ id: wid }] = await db.insert(customers).values({
+              tenantId,
+              code: "WALK-IN",
+              name: "Walk-in Customer",
+              nameAr: "عميل نقدي",
+              country: settings?.country || "Saudi Arabia",
+              isActive: true,
+            }).$returningId();
+            resolvedCustomerId = wid;
+          }
         }
       }
 
