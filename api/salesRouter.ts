@@ -4,7 +4,7 @@ import { getDb } from "./queries/connection";
 import {
   customers, salesQuotations, salesQuotationItems,
   salesOrders, salesOrderItems, invoices, invoiceItems,
-  creditNotes, customerPayments, companySettings, auditLogs
+  creditNotes, customerPayments, companySettings, auditLogs, companies
 } from "@db/schema";
 import { eq, sql, and, like, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -390,8 +390,28 @@ export const salesRouter = createRouter({
       const currency = settings?.defaultCurrency || (saudiInvoice ? "SAR" : "USD");
       const taxPercent = invoiceData.taxPercent || (settings?.vatRate ? String(settings.vatRate) : saudiInvoice ? "15" : "0");
       const taxAmount = invoiceData.taxAmount || "0";
-      const sellerName = settings?.companyName || settings?.companyNameAr || "";
+      let sellerName = settings?.companyName || settings?.companyNameAr || "";
       const vatNumber = settings?.taxNumber || "";
+
+      // Auto-seed company settings from registered company info if missing (e.g. fresh signups)
+      if (!sellerName.trim()) {
+        const company = await db.query.companies.findFirst({ where: eq(companies.tenantId, tenantId) });
+        const fallbackName = company?.legalName || company?.displayName || "";
+        if (fallbackName.trim()) {
+          sellerName = fallbackName;
+          const existing = await db.select({ id: companySettings.id }).from(companySettings)
+            .where(eq(companySettings.tenantId, tenantId)).limit(1);
+          const seed: Record<string, any> = {
+            companyName: fallbackName, companyNameAr: settings?.companyNameAr || "",
+            defaultCurrency: company?.baseCurrency || settings?.defaultCurrency,
+            vatRate: (company?.countryCode === "SA" ? 15 : settings?.vatRate) ?? undefined,
+            taxNumber: company?.taxNumber || settings?.taxNumber || "",
+            address: settings?.address || "", phone: settings?.phone || "", email: settings?.email || "",
+          };
+          if (existing.length > 0) await db.update(companySettings).set(seed).where(eq(companySettings.id, existing[0].id));
+          else await db.insert(companySettings).values({ tenantId, ...seed });
+        }
+      }
 
       // Determine actual invoice type
       // - If forced ZATCA and VAT valid → zatca (full ZATCA XML + TLV QR)
