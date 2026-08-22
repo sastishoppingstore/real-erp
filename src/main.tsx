@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router'
 import './index.css'
 import { TRPCProvider } from "@/providers/trpc"
 import { LanguageProvider } from "@/providers/language"
+import { Toaster } from "sonner"
 import { CountryDetectionProvider, useCountryDetection } from "@/providers/country-detection"
 import { useLanguage } from "@/providers/language"
 import { SyncProvider } from "@/providers/sync"
@@ -44,9 +45,10 @@ createRoot(document.getElementById('root')!).render(
               <LicenseGate>
                 <SyncProvider>
                   <ThemeProvider>
-                    <LayoutThemeProvider>
-                      <App />
-                    </LayoutThemeProvider>
+                     <LayoutThemeProvider>
+                       <App />
+                       <Toaster richColors position="top-center" closeButton />
+                     </LayoutThemeProvider>
                   </ThemeProvider>
                 </SyncProvider>
               </LicenseGate>
