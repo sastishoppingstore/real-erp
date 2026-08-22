@@ -7,6 +7,11 @@ import { templates } from "./lib/emailBranding";
 import * as schema from "@db/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { templateEngine } from "./lib/notifications/templates";
+import * as cookie from "cookie";
+import { Session } from "@contracts/constants";
+import { getSessionCookieOptions } from "./lib/cookies";
+import { signSessionToken } from "./lib/session";
+import { env } from "./lib/env";
 
 function hashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -133,7 +138,7 @@ export const registrationRouter = createRouter({
     }),
   verifyOtp: publicQuery
     .input(z.object({ email: z.string().email(), otp: z.string().regex(/^\d{6}$/), purpose: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const email = normalizeEmail(input.email);
       const db = getDb();
       const records = await db.select().from(schema.otpCodes).where(
@@ -150,6 +155,24 @@ export const registrationRouter = createRouter({
       }
       await db.update(schema.otpCodes).set({ isVerified: true, verifiedAt: new Date() }).where(eq(schema.otpCodes.id, record.id));
       const user = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
+      if (user?.unionId) {
+        try {
+          const token = await signSessionToken({ unionId: user.unionId, clientId: env.appId || "yasco-web" });
+          const opts = getSessionCookieOptions(ctx.req.headers);
+          ctx.resHeaders.append(
+            "set-cookie",
+            cookie.serialize(Session.cookieName, token, {
+              httpOnly: opts.httpOnly,
+              path: opts.path,
+              sameSite: (opts.sameSite?.toLowerCase() as "lax" | "none") || "lax",
+              secure: opts.secure,
+              maxAge: Session.maxAgeMs / 1000,
+            }),
+          );
+        } catch (e) {
+          console.warn("[verifyOtp] session issue:", String(e));
+        }
+      }
       return { success: true, message: "Email verified successfully.", tenantId: user?.tenantId ?? null };
     }),
   resendOtp: publicQuery
