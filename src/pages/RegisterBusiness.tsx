@@ -270,7 +270,15 @@ export default function RegisterBusiness() {
 
   const onSubmit = async () => {
     const isValid = await form.trigger();
-    if (!isValid) return;
+    if (!isValid) {
+      const bad = Object.keys(form.formState.errors);
+      setError(
+        (bad.length
+          ? `${isAr ? "براہ کرم درست کریں" : "Please fix"}: ${bad.join(", ")}`
+          : (isAr ? "معلومات نامکمل ہیں" : "Please complete all required fields"))
+      );
+      return;
+    }
     setError("");
     const values = form.getValues();
     const payload: Record<string, any> = {
@@ -317,8 +325,11 @@ export default function RegisterBusiness() {
 
   const progress = ((currentStep + 1) / steps.length) * 100;
 
-  const renderStep = () => {
-    switch (currentStep) {
+  // Render EVERY step always (hidden via CSS). If steps unmount, RHF Controllers
+// unregister and DROP their values from _formValues, so the final submit silently
+// fails zod validation with undefined fields ("Invalid input") and no API call.
+const stepContent = (idx: number) => {
+    switch (idx) {
       case 0:
         return (
           <div className="space-y-4">
@@ -733,7 +744,11 @@ export default function RegisterBusiness() {
             <CardContent className="px-0">
               <Form {...form}>
                 <form onSubmit={(e) => { e.preventDefault(); currentStep === steps.length - 1 ? onSubmit() : onNext(); }} className="space-y-6">
-                  {renderStep()}
+                  {steps.map((_, idx) => (
+                    <div key={idx} style={{ display: idx === currentStep ? "block" : "none" }}>
+                      {stepContent(idx)}
+                    </div>
+                  ))}
 
                   {error && (
                     <Alert variant="destructive">
