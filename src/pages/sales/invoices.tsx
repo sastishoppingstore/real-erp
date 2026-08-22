@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
-type CartItem = { id: string; name: string; price: number; qty: number; sku?: string; discountPercent?: number };
+type CartItem = { id: string; name: string; price: number; qty: number; sku?: string; discountPercent?: number; unit?: string };
 type InvoiceMode = "product" | "service" | "construction";
 
 // Sub-component to render invoice preview (WYSIWYG - same HTML as print)
@@ -269,9 +269,25 @@ export default function InvoicesPage() {
         setNewProductCategoryId(res.id);
         setNewCategoryMode(false);
         setNewCategoryName("");
-        setNewCategoryImage("");
+         setNewCategoryImage("");
       },
     });
+  };
+
+  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemQty, setNewItemQty] = useState("1");
+  const [newItemPrice, setNewItemPrice] = useState("");
+  const [newItemUnit, setNewItemUnit] = useState("pcs");
+  const addCustomItem = () => {
+    const name = newItemName.trim();
+    const price = parseFloat(newItemPrice);
+    if (!name || isNaN(price) || price < 0) { toast.error("Enter item name and a valid price"); return; }
+    const qty = Math.max(1, parseFloat(newItemQty) || 1);
+    setCart(prev => [...prev, { id: `custom-${Date.now()}`, name, price, qty, sku: undefined, unit: newItemUnit }]);
+    setNewItemName(""); setNewItemQty("1"); setNewItemPrice(""); setNewItemUnit("pcs");
+    setAddItemDialogOpen(false);
+    toast.success("Item added to cart");
   };
 
   const handleAddQuickProduct = () => {
@@ -305,7 +321,7 @@ export default function InvoicesPage() {
       unitPrice: item.price.toString(),
       taxPercent: taxPercent.toString(),
       totalAmount: (item.price * item.qty).toFixed(2),
-      unit: "pcs", sku: item.sku,
+      unit: item.unit || "pcs", sku: item.sku,
     }));
     const payload = {
       invoiceNumber: `BILL-${Date.now().toString().slice(-6)}`,
@@ -494,6 +510,12 @@ export default function InvoicesPage() {
 
           {/* Center: Products */}
           <div className="flex-1 p-4 overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase">Products / المنتجات</h3>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setAddItemDialogOpen(true); }}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add Item / اضافة بند
+              </Button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {products?.map(p => (
                 <button key={p.id} onClick={() => addToCart(p as any)}
@@ -620,6 +642,34 @@ export default function InvoicesPage() {
                 Loading invoice details...
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Custom Item Dialog — lets user add a line item even when no products exist yet (hourly/service items etc.) */}
+      <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Item / اضافة بند</DialogTitle>
+            <DialogDescription>Type a custom item (e.g. hourly labor, service) — no product needed.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div>
+              <Label>Description / الوصف</Label>
+              <Input value={newItemName} onChange={e => setNewItemName(e.target.value)} placeholder="e.g. Hourly labor / الخدمة الساعية" className="h-8 text-sm" />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div><Label>Qty</Label><Input type="number" min={1} value={newItemQty} onChange={e => setNewItemQty(e.target.value)} className="h-8" /></div>
+              <div className="col-span-2"><Label>Rate</Label><Input type="number" min={0} value={newItemPrice} onChange={e => setNewItemPrice(e.target.value)} placeholder="0.00" className="h-8" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Unit / الوحدة</Label><Input value={newItemUnit} onChange={e => setNewItemUnit(e.target.value)} className="h-8" /></div>
+              <div className="col-span-1 flex items-end"><Label className="text-xs text-slate-400">{currency}</Label></div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t">
+            <Button variant="outline" size="sm" onClick={() => setAddItemDialogOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={addCustomItem}>Add to Cart</Button>
           </div>
         </DialogContent>
       </Dialog>
