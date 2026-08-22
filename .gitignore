@@ -1,0 +1,14 @@
+# Include all files
+node_modules/
+dist/
+.env
+*.local
+/uploads/
+public/uploads/
+*.log
+*.sqlite
+tauri.target/
+src-tauri/target/
+ecosystem.config.cjs
+pm2.config.cjs
+*.pem
