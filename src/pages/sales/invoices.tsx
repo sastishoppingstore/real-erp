@@ -326,6 +326,10 @@ export default function InvoicesPage() {
     const payload = {
       invoiceNumber: `BILL-${Date.now().toString().slice(-6)}`,
       customerId: customerId || 0,
+      customerName: customerName.trim() || undefined,
+      customerPhone: customerPhone.trim() || undefined,
+      customerAddress: customerAddress.trim() || undefined,
+      customerVat: customerVat.trim() || undefined,
       date: new Date().toISOString().slice(0, 10), dueDate: "",
       invoiceType: invoiceTypeMode, invoiceMode: "product" as InvoiceMode,
       subTotal: subtotal.toFixed(2), taxAmount: vat.toFixed(2),
