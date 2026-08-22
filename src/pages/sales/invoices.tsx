@@ -41,14 +41,30 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
     companyNameAr: companyData.companyNameAr || "",
     companyLogo: companyData.companyLogo || "",
     companyStamp: companyData.companyStamp || "",
+    companySignature: companyData.companySignature || "",
     companyAddress: companyData.companyAddress || "",
-    companyPhone: companyData.companyPhone || "",
-    companyVat: companyData.companyVat || "",
+    companyEmail: companyData.companyEmail || "",
+    companyWebsite: companyData.companyWebsite || "",
+    companyUnifiedNatlNo: companyData.companyUnifiedNatlNo || "",
+    companyCrNumber: companyData.companyCrNumber || "",
+    companyTaxNumber: companyData.companyVat || "",
     currency: companyData.currency || "SAR",
     taxPercent: dInv.taxPercent || "15",
     note: dInv.notes || "",
+    invoiceNumber: dInv.invoiceNumber || "",
+    invDate: dInv.date || "",
+    dueDate: dInv.dueDate || "",
+    invTime: dInv.time || "",
+    paymentMethod: dInv.paymentMethod || "",
+    cashier: dInv.cashier || "",
+    poNumber: dInv.poNumber || "",
+    workedMonth: dInv.workedMonth || "",
     pSub, pDisc, pVat, pTotal,
-    pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems: dItems
+    pCustName, pCustPhone, pCustAddr, pCustVat,
+    pCustEmail: dCust?.email || "",
+    pCustCr: dCust?.crNumber || "",
+    pCustWebsite: dCust?.website || "",
+    pType, printItems: dItems
   });
   return (
     <div
@@ -150,6 +166,8 @@ export default function InvoicesPage() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [discount, setDiscount] = useState(0);
   const [note, setNote] = useState("");
+  const [poNumber, setPoNumber] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [custDropdownOpen, setCustDropdownOpen] = useState(false);
   const [custFocus, setCustFocus] = useState(-1);
@@ -182,6 +200,11 @@ export default function InvoicesPage() {
   const companyVat = settings?.taxNumber || settings?.vatNumber || "";
   const companyLogo = settings?.logo || "";
   const companyStamp = settings?.stamp || "";
+  const companySignature = settings?.signature || "";
+  const companyEmail = settings?.email || "";
+  const companyWebsite = settings?.website || "";
+  const companyUnifiedNatlNo = settings?.unifiedNationalNo || "";
+  const companyCrNumber = settings?.crNumber || "";
   const companyCountry = settings?.country || "";
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -236,7 +259,7 @@ export default function InvoicesPage() {
     setCart(prev => {
       const ex = prev.find(i => i.id === product.id);
       if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { id: product.id, name: product.name || "Item", price: Number(product.price || 0), qty: 1, sku: product.sku }];
+      return [...prev, { id: product.id, name: product.name || "Item", price: Number((product as any).salePrice || product.price || 0), qty: 1, sku: product.sku }];
     });
   };
 
@@ -330,7 +353,7 @@ export default function InvoicesPage() {
       customerPhone: customerPhone.trim() || undefined,
       customerAddress: customerAddress.trim() || undefined,
       customerVat: customerVat.trim() || undefined,
-      date: new Date().toISOString().slice(0, 10), dueDate: "",
+      date: new Date().toISOString().slice(0, 10), dueDate: dueDate || "", poNumber: poNumber || "",
       invoiceType: invoiceTypeMode, invoiceMode: "product" as InvoiceMode,
       subTotal: subtotal.toFixed(2), taxAmount: vat.toFixed(2),
       taxPercent: taxPercent.toString(), totalAmount: total.toFixed(2),
@@ -370,9 +393,24 @@ export default function InvoicesPage() {
     const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
 
     const html = generateInvoiceHtml({
-      companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat,
+      companyName, companyNameAr, companyLogo, companyStamp, companySignature,
+      companyAddress, companyAddressAr: "", companyPhone,
+      companyEmail, companyWebsite, companyUnifiedNatlNo, companyCrNumber,
+      companyTaxNumber: companyVat,
       currency, taxPercent, note, pSub, pDisc, pVat, pTotal,
-      pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems
+      invoiceNumber: detailInvoice?.invoiceNumber || "",
+      invDate: detailInvoice?.date || "",
+      dueDate: detailInvoice?.dueDate || "",
+      invTime: detailInvoice?.time || "",
+      paymentMethod: detailInvoice?.paymentMethod || "",
+      cashier: detailInvoice?.cashier || "",
+      poNumber: detailInvoice?.poNumber || "",
+      workedMonth: detailInvoice?.workedMonth || "",
+      pCustName, pCustPhone, pCustAddr, pCustVat,
+      pCustEmail: detailCustomer?.email || "",
+      pCustCr: detailCustomer?.crNumber || "",
+      pCustWebsite: detailCustomer?.website || "",
+      pType, printItems
     });
 
     // Open print window via Blob URL (most reliable cross-browser)
@@ -579,6 +617,10 @@ export default function InvoicesPage() {
               <div className="flex justify-between"><span>VAT ({taxPercent}%):</span><span>{currency} {vat.toFixed(2)}</span></div>
               <div className="flex justify-between font-bold text-sm"><span>TOTAL:</span><span>{currency} {total.toFixed(2)}</span></div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+              <Input placeholder="PO Number / رقم أمر الشراء" value={poNumber} onChange={e => setPoNumber(e.target.value)} className="h-7 text-xs" />
+              <Input type="date" placeholder="Due Date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="h-7 text-xs" />
+            </div>
             <Button className="w-full mt-3" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0}>
               <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
             </Button>
@@ -664,7 +706,7 @@ export default function InvoicesPage() {
           <DialogDescription id="invoice-view-desc" className="sr-only">Invoice preview - what you see is what you print</DialogDescription>
           <div className="flex-1 overflow-y-auto bg-slate-100 p-4">
             {detail?.invoice && !invoiceDetail.isPending && (
-              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, currency }} />
+              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, currency, companySignature, companyEmail, companyWebsite, companyUnifiedNatlNo, companyCrNumber }} />
             )}
             {!detail?.invoice && !invoiceDetail.isPending && (
               <div className="py-16 text-center text-slate-400">Loading invoice...</div>
