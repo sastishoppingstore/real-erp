@@ -38,6 +38,7 @@ const formSchema = z.object({
   phone: z.string().min(5, "Phone number is required"),
   country: z.string().min(2, "Country is required"),
   city: z.string().min(2, "City is required"),
+  address: z.string().min(1, "Address is required"),
   timezone: z.string().min(1, "Timezone is required"),
   businessType: z.string().min(1, "Business type is required"),
   industry: z.string().min(1, "Category is required"),
@@ -118,6 +119,7 @@ export default function RegisterBusiness() {
       phone: "",
       country: selectedCountry,
       city: "",
+      address: "",
       timezone: timezone,
       businessType: "",
       industry: "",
@@ -291,7 +293,7 @@ export default function RegisterBusiness() {
       timezone: values.timezone,
       businessType: values.businessType,
       industry: values.industry,
-      employeesCount: values.employeesCount,
+      employeesCount: Number((String(values.employeesCount).match(/\d+/) || ["1"])[0]),
       currency: values.currency,
       language: values.language,
       selectedModules: values.selectedModules,
@@ -299,6 +301,8 @@ export default function RegisterBusiness() {
       themeColor: values.themeColor,
       taxRegistered: values.taxRegistered,
       password: values.password,
+      confirmPassword: values.confirmPassword,
+      address: values.address,
     };
     if (values.taxRegistered) {
       switch (watchedCountry) {
@@ -416,6 +420,15 @@ const stepContent = (idx: number) => {
                 <FormLabel>{isAr ? "المدينة" : "City"}</FormLabel>
                 <FormControl>
                   <Input {...field} placeholder={isAr ? "المدينة" : "City"} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="address" render={({ field }) => (
+              <FormItem>
+                <FormLabel>{isAr ? "پتہ" : "Address"}</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder={isAr ? "پتہ" : "Street / District, City"} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
