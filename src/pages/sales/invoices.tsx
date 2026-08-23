@@ -127,7 +127,7 @@ export default function InvoicesPage() {
   const reportInvoice = trpc.zatca.reportInvoice.useMutation({ onSuccess: () => toast.success("ZATCA reporting logged"), onError: (e) => toast.error(e.message) });
   const syncZatcaStatus = trpc.zatca.syncStatus.useMutation({ onSuccess: () => toast.success("ZATCA status synced"), onError: (e) => toast.error(e.message) });
   const sendWhatsAppInvoice = trpc.whatsapp.sendInvoiceCreated.useMutation({ onSuccess: () => toast.success("Invoice sent on WhatsApp"), onError: (e) => toast.error(e.message) });
-  const emailSend = trpc.email.sendInvoice.useMutation({ onSuccess: () => toast.success("Invoice sent via email"), onError: (e) => toast.error("Email failed: " + e.message) });
+  const emailSend = trpc.emails.sendInvoice.useMutation({ onSuccess: () => toast.success("Invoice sent via email"), onError: (e) => toast.error("Email failed: " + e.message) });
   const createQuickProduct = trpc.inventory.productCreate.useMutation({
     onSuccess: () => { refetchProducts(); toast.success("Product added"); },
     onError: (e) => toast.error(e.message),
@@ -208,7 +208,8 @@ export default function InvoicesPage() {
   const companyStamp = settings?.stamp || "";
   const companyCountry = settings?.country || "";
 
-  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const safePrice = (p: number) => Number.isNaN(p) ? 0 : p;
+  const subtotal = cart.reduce((s, i) => s + safePrice(i.price) * i.qty, 0);
   const taxable = Math.max(0, subtotal - discount);
   const vat = taxable * taxPercent / 100;
   const total = taxable + vat;
@@ -272,7 +273,14 @@ export default function InvoicesPage() {
     setCart(prev => prev.map((item, i) => i === index ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
   };
   const updatePrice = (index: number, value: string) => {
-    setCart(prev => prev.map((item, i) => i === index ? { ...item, price: Math.max(0, parseFloat(value) || 0) } : item));
+    // Allow empty while typing; strip leading zeros (fixes "0500" bug)
+    if (value === "" || value === "0" || value === "0.00") {
+      setCart(prev => prev.map((item, i) => i === index ? { ...item, price: value === "" ? NaN : 0 } : item));
+      return;
+    }
+    const cleaned = value.replace(/^0+(?=\d)/, "");
+    const num = parseFloat(cleaned);
+    setCart(prev => prev.map((item, i) => i === index ? { ...item, price: isNaN(num) ? 0 : Math.max(0, num) } : item));
   };
   const updateItemName = (index: number, value: string) => {
     setCart(prev => prev.map((item, i) => i === index ? { ...item, name: value } : item));
@@ -457,6 +465,13 @@ export default function InvoicesPage() {
     emailSend.mutate({ invoiceId: inv.id, to });
   };
 
+  // Delete from view dialog
+  const handleDeleteFromView = (id: number) => {
+    if (confirm("Are you sure you want to delete this invoice?")) {
+      deleteInvoiceMut.mutate(id);
+    }
+  };
+
   // View invoice handler
   const openViewInvoice = (id: number) => {
     setViewInvoiceId(id);
@@ -526,16 +541,16 @@ export default function InvoicesPage() {
 
       <div className="flex-1 flex overflow-hidden min-h-0">
         {viewTab === "create" && (
-        <div className="flex-1 flex min-h-0">
-          {/* Left: Cart & Customer */}
-          <div className="w-80 border-r bg-white p-4 space-y-4 overflow-y-auto flex-none">
+        <div className="flex-1 flex min-h-0 w-full">
+          {/* Left: Customer Details */}
+          <div className="w-72 border-r bg-white p-3 space-y-2 overflow-y-auto flex-none">
             <div className="relative" ref={custRef}>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer / العميل</Label>
-              <Input value={customerName} onChange={e => { setCustomerName(e.target.value); setCustDropdownOpen(true); }} onFocus={() => setCustDropdownOpen(true)} placeholder="Type customer name..." className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Customer / العميل</Label>
+              <Input value={customerName} onChange={e => { setCustomerName(e.target.value); setCustDropdownOpen(true); }} onFocus={() => setCustDropdownOpen(true)} placeholder="Type customer name..." className="h-7 text-xs" />
               {custDropdownOpen && filteredCustomers.length > 0 && (
-                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredCustomers.map(c => (
-                    <button key={c.id} type="button" onClick={() => selectCustomer(c)} className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0">
+                    <button key={c.id} type="button" onClick={() => selectCustomer(c)} className="w-full text-left px-2 py-1.5 hover:bg-blue-50 border-b border-gray-100 last:border-0">
                       <div className="text-xs font-semibold text-slate-700">{c.name}{c.nameAr ? ` / ${c.nameAr}` : ''}</div>
                       <div className="text-[10px] text-slate-500">{c.phone || ''} {c.vatNumber ? `• VAT: ${c.vatNumber}` : ''}</div>
                     </button>
@@ -544,59 +559,59 @@ export default function InvoicesPage() {
               )}
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer Name (Arabic) / اسم العميل</Label>
-              <Input dir="rtl" value={customerNameAr} onChange={e => setCustomerNameAr(e.target.value)} placeholder="اسم العميل..." className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Customer Name (Arabic) / اسم العميل</Label>
+              <Input dir="rtl" value={customerNameAr} onChange={e => setCustomerNameAr(e.target.value)} placeholder="اسم العميل..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Phone (optional)</Label>
-              <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Optional" className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Phone</Label>
+              <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="+966..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Address (optional)</Label>
-              <Input value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Optional" className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Address</Label>
+              <Input value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Address..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Address (Arabic) / العنوان بالعربي</Label>
-              <Input dir="rtl" value={customerAddressAr} onChange={e => setCustomerAddressAr(e.target.value)} placeholder="العنوان بالعربي..." className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Address (Arabic) / العنوان بالعربي</Label>
+              <Input dir="rtl" value={customerAddressAr} onChange={e => setCustomerAddressAr(e.target.value)} placeholder="العنوان بالعربي..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer VAT (optional)</Label>
-              <Input value={customerVat} onChange={e => setCustomerVat(e.target.value)} placeholder="e.g. 311777758600003" className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">VAT No</Label>
+              <Input value={customerVat} onChange={e => setCustomerVat(e.target.value)} placeholder="300000000000003" className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">CR No (optional)</Label>
-              <Input value={customerCr} onChange={e => setCustomerCr(e.target.value)} placeholder="CR number" className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">CR No</Label>
+              <Input value={customerCr} onChange={e => setCustomerCr(e.target.value)} placeholder="CR number" className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer Email (for auto-send bill)</Label>
-              <Input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@email.com" className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Email (auto-send bill)</Label>
+              <Input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@email.com" className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Notes / ملاحظات</Label>
-              <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Additional notes..." className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Notes / ملاحظات</Label>
+              <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Additional notes..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Notes (Arabic) / ملاحظات إضافية</Label>
-              <Input dir="rtl" value={noteAr} onChange={e => setNoteAr(e.target.value)} placeholder="ملاحظات إضافية..." className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Notes (Arabic) / ملاحظات إضافية</Label>
+              <Input dir="rtl" value={noteAr} onChange={e => setNoteAr(e.target.value)} placeholder="ملاحظات إضافية..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Discount</Label>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Discount</Label>
               <Input type="number" className="w-20 h-7 text-xs text-right" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} />
             </div>
           </div>
 
           {/* Center: Products */}
-          <div className="flex-1 p-4 overflow-y-auto min-h-0 pb-32">
-            <div className="flex items-center justify-between mb-3">
+          <div className="flex-1 p-3 overflow-y-auto min-h-0">
+            <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-slate-500 uppercase">Products / المنتجات</h3>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setAddItemDialogOpen(true); }}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Add Item / اضافة بند
               </Button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {products?.map(p => (
                 <button key={p.id} onClick={() => addToCart(p as any)}
-                  className="border-2 border-slate-200 rounded-lg p-3 text-left hover:border-blue-400 hover:shadow-md transition-all">
+                  className="border-2 border-slate-200 rounded-lg p-2 text-left hover:border-blue-400 hover:shadow-md transition-all">
                   <div className="text-xs font-bold text-slate-700 truncate">{p.name}</div>
                   <div className="text-xs text-slate-500">{p.sku}</div>
                   <div className="text-sm font-bold text-blue-600">{currency} {Number(p.salePrice).toFixed(2)}</div>
@@ -605,10 +620,10 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Right: Cart Summary */}
-          <div className="w-80 border-l bg-white p-4 flex flex-col flex-none">
-            <h3 className="font-semibold text-slate-800 mb-3">Cart</h3>
-            <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+          {/* Right: Cart Summary with Sticky Footer */}
+          <div className="w-80 border-l bg-white flex flex-col flex-none">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+              <h3 className="font-semibold text-slate-800 text-sm">Cart</h3>
               {cart.length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-8">No items in cart</p>
               ) : cart.map((item, i) => (
@@ -620,26 +635,23 @@ export default function InvoicesPage() {
                   </div>
                   {item.nameAr && <div dir="rtl" className="text-[11px] text-slate-500">{item.nameAr}</div>}
                   <div className="flex items-center gap-1 text-[11px]">
-                    <span>Qty:</span>
-                    <input type="number" min={1} value={item.qty} onChange={e => { const v = Math.max(1, parseInt(e.target.value) || 1); setCart(prev => prev.map((it, j) => j === i ? { ...it, qty: v } : it)); }} className="w-12 border rounded px-1 py-0.5 text-right" />
-                    <span>Rate:</span>
-                    <input type="number" min={0} value={item.price} onChange={e => updatePrice(i, e.target.value)} className="w-16 border rounded px-1 py-0.5 text-right" />
-                    <span className="ml-auto font-bold">{(item.price * item.qty).toFixed(2)}</span>
+                    <span>Qty / الكمية:</span>
+                    <input type="number" min={1} value={String(item.qty)} onFocus={e => { if (e.target.value === "1") e.target.select(); }} onChange={e => { const raw = e.target.value.replace(/^0+(?=\d)/, ""); const v = Math.max(1, parseInt(raw) || 1); setCart(prev => prev.map((it, j) => j === i ? { ...it, qty: v } : it)); }} className="w-12 border rounded px-1 py-0.5 text-right" />
+                    <span>Rate/Hour / سعر الساعة:</span>
+                    <input type="number" min={0} placeholder="0" value={Number.isNaN(item.price) ? "" : item.price} onFocus={e => e.target.select()} onChange={e => updatePrice(i, e.target.value)} className="w-16 border rounded px-1 py-0.5 text-right" />
+                    <span className="ml-auto font-bold">{(safePrice(item.price) * item.qty).toFixed(2)}</span>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Fixed Footer with Totals + Create Bill Button */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
-            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-              <div className="flex gap-6 text-xs">
-                <div><span className="text-slate-500">Subtotal:</span> <span className="font-semibold">{currency} {subtotal.toFixed(2)}</span></div>
-                <div><span className="text-slate-500">VAT ({taxPercent}%):</span> <span className="font-semibold">{currency} {vat.toFixed(2)}</span></div>
-                <div className="text-sm font-bold"><span className="text-slate-500">TOTAL:</span> {currency} {total.toFixed(2)}</div>
+            {/* Sticky Footer - INSIDE the cart column */}
+            <div className="flex-none border-t bg-white p-3 shadow-md z-10">
+              <div className="space-y-1 text-xs mb-3">
+                <div className="flex justify-between"><span className="text-slate-500">Subtotal:</span><span className="font-semibold">{currency} {subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">VAT ({taxPercent}%):</span><span className="font-semibold">{currency} {vat.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-sm border-t pt-1"><span>TOTAL:</span><span>{currency} {total.toFixed(2)}</span></div>
               </div>
-              <Button onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0} className="shrink-0">
+              <Button className="w-full" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0}>
                 <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
               </Button>
             </div>
