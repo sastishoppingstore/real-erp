@@ -81,21 +81,25 @@ export default function InvoicesPage() {
 
   const createInvoice = trpc.sales.invoiceCreate.useMutation({
     onSuccess: (data) => {
-      // Invalidate all sales queries to refresh list
       queryClient.invalidateQueries();
       toast.success("Bill created");
       clearCart();
-      // Auto-send invoice via email if customer email provided
       const newId = data?.id;
       if (newId && customerEmail.trim()) {
         emailSend.mutate({ invoiceId: newId, to: customerEmail.trim() });
       }
-      // Auto-open the newly created invoice for viewing/printing
       if (newId) {
         setTimeout(() => openViewInvoice(newId), 400);
       }
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      const msg = error?.message || "Unknown error";
+      if (msg.includes("NetworkError") || msg.includes("fetch") || msg.includes("Failed to fetch")) {
+        toast.error("Network error or server unreachable. Please check your connection.");
+      } else {
+        toast.error(msg);
+      }
+    },
   });
   const updateInvoice = trpc.sales.invoiceUpdate.useMutation({
     onSuccess: () => {
@@ -103,7 +107,14 @@ export default function InvoicesPage() {
       queryClient.invalidateQueries({ queryKey: [['sales', 'invoiceGet']] });
       toast.success("Invoice updated");
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      const msg = error?.message || "Unknown error";
+      if (msg.includes("NetworkError") || msg.includes("fetch") || msg.includes("Failed to fetch")) {
+        toast.error("Network error or server unreachable. Please check your connection.");
+      } else {
+        toast.error(msg);
+      }
+    },
   });
   const deleteInvoiceMut = trpc.sales.invoiceDelete.useMutation({
     onSuccess: () => {
@@ -493,8 +504,8 @@ export default function InvoicesPage() {
   const selectedInvoiceId = detail?.invoice?.id;
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="p-4 border-b bg-white">
+    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="p-4 border-b bg-white flex-none">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-2xl font-bold">Invoices / فواتير</h2>
@@ -516,11 +527,11 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {viewTab === "create" && (
-        <div className="flex-1 flex">
+        <div className="flex-1 flex min-h-0">
           {/* Left: Cart & Customer */}
-          <div className="w-80 border-r bg-white p-4 space-y-4 overflow-y-auto">
+          <div className="w-80 border-r bg-white p-4 space-y-4 overflow-y-auto flex-none">
             <div>
               <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer / العميل</Label>
               <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Type customer name..." className="h-8 text-xs" />
@@ -568,7 +579,7 @@ export default function InvoicesPage() {
           </div>
 
           {/* Center: Products */}
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 p-4 overflow-y-auto min-h-0">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase">Products / المنتجات</h3>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setAddItemDialogOpen(true); }}>
@@ -588,9 +599,9 @@ export default function InvoicesPage() {
           </div>
 
           {/* Right: Cart Summary */}
-          <div className="w-80 border-l bg-white p-4 flex flex-col">
+          <div className="w-80 border-l bg-white p-4 flex flex-col flex-none">
             <h3 className="font-semibold text-slate-800 mb-3">Cart</h3>
-            <div className="flex-1 overflow-y-auto space-y-2">
+            <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
               {cart.length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-8">No items in cart</p>
               ) : cart.map((item, i) => (
@@ -611,14 +622,15 @@ export default function InvoicesPage() {
                 </div>
               ))}
             </div>
-            <div className="border-t pt-3 space-y-1 text-xs">
+            {/* Fixed Footer with Totals + Create Bill Button */}
+            <div className="flex-none border-t pt-3 mt-2 space-y-1 text-xs bg-white sticky bottom-0 z-10">
               <div className="flex justify-between"><span>Subtotal:</span><span>{currency} {subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between"><span>VAT ({taxPercent}%):</span><span>{currency} {vat.toFixed(2)}</span></div>
               <div className="flex justify-between font-bold text-sm"><span>TOTAL:</span><span>{currency} {total.toFixed(2)}</span></div>
+              <Button className="w-full mt-3" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0}>
+                <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
+              </Button>
             </div>
-            <Button className="w-full mt-3" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0}>
-              <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
-            </Button>
           </div>
         </div>
         )}

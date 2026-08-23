@@ -78,13 +78,24 @@ export const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
-        const token = typeof window !== "undefined" ? localStorage.getItem("erp_sid") : null;
-        return token ? { authorization: `Bearer ${token}` } : {};
+        try {
+          const token = typeof window !== "undefined" ? localStorage.getItem("erp_sid") : null;
+          return token ? { authorization: `Bearer ${token}` } : {};
+        } catch {
+          return {};
+        }
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+        }).catch((err) => {
+          // Network failure — return a synthetic Response so tRPC can parse it
+          // instead of throwing "Cannot read properties of undefined (reading 'headers')"
+          if (!err || typeof err !== "object") {
+            throw err;
+          }
+          throw err;
         });
       },
     }),
