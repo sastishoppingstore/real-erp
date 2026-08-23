@@ -180,6 +180,11 @@ export default function InvoicesPage() {
   const [customerCr, setCustomerCr] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [workedMonth, setWorkedMonth] = useState("");
+  const [paymentType, setPaymentType] = useState("Credit");
+  const [cashier, setCashier] = useState("مدير النظام");
+  const [dueDate, setDueDate] = useState("");
+  const [poNo, setPoNo] = useState("");
   const [note, setNote] = useState("");
   const [noteAr, setNoteAr] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -380,7 +385,12 @@ export default function InvoicesPage() {
         customerAddressAr: customerAddressAr.trim() || undefined,
         customerVat: customerVat.trim() || undefined,
         customerCr: customerCr.trim() || undefined,
-        date: new Date().toISOString().slice(0, 10), dueDate: "",
+        customerEmail: customerEmail.trim() || undefined,
+        date: new Date().toISOString().slice(0, 10),
+        dueDate: dueDate || undefined,
+        paymentType: paymentType || undefined,
+        cashier: cashier || undefined,
+        poNumber: poNo || undefined,
         invoiceType: invoiceTypeMode, invoiceMode: "product" as InvoiceMode,
         subTotal: subtotal.toFixed(2), taxAmount: vat.toFixed(2),
         taxPercent: taxPercent.toString(), totalAmount: total.toFixed(2),
@@ -489,13 +499,62 @@ export default function InvoicesPage() {
     }
   };
 
-  // Word (.docx) export function - calls backend API
+  // Word (.docx) export function - client-side generation
   const handleWordExport = async (inv: any) => {
     if (!inv) return;
     try {
-      const res = await fetch(`/api/word-export/${inv.id}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to generate Word document");
-      const blob = await res.blob();
+      const { generateInvoiceDocx } = await import("@/lib/wordExport");
+      const { Packer } = await import("docx");
+      
+      const items = (detail?.items || []).map((it: any, i: number) => ({
+        no: i + 1,
+        name: it.description || "",
+        nameAr: it.descriptionAr || "",
+        unit: it.unit || "Hour",
+        totalHour: Number(it.quantity || 1),
+        rate: Number(it.unitPrice || 0),
+        total: Number(it.totalAmount || 0),
+      }));
+
+      const doc = await generateInvoiceDocx({
+        companyName: companyName || "YAFCO AL ARABIAH EST.",
+        companyNameAr: companyNameAr || "مؤسسة يافكو العربية",
+        companyLogo: companyLogo,
+        companyAddress: companyAddress || "Saudi Arabia - Yanbu Al Bahr - P.O.Box: 2326",
+        companyPhone: "",
+        companyVat: companyVat || "300995897900003",
+        companyCr: companyCr || "4700012896",
+        companyEmail: companyEmail || "info@yafco.com.sa",
+        companyWebsite: companyWebsite || "www.yafco.com.sa",
+        currency: currency || "SAR",
+        taxPercent: inv.taxPercent || "15",
+        customerName: detail?.customer?.name || inv.customerName || "Walk-in Customer",
+        customerNameAr: detail?.customer?.nameAr || inv.customerNameAr || "",
+        customerVat: detail?.customer?.vatNumber || inv.customerVat || "",
+        customerCr: detail?.customer?.crNumber || inv.customerCr || "",
+        customerAddress: detail?.customer?.address || inv.customerAddress || "",
+        customerAddressAr: detail?.customer?.addressAr || inv.customerAddressAr || "",
+        customerEmail: detail?.customer?.email || inv.customerEmail || "",
+        customerPhone: detail?.customer?.phone || inv.customerPhone || "",
+        customerPo: inv.poNumber || "",
+        invoiceNo: inv.invoiceNumber,
+        workedMonth: inv.workedMonth || "",
+        paymentType: inv.paymentType || "Credit",
+        cashier: inv.cashier || "مدير النظام",
+        date: inv.date || "",
+        time: inv.time || "",
+        dueDate: inv.dueDate || "",
+        poNumber: inv.poNumber || "",
+        subtotal: Number(inv.subTotal || 0),
+        vatTotal: Number(inv.taxAmount || 0),
+        grandTotal: Number(inv.totalAmount || 0),
+        dueInWords: inv.dueInWords || "",
+        notes: inv.notes || "",
+        notesAr: (inv as any).notesAr || "",
+        items,
+      });
+
+      const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -670,6 +729,29 @@ export default function InvoicesPage() {
             <div>
               <Label className="text-xs font-semibold text-slate-600 block mb-1">Discount</Label>
               <Input type="number" className="w-20 h-7 text-xs text-right" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Worked Month / الشهر</Label>
+              <Input type="month" value={workedMonth} onChange={e => setWorkedMonth(e.target.value)} className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Payment / الدفع</Label>
+              <select value={paymentType} onChange={e => setPaymentType(e.target.value)} className="h-7 text-xs border rounded w-full px-2">
+                <option value="Credit">Credit</option>
+                <option value="Cash">Cash</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Cashier / الكاشير</Label>
+              <Input value={cashier} onChange={e => setCashier(e.target.value)} className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Due Date / تاريخ الاستحقاق</Label>
+              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">PO No / رقم طلب الشراء</Label>
+              <Input value={poNo} onChange={e => setPoNo(e.target.value)} placeholder="PO Number" className="h-7 text-xs" />
             </div>
           </div>
 
