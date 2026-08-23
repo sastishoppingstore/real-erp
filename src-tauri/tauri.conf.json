@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "YASCO ERP",
-        "url": "http://127.0.0.1:32145/app",
+        "url": "https://yasco.tech/app",
         "width": 1440,
         "height": 900,
         "minWidth": 1024,
