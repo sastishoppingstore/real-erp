@@ -444,7 +444,7 @@ export default function InvoicesPage() {
       note: note || "",
       noteAr: noteAr || "",
       pSub, pDisc, pVat, pTotal,
-      pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType,
+    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pCustEmail: dCust?.email, pCustPo: dInv.poNumber, pType,
       workedMonth: useDetail ? detailInvoice?.workedMonth : undefined,
       invoiceNo: useDetail ? detailInvoice?.invoiceNumber : undefined,
       paymentType: useDetail ? detailInvoice?.paymentType : "Credit",
