@@ -2,7 +2,7 @@
   "name": "yasco-erp",
   "private": true,
   "version": "1.0.0",
-  "description": "YASCO ERP — World-class Enterprise Resource Planning with Saudi ZATCA Phase 2 compliance, multi-country tax support, and full offline desktop capabilities",
+  "description": "YASCO ERP \u2014 World-class Enterprise Resource Planning with Saudi ZATCA Phase 2 compliance, multi-country tax support, and full offline desktop capabilities",
   "type": "module",
   "scripts": {
     "dev": "vite",
