@@ -45,10 +45,10 @@ export function generateInvoiceHtml(params: {
 body{font-family:Arial,sans-serif;background:#f5f5f5;padding:10mm}
 .invoice{max-width:800px;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 0 10px rgba(0,0,0,.1)}
 .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3a8a;padding-bottom:15px;margin-bottom:20px;gap:20px}
-.logo-box{width:100px;height:100px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.logo-box img{max-width:100px;max-height:100px;object-fit:contain}
-.qr-box{width:100px;height:100px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.qr-box img{width:100px;height:100px;object-fit:contain;aspect-ratio:1/1}
+.logo-box{width:128px;height:128px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.logo-box img{max-width:128px;max-height:128px;object-fit:contain;aspect-ratio:1/1}
+.qr-box{width:128px;height:128px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.qr-box img{width:128px;height:128px;object-fit:contain;aspect-ratio:1/1}
 .company-center{flex:1;text-align:center;padding:0 15px}
 .company-center h1{font-size:22px;color:#1e3a8a;font-weight:900;margin-bottom:2px}
 .company-center h2{font-size:16px;color:#1d4ed8;font-weight:700;margin-bottom:6px}
@@ -67,12 +67,9 @@ tr:nth-child(even){background:#f9f9ff}
 .totals{margin-top:20px;padding:15px;background:#f5f5ff;border-radius:5px}
 .total-row{display:flex;justify-content:space-between;padding:8px 15px;font-size:14px}
 .total-row.grand{background:linear-gradient(135deg,#1d4ed8,#1e3a8a);color:#fff;font-weight:900;font-size:18px;border-radius:5px;margin-top:10px}
-.notes-section{margin-top:15px;padding:12px;background:#f9f9ff;border-radius:5px;border:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
-.notes-text{flex:1}
+.notes-section{margin-top:15px;padding:12px;background:#f9f9ff;border-radius:5px;border:1px solid #e5e7eb}
 .notes-ar{direction:rtl;text-align:right;font-size:13px;color:#374151;margin-top:4px}
 .notes-en{font-size:13px;color:#374151}
-.stamp-box{width:80px;height:80px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0.85}
-.stamp-box img{max-width:80px;max-height:80px;object-fit:contain;border-radius:50%}
 .footer{margin-top:20px;text-align:center;padding:15px;border-top:2px solid #ddd;font-size:16px;font-weight:700;color:#1e3a8a}
 @media print{
   body{background:#fff;padding:0;margin:0}
@@ -115,7 +112,7 @@ ${pDisc > 0 ? `<div class="total-row"><span>Discount / الخصم:</span><span>-
 <div class="total-row"><span>VAT ${taxPercent}% / القيمة المضافة:</span><span>${currency} ${pVat.toFixed(2)}</span></div>
 <div class="total-row grand"><span>TOTAL / الإجمالي:</span><span>${currency} ${pTotal.toFixed(2)}</span></div>
 </div>
-${note || noteAr ? `<div class="notes-section"><div class="notes-text">${noteAr ? `<div class="notes-ar">ملاحظات: ${noteAr}</div>` : ''}${note ? `<div class="notes-en">Notes: ${note}</div>` : ''}</div><div class="stamp-box">${companyStamp ? `<img src="${companyStamp}" alt="Stamp">` : ''}</div></div>` : ''}
+${note || noteAr ? `<div class="notes-section"><div class="notes-text">${noteAr ? `<div class="notes-ar">ملاحظات: ${noteAr}</div>` : ''}${note ? `<div class="notes-en">Notes: ${note}</div>` : ''}</div></div>` : ''}
 <div class="footer">شكراً لتعاملكم معنا / Thank You For Your Business!</div>
 </div>
 <script>window.onload=function(){window.print();}</script></body></html>`;
