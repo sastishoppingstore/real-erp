@@ -45,22 +45,33 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
     qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
   }));
   const html = generateInvoiceHtml({
-    companyName: companyData.companyName || "Company Name",
-    companyNameAr: companyData.companyNameAr || "",
+    companyName: companyData.companyName || "YAFCO AL ARABIAH EST.",
+    companyNameAr: companyData.companyNameAr || "مؤسسة يافكو العربية",
     companyLogo: companyData.companyLogo || "",
     companyStamp: companyData.companyStamp || "",
-    companyAddress: companyData.companyAddress || "",
+    companyAddress: companyData.companyAddress || "Saudi Arabia - Yanbu Al Bahr - P.O.Box: 2326",
+    companyAddressAr: companyData.companyAddressAr || "المملكة العربية السعودية - ينبع البحر - ص . ب : 2326",
     companyPhone: companyData.companyPhone || "",
-    companyVat: companyData.companyVat || "",
-    companyCr: companyData.companyCr || "",
-    companyEmail: companyData.companyEmail || "",
-    companyWebsite: companyData.companyWebsite || "",
+    companyVat: companyData.companyVat || "300995897900003",
+    companyCr: companyData.companyCr || "4700012896",
+    companyEmail: companyData.companyEmail || "info@yafco.com.sa",
+    companyWebsite: companyData.companyWebsite || "www.yafco.com.sa",
     currency: companyData.currency || "SAR",
     taxPercent: dInv.taxPercent || "15",
     note: dInv.notes || "",
     noteAr: dInv.notesAr || "",
     pSub, pDisc, pVat, pTotal,
-    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType, printItems: printItemsWithAr
+    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType,
+    workedMonth: dInv.workedMonth,
+    invoiceNo: dInv.invoiceNumber,
+    paymentType: dInv.paymentType,
+    cashier: dInv.cashier,
+    date: dInv.date,
+    time: dInv.time,
+    dueDate: dInv.dueDate,
+    poNumber: dInv.poNumber,
+    dueInWords: dInv.dueInWords,
+    printItems: printItemsWithAr.map((i: any) => ({ ...i, totalHour: i.qty, vat: i.total * 0.15, grandTotal: i.total * 1.15 }))
   });
   return (
     <div
@@ -417,9 +428,33 @@ export default function InvoicesPage() {
     const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
 
     const html = generateInvoiceHtml({
-      companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, companyCr, companyEmail, companyWebsite,
-      currency, taxPercent, note, noteAr: useDetail ? detailInvoice?.notesAr : noteAr, pSub, pDisc, pVat, pTotal,
-      pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType, printItems
+      companyName: companyName || "YAFCO AL ARABIAH EST.",
+      companyNameAr: companyNameAr || "مؤسسة يافكو العربية",
+      companyLogo: companyLogo,
+      companyStamp: companyStamp,
+      companyAddress: companyAddress || "Saudi Arabia - Yanbu Al Bahr - P.O.Box: 2326",
+      companyAddressAr: "المملكة العربية السعودية - ينبع البحر - ص . ب : 2326",
+      companyPhone: "",
+      companyVat: companyVat || "300995897900003",
+      companyCr: companyCr || "4700012896",
+      companyEmail: companyEmail || "info@yafco.com.sa",
+      companyWebsite: companyWebsite || "www.yafco.com.sa",
+      currency: currency || "SAR",
+      taxPercent: String(taxPercent || "15"),
+      note: note || "",
+      noteAr: noteAr || "",
+      pSub, pDisc, pVat, pTotal,
+      pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType,
+      workedMonth: useDetail ? detailInvoice?.workedMonth : undefined,
+      invoiceNo: useDetail ? detailInvoice?.invoiceNumber : undefined,
+      paymentType: useDetail ? detailInvoice?.paymentType : "Credit",
+      cashier: useDetail ? detailInvoice?.cashier : "مدير النظام",
+      date: useDetail ? detailInvoice?.date : undefined,
+      time: useDetail ? detailInvoice?.time : undefined,
+      dueDate: useDetail ? detailInvoice?.dueDate : undefined,
+      poNumber: useDetail ? detailInvoice?.poNumber : undefined,
+      dueInWords: undefined,
+      printItems: printItems.map((i: any) => ({ ...i, totalHour: i.qty, vat: (i.total || 0) * 0.15, grandTotal: (i.total || 0) * 1.15 }))
     });
 
     // Tauri/desktop fix: use hidden iframe for printing instead of window.open
