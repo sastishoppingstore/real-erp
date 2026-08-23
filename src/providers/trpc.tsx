@@ -77,25 +77,13 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      headers() {
-        try {
-          const token = typeof window !== "undefined" ? localStorage.getItem("erp_sid") : null;
-          return token ? { authorization: `Bearer ${token}` } : {};
-        } catch {
-          return {};
-        }
-      },
+      // Tauri/desktop: auth is cookie-based (HTTP-only session cookie set by backend).
+      // Do NOT send Bearer header from localStorage — it does not exist in desktop mode.
+      // credentials: "include" ensures cookies are sent with every request.
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
-        }).then((response) => {
-          // Tauri/desktop fix: ensure response has a valid .headers object
-          // before tRPC's httpBatchLink tries to read batch headers
-          if (!response || typeof response?.headers === "undefined") {
-            throw new Error("Network or Server Error");
-          }
-          return response;
         }).catch((err: any) => {
           const errorMsg = err?.message || err?.response?.data?.message || "Network or Server Error";
           throw new Error(errorMsg);

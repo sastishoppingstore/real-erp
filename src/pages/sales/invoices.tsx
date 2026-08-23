@@ -77,7 +77,9 @@ export default function InvoicesPage() {
   const { data: customers } = trpc.sales.customerList.useQuery(undefined);
   const { data: products, refetch: refetchProducts } = trpc.inventory.productList.useQuery(undefined);
   const { data: categories, refetch: refetchCategories } = trpc.inventory.categoryList.useQuery(undefined);
-  const { data: settings } = trpc.settings.companySettingsGet.useQuery();
+  const { data: settings } = trpc.settings.companySettingsGet.useQuery(undefined);
+  // Force company settings to load on mount (fixes Tauri desktop not loading settings)
+  const { data: freshSettings } = trpc.settings.companySettingsGet.useQuery(undefined, { staleTime: 0, refetchOnMount: true });
 
   const createInvoice = trpc.sales.invoiceCreate.useMutation({
     onSuccess: (data) => {
