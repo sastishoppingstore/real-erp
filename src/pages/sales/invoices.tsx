@@ -454,65 +454,13 @@ export default function InvoicesPage() {
     }
   };
 
-  // Word (.docx) export function - pixel-perfect replica of PDF
+  // Word (.docx) export function - calls backend API
   const handleWordExport = async (inv: any) => {
     if (!inv) return;
     try {
-      const { generateInvoiceDocx } = await import("@/lib/wordExport");
-      const { Packer } = await import("docx");
-      
-      const items = (detail?.items || []).map((it: any, i: number) => {
-        const totalHour = Number(it.quantity || 1);
-        const rate = Number(it.unitPrice || 0);
-        const total = Number(it.totalAmount || 0);
-        const vat = total * 0.15;
-        return {
-          no: i + 1,
-          description: it.description || "",
-          descriptionAr: "",
-          unit: "Hour",
-          totalHour,
-          rate,
-          total,
-          vat,
-          grandTotal: total + vat,
-        };
-      });
-
-      const doc = await generateInvoiceDocx({
-        companyName: companyName || "Company",
-        companyNameAr: companyNameAr || "",
-        companyLogo: companyLogo,
-        companyAddress: companyAddress || "",
-        companyAddressAr: "",
-        companyPhone: "",
-        companyEmail: companyEmail || "",
-        companyWebsite: companyWebsite || "",
-        companyVat: companyVat || "",
-        companyCr: "",
-        companyStamp: companyStamp,
-        customerName: detail?.customer?.name || "Walk-in Customer",
-        customerNameAr: detail?.customer?.nameAr || "",
-        customerVat: detail?.customer?.vatNumber || "",
-        customerCr: detail?.customer?.crNumber || "",
-        customerAddress: detail?.customer?.address || "",
-        invoiceNo: inv.invoiceNumber,
-        workedMonth: inv.workedMonth || "",
-        paymentType: inv.paymentType || "Credit",
-        cashier: inv.cashier || "مدير النظام",
-        date: inv.date || "",
-        time: inv.time || new Date().toLocaleTimeString(),
-        dueDate: inv.dueDate || "",
-        poNumber: inv.poNumber || "",
-        items,
-        subtotal: Number(inv.subTotal || 0),
-        vatTotal: Number(inv.taxAmount || 0),
-        grandTotal: Number(inv.totalAmount || 0),
-        dueInWords: "",
-        vatPercent: Number(inv.taxPercent || 15),
-      });
-
-      const blob = await Packer.toBlob(doc);
+      const res = await fetch(`/api/word-export/${inv.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to generate Word document");
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

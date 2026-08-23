@@ -32,6 +32,7 @@ import { meetingRouter } from "./meetingRouter";
 import { taskRouter } from "./taskRouter";
 import { notificationRouter } from "./notificationRouter";
 import { emailRouter } from "./emailRouter";
+import { wordRouter } from "./wordRouter";
 import { syncRouter } from "./syncRouter";
 import { syncEnhancedRouter } from "./syncEnhancedRouter";
 import { licenseRouter } from "./licenseRouter";
@@ -120,6 +121,7 @@ export const appRouter = createRouter({
   tasks: taskRouter,
   notifications2: notificationRouter,
   emails: emailRouter,
+word: wordRouter,
   sync: syncRouter,
   syncEnhanced: syncEnhancedRouter,
   license: licenseRouter,
