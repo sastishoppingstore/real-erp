@@ -215,7 +215,7 @@ export default function InvoicesPage() {
     !searchQuery || (p.name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
   const filteredCustomers = (customers || []).filter(c => {
-    if (!customerName && !customerNameAr) return true;
+    if (!customerName && !customerNameAr) return false;
     const q = (customerName || "").toLowerCase();
     const qAr = (customerNameAr || "").toLowerCase();
     return (!q || (c.name || "").toLowerCase().includes(q) || (c.nameAr || "").toLowerCase().includes(q))
@@ -527,9 +527,19 @@ export default function InvoicesPage() {
         <div className="flex-1 flex min-h-0">
           {/* Left: Cart & Customer */}
           <div className="w-80 border-r bg-white p-4 space-y-4 overflow-y-auto flex-none">
-            <div>
+            <div className="relative" ref={custRef}>
               <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer / العميل</Label>
-              <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Type customer name..." className="h-8 text-xs" />
+              <Input value={customerName} onChange={e => { setCustomerName(e.target.value); setCustDropdownOpen(true); }} onFocus={() => setCustDropdownOpen(true)} placeholder="Type customer name..." className="h-8 text-xs" />
+              {custDropdownOpen && filteredCustomers.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {filteredCustomers.map(c => (
+                    <button key={c.id} type="button" onClick={() => selectCustomer(c)} className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0">
+                      <div className="text-xs font-semibold text-slate-700">{c.name}{c.nameAr ? ` / ${c.nameAr}` : ''}</div>
+                      <div className="text-[10px] text-slate-500">{c.phone || ''} {c.vatNumber ? `• VAT: ${c.vatNumber}` : ''}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer Name (Arabic) / اسم العميل</Label>
