@@ -5,7 +5,7 @@ import { invoices, invoiceItems, customers, companySettings } from "@db/schema";
 import { eq, and } from "drizzle-orm";
 
 export const wordRouter = createRouter({
-  generateWord: authedQuery
+  generateWord: authedMutation
     .input(z.object({ invoiceId: z.number() }))
     .query(async ({ input, ctx }) => {
       const db = getDb();
