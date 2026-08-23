@@ -579,6 +579,22 @@ export const salesRouter = createRouter({
           totalAmount: item.totalAmount,
           productId: item.productId,
         });
+        // Auto-save new products to database for future use
+        if (!item.productId && item.description) {
+          try {
+            await db.insert(products).values({
+              tenantId,
+              sku: item.sku || `PRD-${Date.now().toString().slice(-6)}`,
+              name: item.description,
+              nameAr: item.descriptionAr || null,
+              salePrice: item.unitPrice || "0",
+              unitName: item.unit || "Piece",
+              isActive: true,
+            });
+          } catch (e) {
+            console.warn("Product auto-save failed:", e);
+          }
+        }
       }
       await db.insert(auditLogs).values({
         tenantId,

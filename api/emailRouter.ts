@@ -95,7 +95,15 @@ export const emailRouter = createRouter({
       });
 
       const subject = `Invoice ${invoice.invoiceNumber} from ${companySettings?.companyName || "Company"}`;
-      const result = await sendEmail(input.to, subject, html);
+      let emailSent = false;
+      let emailError = null;
+      try {
+        const result = await sendEmail(input.to, subject, html);
+        emailSent = result.sent;
+        emailError = result.sent ? null : "SMTP error";
+      } catch (e: any) {
+        emailError = e?.message || "Email send failed";
+      }
 
       // Log email
       await db.insert(schema.emailLogs).values({
@@ -104,11 +112,11 @@ export const emailRouter = createRouter({
         recipient: input.to,
         subject,
         body: html.substring(0, 500),
-        status: result.sent ? "sent" : "failed",
-        errorMessage: result.sent ? null : "SMTP error",
+        status: emailSent ? "sent" : "failed",
+        errorMessage: emailError,
       });
 
-      if (!result.sent) throw new Error("Failed to send invoice email");
-      return { success: true, message: `Invoice sent to ${input.to}` };
+      // Return success even if email fails — don't break invoice creation
+      return { success: true, emailSent, message: emailSent ? `Invoice sent to ${input.to}` : `Invoice created but email failed: ${emailError}` };
     }),
 });
