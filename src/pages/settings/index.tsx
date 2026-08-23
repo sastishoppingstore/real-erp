@@ -6,19 +6,28 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/providers/trpc";
-import { Building2, Receipt, Palette, Shield, Bot, Eye, EyeOff, LayoutDashboard, Grid, Check, Rocket } from "lucide-react";
+import { Building2, Receipt, Palette, Shield, Bot, Eye, EyeOff, LayoutDashboard, Grid, Check, Rocket, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { TaxComplianceSettings } from "./TaxComplianceSettings";
 import ThemeSelector from "@/components/ThemeSelector";
 import { useLayoutTheme } from "@/providers/layoutTheme";
-import { useLanguage } from "@/providers/language";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
 export default function SettingsPage() {
   const { data: settings, refetch } = trpc.settings.companySettingsGet.useQuery();
-  const updateSettings = trpc.settings.companySettingsUpdate.useMutation({ onSuccess: () => refetch() });
+  const updateSettings = trpc.settings.companySettingsUpdate.useMutation({
+    onSuccess: () => {
+      refetch();
+      setSaved(true);
+      toast.success("Settings saved");
+      setTimeout(() => setSaved(false), 3000);
+    },
+    onError: (e: any) => toast.error(e?.message || "Failed to save settings"),
+  });
   const { data: taxRates } = trpc.settings.taxRateList.useQuery();
   const { data: currencies } = trpc.settings.currencyList.useQuery();
+  const [saved, setSaved] = useState(false);
 
   const [form, setForm] = useState({
     companyName: "", companyNameAr: "", tradeName: "", email: "", phone: "", mobile: "", website: "",
@@ -72,8 +81,7 @@ export default function SettingsPage() {
           <TabsTrigger value="company"><Building2 className="w-4 h-4 mr-2 hidden sm:inline" />Company</TabsTrigger>
           <TabsTrigger value="finance"><Receipt className="w-4 h-4 mr-2 hidden sm:inline" />Finance</TabsTrigger>
           <TabsTrigger value="appearance"><Palette className="w-4 h-4 mr-2 hidden sm:inline" />Appearance</TabsTrigger>
-          <TabsTrigger value="ai"><Bot className="w-4 h-4 mr-2 hidden sm:inline" />AI</TabsTrigger>
-          <TabsTrigger value="compliance"><Shield className="w-4 h-4 mr-2 hidden sm:inline" />Compliance</TabsTrigger>
+                    <TabsTrigger value="compliance"><Shield className="w-4 h-4 mr-2 hidden sm:inline" />Compliance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="company" className="space-y-4">
@@ -179,9 +187,6 @@ export default function SettingsPage() {
            </Card>
          </TabsContent>
 
-        <TabsContent value="ai" className="space-y-4">
-          <AiSettingsTab />
-        </TabsContent>
 
         <TabsContent value="compliance" className="space-y-4">
           <TaxComplianceSettings />
@@ -190,7 +195,10 @@ export default function SettingsPage() {
 
       <div className="flex justify-end gap-3">
         <Button variant="outline">Reset</Button>
-        <Button onClick={handleSave}>Save Changes</Button>
+        <Button onClick={handleSave} disabled={updateSettings.isPending}>
+          {updateSettings.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+          {saved ? "Saved ✓" : "Save Changes"}
+        </Button>
       </div>
     </div>
   );
@@ -274,89 +282,3 @@ function LayoutThemeCard() {
   );
 }
 
-function AiSettingsTab() {
-  const { data: aiSettings, refetch } = trpc.settings.aiSettingsGet.useQuery();
-  const updateAi = trpc.settings.aiSettingsUpdate.useMutation({ onSuccess: () => refetch() });
-  const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState("gemini-2.0-flash");
-  const [showKey, setShowKey] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (aiSettings) {
-      setModel(aiSettings.aiModel || "gemini-2.0-flash");
-    }
-  }, [aiSettings]);
-
-  const handleSave = () => {
-    updateAi.mutate(
-      { aiApiKey: apiKey || undefined, aiModel: model },
-      { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 3000); } },
-    );
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-emerald-500" />
-          AI Assistant Configuration
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <Label>Gemini API Key</Label>
-          <div className="flex gap-2 mt-1">
-            <div className="relative flex-1">
-              <Input
-                type={showKey ? "text" : "password"}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder={aiSettings?.aiApiKeySet ? "**** (key already set, leave blank to keep)" : "Enter Gemini API key..."}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-              >
-                {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          {aiSettings?.aiApiKeySet && !apiKey && (
-            <p className="text-xs text-emerald-400 mt-1">✓ API key is configured. Enter a new value to change it.</p>
-          )}
-          <p className="text-xs text-slate-500 mt-1">Get your free API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" className="text-emerald-400 underline">aistudio.google.com/apikey</a></p>
-        </div>
-
-        <div>
-          <Label>AI Model</Label>
-          <select
-            value={model}
-            onChange={e => setModel(e.target.value)}
-            className="w-full mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
-          >
-            <option value="gemini-2.0-flash">Gemini 2.0 Flash (fast, default)</option>
-            <option value="gemini-2.5-flash">Gemini 2.5 Flash (latest)</option>
-            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
-          </select>
-          <p className="text-xs text-slate-500 mt-1">Choose which Gemini model to use for AI responses</p>
-        </div>
-
-        <div className="flex items-center gap-3 pt-2">
-          <Button onClick={handleSave} disabled={updateAi.isPending}>
-            {updateAi.isPending ? "Saving..." : "Save AI Settings"}
-          </Button>
-          {saved && (
-            <span className="flex items-center gap-1 text-sm text-emerald-400">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              Saved
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
