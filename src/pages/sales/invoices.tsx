@@ -87,13 +87,8 @@ export default function InvoicesPage() {
       toast.success("Bill created");
       clearCart();
       const newId = data?.id;
-      // Auto-send email if customer email provided — wrapped in try/catch to not break invoice
       if (newId && customerEmail.trim()) {
-        try {
-          emailSend.mutate({ invoiceId: newId, to: customerEmail.trim() });
-        } catch (e) {
-          console.warn("Email auto-send failed:", e);
-        }
+        emailSend.mutate({ invoiceId: newId, to: customerEmail.trim() });
       }
       if (newId) {
         setTimeout(() => openViewInvoice(newId), 400);
@@ -730,7 +725,7 @@ export default function InvoicesPage() {
           <DialogDescription id="invoice-view-desc" className="sr-only">Invoice preview - what you see is what you print</DialogDescription>
           <div className="flex-1 overflow-y-auto bg-slate-100 p-4">
             {detail?.invoice && !invoiceDetail.isPending && (
-              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, companyCr, companyEmail, companyWebsite, currency }} />
+              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, currency }} />
             )}
             {!detail?.invoice && !invoiceDetail.isPending && (
               <div className="py-16 text-center text-slate-400">Loading invoice...</div>
