@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createRouter, authedQuery } from "./middleware";
+import { createRouter, authedMutation } from "./middleware";
 import { getDb } from "./queries/connection";
 import { invoices, invoiceItems, customers, companySettings } from "@db/schema";
 import { eq, and } from "drizzle-orm";
@@ -7,7 +7,7 @@ import { eq, and } from "drizzle-orm";
 export const wordRouter = createRouter({
   generateWord: authedMutation
     .input(z.object({ invoiceId: z.number() }))
-    .query(async ({ input, ctx }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
 
