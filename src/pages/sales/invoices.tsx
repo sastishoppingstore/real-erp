@@ -476,21 +476,21 @@ export default function InvoicesPage() {
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
-  // WhatsApp handler for view dialog
-  const handleWhatsAppFromView = async () => {
+  const handleWhatsAppFromView = () => {
     if (!detail?.invoice) return;
     const inv = detail.invoice;
     const custName = detail.customer?.name || "Walk-in Customer";
     const total = Number(inv.totalAmount || 0).toFixed(2);
     const msg = `*${companyName}*\n*Invoice: ${inv.invoiceNumber}*\nCustomer: ${custName}\nTotal: ${currency} ${total}\nDate: ${inv.date}`;
     const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    try {
-      const { open } = await import("@tauri-apps/api/shell");
-      await open(waUrl);
-    } catch {
-      // Fallback for non-Tauri (web)
-      window.open(waUrl, "_blank");
-    }
+    // Anchor click works in both web and Tauri webview
+    const a = document.createElement("a");
+    a.href = waUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     sendWhatsAppInvoice.mutate({ invoiceId: inv.id });
   };
 
