@@ -59,12 +59,12 @@ export function generateInvoiceHtml(params: {
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Calibri,Arial,sans-serif;background:#f5f5f5;padding:10mm;font-size:11pt}
 .invoice{max-width:800px;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 0 10px rgba(0,0,0,.1)}
-.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3a8a;padding-bottom:15px;margin-bottom:20px;gap:20px}
-.logo-box{width:128px;height:128px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.header{display:table;width:100%;border-bottom:3px solid #1e3a8a;padding-bottom:15px;margin-bottom:20px}
+.logo-box{display:table-cell;width:140px;height:140px;text-align:center;vertical-align:middle}
 .logo-box img{max-width:128px;max-height:128px;object-fit:contain;aspect-ratio:1/1}
-.qr-box{width:128px;height:128px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.qr-box{display:table-cell;width:140px;height:140px;text-align:center;vertical-align:middle}
 .qr-box img{width:128px;height:128px;object-fit:contain;aspect-ratio:1/1}
-.company-center{flex:1;text-align:center;padding:0 15px}
+.company-center{display:table-cell;text-align:center;padding:0 15px;vertical-align:middle}
 .company-center h1{font-size:20pt;color:#A6272C;font-weight:bold;margin-bottom:2px}
 .company-center h2{font-size:14pt;color:#1e3a8a;font-weight:bold;margin-bottom:6px}
 .company-center p{font-size:9.5pt;color:#333;margin:1px 0}
@@ -84,25 +84,27 @@ body{font-family:Calibri,Arial,sans-serif;background:#f5f5f5;padding:10mm;font-s
 .stamp-box{text-align:center;margin-top:15pt}
 .stamp-box img{width:130px;height:130px}
 @media print{
-  body{background:#fff;padding:0;margin:0}
+  body{background:#fff;padding:0;margin:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   .invoice{box-shadow:none;margin:0;padding:10mm;max-width:none}
-  .no-print,.sidebar,.header,.footer,.buttons,button,nav,.dialog-header,.action-bar{display:none!important}
+  header,.invoice-header,img,svg{display:flex!important;visibility:visible!important;opacity:1!important}
+  .no-print,.action-buttons,.sidebar,.buttons,button,nav,.dialog-header,.action-bar{display:none!important}
   @page{size:A4;margin:0}
 }
 </style></head><body>
 <div class="invoice">
 <div class="header">
-  <div class="logo-box">${companyLogo ? `<img src="${companyLogo}" alt="Logo">` : ''}</div>
+  <div class="logo-box">${companyLogo ? `<img src="${companyLogo}" alt="Logo" style="width:128px;height:128px;object-fit:contain"/>` : ''}</div>
   <div class="company-center">
-    <h1>${companyName}</h1>
-    ${companyNameAr ? `<h2>${companyNameAr}</h2>` : ''}
-    ${companyAddress ? `<p>${companyAddress}</p>` : ''}
-    ${companyPhone ? `<p>Phone: ${companyPhone}</p>` : ''}
-    ${companyEmail ? `<p>Email: <span style="color:#0563C1;text-decoration:underline">${companyEmail}</span></p>` : ''}
-    ${companyWebsite ? `<p>Website: ${companyWebsite}</p>` : ''}
-    ${companyVat ? `<p><strong>VAT No:</strong> ${companyVat}</p>` : ''}
-    ${companyCr ? `<p><strong>CR No:</strong> ${companyCr}</p>` : ''}
+    <h1 style="font-size:20pt;color:#A6272C;font-weight:bold;margin:0">${companyName}</h1>
+    ${companyNameAr ? `<h2 style="font-size:14pt;color:#1e3a8a;font-weight:bold;margin:2px 0">${companyNameAr}</h2>` : ''}
+    ${companyAddress ? `<p style="font-size:9.5pt;color:#333;margin:1px 0">${companyAddress}</p>` : ''}
+    ${companyPhone ? `<p style="font-size:9.5pt;color:#333;margin:1px 0">Phone: ${companyPhone}</p>` : ''}
+    ${companyEmail ? `<p style="font-size:9.5pt;color:#0563C1;text-decoration:underline;margin:1px 0">${companyEmail}</p>` : ''}
+    ${companyVat ? `<p style="font-size:9.5pt;color:#333;margin:1px 0"><strong>VAT No:</strong> ${companyVat}</p>` : ''}
+    ${companyCr ? `<p style="font-size:9.5pt;color:#333;margin:1px 0"><strong>CR No:</strong> ${companyCr}</p>` : ''}
   </div>
+  <div class="qr-box"><img src="${qrSrc}" alt="QR" style="width:128px;height:128px;object-fit:contain;aspect-ratio:1/1"/></div>
+</div>
   <div class="qr-box"><img src="${qrSrc}" alt="QR"></div>
 </div>
 <div class="title-bar">فاتورة ضريبية - TAX INVOICE</div>
@@ -189,8 +191,10 @@ ${note || noteAr ? `<div style="margin-top:15pt;padding:12pt;background:#f9f9ff;
   ${noteAr ? `<div style="direction:rtl;text-align:right;font-size:13pt;margin-top:4pt">ملاحظات: ${noteAr}</div>` : ''}
   ${note ? `<div style="font-size:13pt">Notes: ${note}</div>` : ''}
 </div>` : ''}
-<div class="footer-band">Website: ${companyWebsite || ''}</div>
-${companyStamp ? `<div class="stamp-box"><img src="${companyStamp}" alt="Stamp"></div>` : ''}
+<div class="footer-band" style="background:#6B7280;text-align:center;padding:6pt;margin-top:20pt;font-size:9.5pt;color:#fff;font-weight:normal">
+  Website: ${companyWebsite || ''}
+</div>
+${companyStamp ? `<div class="stamp-box" style="text-align:center;margin-top:15pt"><img src="${companyStamp}" alt="Stamp" style="width:130px;height:130px;object-fit:contain;border-radius:50%"/></div>` : ''}
 </div>
 <script>window.onload=function(){window.print();}</script></body></html>`;
 }
