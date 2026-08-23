@@ -9,24 +9,31 @@ export function generateInvoiceHtml(params: {
   companyAddress?: string;
   companyPhone?: string;
   companyVat?: string;
+  companyCr?: string;
+  companyEmail?: string;
+  companyWebsite?: string;
   currency: string;
   taxPercent: string;
   note?: string;
+  noteAr?: string;
   pSub: number;
   pDisc: number;
   pVat: number;
   pTotal: number;
   pCustName: string;
+  pCustNameAr?: string;
   pCustPhone: string;
   pCustAddr: string;
+  pCustAddrAr?: string;
   pCustVat: string;
+  pCustCr?: string;
   pType: string;
-  printItems: Array<{ no: number; name: string; qty: number; rate: number; total: number }>;
+  printItems: Array<{ no: number; name: string; nameAr?: string; qty: number; rate: number; total: number }>;
 }) {
   const {
-    companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat,
-    currency, taxPercent, note, pSub, pDisc, pVat, pTotal,
-    pCustName, pCustPhone, pCustAddr, pCustVat, pType, printItems
+    companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, companyCr, companyEmail, companyWebsite,
+    currency, taxPercent, note, noteAr, pSub, pDisc, pVat, pTotal,
+    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType, printItems
   } = params;
 
   const qrPayload = JSON.stringify({
@@ -60,6 +67,9 @@ tr:nth-child(even){background:#f9f9ff}
 .total-row.grand{background:linear-gradient(135deg,#1d4ed8,#1e3a8a);color:#fff;font-weight:900;font-size:18px;border-radius:5px;margin-top:10px}
 .qr-section{text-align:center;margin:15px 0;padding:15px;border:1px dashed #ccc;border-radius:5px}
 .qr-section p{font-size:11px;color:#666;margin-top:5px}
+.notes{margin-top:15px;padding:12px;background:#f9f9ff;border-radius:5px;border:1px solid #e5e7eb}
+.notes-ar{direction:rtl;text-align:right;font-size:13px;color:#374151;margin-top:6px}
+.notes-en{font-size:13px;color:#374151}
 .footer{margin-top:20px;text-align:center;padding:15px;border-top:2px solid #ddd;font-size:16px;font-weight:700;color:#1e3a8a}
 @media print{body{background:#fff;padding:0}.invoice{box-shadow:none;margin:0}}
 </style></head><body>
@@ -69,8 +79,11 @@ tr:nth-child(even){background:#f9f9ff}
 <h1>${companyName}</h1>${companyNameAr ? `<h2>${companyNameAr}</h2>` : ''}
 ${companyLogo ? `<img src="${companyLogo}" style="max-width:60px;max-height:40px">` : ''}
 ${companyAddress ? `<div class="info-line">${companyAddress}</div>` : ''}
-${companyPhone ? `<div class="info-line">${companyPhone}</div>` : ''}
-${companyVat ? `<div class="info-line"><strong>VAT: ${companyVat}</strong></div>` : ''}
+${companyPhone ? `<div class="info-line">Phone: ${companyPhone}</div>` : ''}
+${companyEmail ? `<div class="info-line">Email: ${companyEmail}</div>` : ''}
+${companyWebsite ? `<div class="info-line">Website: ${companyWebsite}</div>` : ''}
+${companyVat ? `<div class="info-line"><strong>VAT No:</strong> ${companyVat}</div>` : ''}
+${companyCr ? `<div class="info-line"><strong>CR No:</strong> ${companyCr}</div>` : ''}
 </div>
 <div class="qr-section" style="width:120px">
 <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" style="width:100px;height:100px">
@@ -80,13 +93,15 @@ ${companyVat ? `<div class="info-line"><strong>VAT: ${companyVat}</strong></div>
 <div class="title">TAX INVOICE / فاتورة ضريبية<span class="badge">${pType === 'zatca' ? 'ZATCA' : 'Standard'}</span></div>
 <div class="customer">
 <h3>Customer / العميل</h3>
-<p><strong>${pCustName}</strong></p>
+<p><strong>${pCustName}</strong>${pCustNameAr ? ` / ${pCustNameAr}` : ''}</p>
 ${pCustPhone ? `<p>Phone: ${pCustPhone}</p>` : ''}
 ${pCustAddr ? `<p>Address: ${pCustAddr}</p>` : ''}
-${pCustVat ? `<p>VAT: ${pCustVat}</p>` : ''}
+${pCustAddrAr ? `<p style="direction:rtl;text-align:right">العنوان: ${pCustAddrAr}</p>` : ''}
+${pCustVat ? `<p><strong>VAT No / الرقم الضريبي:</strong> ${pCustVat}</p>` : ''}
+${pCustCr ? `<p><strong>CR No:</strong> ${pCustCr}</p>` : ''}
 </div>
-<table><thead><tr><th>#</th><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
-${printItems.map(i => `<tr><td>${i.no}</td><td>${i.name}</td><td>${i.qty}</td><td>${i.rate.toFixed(2)}</td><td>${i.total.toFixed(2)}</td></tr>`).join('')}
+<table><thead><tr><th>#</th><th>Description / الوصف</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
+${printItems.map(i => `<tr><td>${i.no}</td><td>${i.name}${i.nameAr ? `<br/><span style="direction:rtl;font-size:11px;color:#555">${i.nameAr}</span>` : ''}</td><td>${i.qty}</td><td>${i.rate.toFixed(2)}</td><td>${i.total.toFixed(2)}</td></tr>`).join('')}
 </tbody></table>
 <div class="totals">
 <div class="total-row"><span>Subtotal:</span><span>${currency} ${pSub.toFixed(2)}</span></div>
@@ -94,7 +109,7 @@ ${pDisc > 0 ? `<div class="total-row"><span>Discount:</span><span>-${currency} $
 <div class="total-row"><span>VAT ${taxPercent}%:</span><span>${currency} ${pVat.toFixed(2)}</span></div>
 <div class="total-row grand"><span>TOTAL:</span><span>${currency} ${pTotal.toFixed(2)}</span></div>
 </div>
-${note ? `<div style="margin-top:15px;padding:10px;background:#f9f9ff;border-radius:5px;font-size:13px"><strong>Note:</strong> ${note}</div>` : ''}
+${note || noteAr ? `<div class="notes">${noteAr ? `<div class="notes-ar">ملاحظات: ${noteAr}</div>` : ''}${note ? `<div class="notes-en">Notes: ${note}</div>` : ''}</div>` : ''}
 <div class="footer">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:15px">
     <div>${companyStamp ? `<img src="${companyStamp}" style="max-width:80px;max-height:80px;opacity:0.8">` : ''}</div>
