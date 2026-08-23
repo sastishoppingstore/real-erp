@@ -454,25 +454,43 @@ export default function InvoicesPage() {
     }
   };
 
+  // Excel export function
+  const handleExcelExport = (inv: any) => {
+    if (!inv) return;
+    const items = detail?.items || [];
+    let csv = "Sr No,Job Description,Qty,Rate,Total\n";
+    items.forEach((it: any, i: number) => {
+      csv += `${i + 1},"${it.description || ''}",${it.quantity || 1},${it.unitPrice || 0},${it.totalAmount || 0}\n`;
+    });
+    csv += `\n,,,"Subtotal",${inv.subTotal || 0}\n`;
+    csv += `,,,"VAT (${inv.taxPercent || 15}%)",${inv.taxAmount || 0}\n`;
+    csv += `,,,"TOTAL",${inv.totalAmount || 0}\n`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice-${inv.invoiceNumber}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
+
   // WhatsApp handler for view dialog
-  const handleWhatsAppFromView = () => {
+  const handleWhatsAppFromView = async () => {
     if (!detail?.invoice) return;
     const inv = detail.invoice;
     const custName = detail.customer?.name || "Walk-in Customer";
     const total = Number(inv.totalAmount || 0).toFixed(2);
     const msg = `*${companyName}*\n*Invoice: ${inv.invoiceNumber}*\nCustomer: ${custName}\nTotal: ${currency} ${total}\nDate: ${inv.date}`;
-    const phone = detail.customer?.phone || companyPhone;
-    const waUrl = phone
-      ? `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`
-      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    // Tauri/desktop: use hidden anchor click (window.open blocked in webview)
-    const a = document.createElement("a");
-    a.href = waUrl;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    try {
+      const { open } = await import("@tauri-apps/api/shell");
+      await open(waUrl);
+    } catch {
+      // Fallback for non-Tauri (web)
+      window.open(waUrl, "_blank");
+    }
     sendWhatsAppInvoice.mutate({ invoiceId: inv.id });
   };
 
@@ -734,8 +752,8 @@ export default function InvoicesPage() {
               <Button size="sm" variant="default" onClick={handlePrint} disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} title="Print A4 PDF">
                 📄 A4 Print
               </Button>
-              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} onClick={() => detail?.invoice && thermalPrint.mutate({ invoiceId: detail.invoice.id, format: "80mm" })} title="Print 80mm Thermal Receipt">
-                🖨️ Thermal
+              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice} onClick={() => detail?.invoice && handleExcelExport(detail.invoice)} title="Export Excel">
+                📊 Excel
               </Button>
               <Button size="sm" variant="outline" onClick={() => detail?.invoice && loadInvoiceForEdit(detail.invoice.id)} disabled={invoiceDetail.isPending || !detail?.invoice}>
                 <Pencil className="h-4 w-4 mr-1" /> Edit
