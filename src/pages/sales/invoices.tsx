@@ -92,13 +92,9 @@ export default function InvoicesPage() {
         setTimeout(() => openViewInvoice(newId), 400);
       }
     },
-    onError: (error) => {
-      const msg = error?.message || "Unknown error";
-      if (msg.includes("NetworkError") || msg.includes("fetch") || msg.includes("Failed to fetch")) {
-        toast.error("Network error or server unreachable. Please check your connection.");
-      } else {
-        toast.error(msg);
-      }
+    onError: (error: any) => {
+      const errorMsg = error?.response?.data?.message || error?.message || "Network or Server Error";
+      toast.error(errorMsg);
     },
   });
   const updateInvoice = trpc.sales.invoiceUpdate.useMutation({
@@ -107,13 +103,9 @@ export default function InvoicesPage() {
       queryClient.invalidateQueries({ queryKey: [['sales', 'invoiceGet']] });
       toast.success("Invoice updated");
     },
-    onError: (error) => {
-      const msg = error?.message || "Unknown error";
-      if (msg.includes("NetworkError") || msg.includes("fetch") || msg.includes("Failed to fetch")) {
-        toast.error("Network error or server unreachable. Please check your connection.");
-      } else {
-        toast.error(msg);
-      }
+    onError: (error: any) => {
+      const errorMsg = error?.response?.data?.message || error?.message || "Network or Server Error";
+      toast.error(errorMsg);
     },
   });
   const deleteInvoiceMut = trpc.sales.invoiceDelete.useMutation({
@@ -348,37 +340,40 @@ export default function InvoicesPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!cart.length) { toast.error("Add at least one item to the cart"); return; }
-    // customerName is optional - walk-in customer is used if not provided
-    const effectiveCustomerName = customerName.trim() || "Walk-in Customer";
-    const items = cart.map(item => ({
-      description: `[${item.id}] ${item.name}`,
-      quantity: item.qty,
-      unitPrice: item.price.toString(),
-      taxPercent: taxPercent.toString(),
-      totalAmount: (item.price * item.qty).toFixed(2),
-      unit: item.unit || "pcs", sku: item.sku,
-    }));
-    const payload = {
-      invoiceNumber: `BILL-${Date.now().toString().slice(-6)}`,
-      customerId: customerId || 0,
-      customerName: customerName.trim() || undefined,
-      customerNameAr: customerNameAr.trim() || undefined,
-      customerPhone: customerPhone.trim() || undefined,
-      customerAddress: customerAddress.trim() || undefined,
-      customerAddressAr: customerAddressAr.trim() || undefined,
-      customerVat: customerVat.trim() || undefined,
-      customerCr: customerCr.trim() || undefined,
-      date: new Date().toISOString().slice(0, 10), dueDate: "",
-      invoiceType: invoiceTypeMode, invoiceMode: "product" as InvoiceMode,
-      subTotal: subtotal.toFixed(2), taxAmount: vat.toFixed(2),
-      taxPercent: taxPercent.toString(), totalAmount: total.toFixed(2),
-      discountAmount: discount.toString(), taxableAmount: taxable.toFixed(2),
-      notes: note, notesAr: noteAr, items,
-    };
-    if (editingInvoiceId) {
-      updateInvoice.mutate({ id: editingInvoiceId, ...payload });
-    } else {
-      createInvoice.mutate(payload);
+    try {
+      const items = cart.map(item => ({
+        description: `[${item.id}] ${item.name}`,
+        quantity: item.qty,
+        unitPrice: item.price.toString(),
+        taxPercent: taxPercent.toString(),
+        totalAmount: (item.price * item.qty).toFixed(2),
+        unit: item.unit || "pcs", sku: item.sku,
+      }));
+      const payload = {
+        invoiceNumber: `BILL-${Date.now().toString().slice(-6)}`,
+        customerId: customerId || 0,
+        customerName: customerName.trim() || undefined,
+        customerNameAr: customerNameAr.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        customerAddress: customerAddress.trim() || undefined,
+        customerAddressAr: customerAddressAr.trim() || undefined,
+        customerVat: customerVat.trim() || undefined,
+        customerCr: customerCr.trim() || undefined,
+        date: new Date().toISOString().slice(0, 10), dueDate: "",
+        invoiceType: invoiceTypeMode, invoiceMode: "product" as InvoiceMode,
+        subTotal: subtotal.toFixed(2), taxAmount: vat.toFixed(2),
+        taxPercent: taxPercent.toString(), totalAmount: total.toFixed(2),
+        discountAmount: discount.toString(), taxableAmount: taxable.toFixed(2),
+        notes: note, notesAr: noteAr, items,
+      };
+      if (editingInvoiceId) {
+        updateInvoice.mutate({ id: editingInvoiceId, ...payload });
+      } else {
+        createInvoice.mutate(payload);
+      }
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.message || error?.message || "Network or Server Error";
+      toast.error(errorMsg);
     }
   };
 
@@ -504,7 +499,7 @@ export default function InvoicesPage() {
   const selectedInvoiceId = detail?.invoice?.id;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen w-full flex flex-col overflow-hidden">
       <div className="p-4 border-b bg-white flex-none">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -579,7 +574,7 @@ export default function InvoicesPage() {
           </div>
 
           {/* Center: Products */}
-          <div className="flex-1 p-4 overflow-y-auto min-h-0">
+          <div className="flex-1 p-4 overflow-y-auto min-h-0 pb-32">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-slate-500 uppercase">Products / المنتجات</h3>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setAddItemDialogOpen(true); }}>
@@ -622,12 +617,17 @@ export default function InvoicesPage() {
                 </div>
               ))}
             </div>
-            {/* Fixed Footer with Totals + Create Bill Button */}
-            <div className="flex-none border-t pt-3 mt-2 space-y-1 text-xs bg-white sticky bottom-0 z-10">
-              <div className="flex justify-between"><span>Subtotal:</span><span>{currency} {subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>VAT ({taxPercent}%):</span><span>{currency} {vat.toFixed(2)}</span></div>
-              <div className="flex justify-between font-bold text-sm"><span>TOTAL:</span><span>{currency} {total.toFixed(2)}</span></div>
-              <Button className="w-full mt-3" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0}>
+          </div>
+
+          {/* Fixed Footer with Totals + Create Bill Button */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
+            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex gap-6 text-xs">
+                <div><span className="text-slate-500">Subtotal:</span> <span className="font-semibold">{currency} {subtotal.toFixed(2)}</span></div>
+                <div><span className="text-slate-500">VAT ({taxPercent}%):</span> <span className="font-semibold">{currency} {vat.toFixed(2)}</span></div>
+                <div className="text-sm font-bold"><span className="text-slate-500">TOTAL:</span> {currency} {total.toFixed(2)}</div>
+              </div>
+              <Button onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0} className="shrink-0">
                 <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
               </Button>
             </div>

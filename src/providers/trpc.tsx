@@ -40,9 +40,9 @@ function handleUnauthorized() {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: (failureCount, error) => {
+      retry: (failureCount, error: any) => {
         if (error instanceof TRPCClientError) {
-          const statusCode = error.data?.httpStatus ?? error.cause?.status;
+          const statusCode = error?.data?.httpStatus ?? error?.cause?.status;
           if (statusCode === 401) return false;
         }
         return failureCount < 2;
@@ -50,9 +50,9 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
     },
     mutations: {
-      onError: (error) => {
+      onError: (error: any) => {
         if (error instanceof TRPCClientError) {
-          const statusCode = error.data?.httpStatus ?? error.cause?.status;
+          const statusCode = error?.data?.httpStatus ?? error?.cause?.status;
           if (statusCode === 401) {
             handleUnauthorized();
           }
@@ -63,9 +63,9 @@ const queryClient = new QueryClient({
   queryCache: undefined,
 });
 
-queryClient.getQueryCache().config.onError = (error) => {
+queryClient.getQueryCache().config.onError = (error: any) => {
   if (error instanceof TRPCClientError) {
-    const statusCode = error.data?.httpStatus ?? error.cause?.status;
+    const statusCode = error?.data?.httpStatus ?? error?.cause?.status;
     if (statusCode === 401) {
       handleUnauthorized();
     }
@@ -89,13 +89,16 @@ export const trpcClient = trpc.createClient({
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
-        }).catch((err) => {
-          // Network failure — return a synthetic Response so tRPC can parse it
-          // instead of throwing "Cannot read properties of undefined (reading 'headers')"
-          if (!err || typeof err !== "object") {
-            throw err;
+        }).then((response) => {
+          // Tauri/desktop fix: ensure response has a valid .headers object
+          // before tRPC's httpBatchLink tries to read batch headers
+          if (!response || typeof response?.headers === "undefined") {
+            throw new Error("Network or Server Error");
           }
-          throw err;
+          return response;
+        }).catch((err: any) => {
+          const errorMsg = err?.message || err?.response?.data?.message || "Network or Server Error";
+          throw new Error(errorMsg);
         });
       },
     }),
