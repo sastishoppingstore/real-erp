@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "YASCO ERP",
-        "url": "https://yasco.tech/app",
+        "url": "http://127.0.0.1:32145/app",
         "width": 1440,
         "height": 900,
         "minWidth": 1024,
@@ -26,7 +26,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; connect-src 'self' https: ws: wss:"
+      "csp": null
     }
   },
   "bundle": {
