@@ -74,7 +74,12 @@ tr:nth-child(even){background:#f9f9ff}
 .stamp-box{width:80px;height:80px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0.85}
 .stamp-box img{max-width:80px;max-height:80px;object-fit:contain;border-radius:50%}
 .footer{margin-top:20px;text-align:center;padding:15px;border-top:2px solid #ddd;font-size:16px;font-weight:700;color:#1e3a8a}
-@media print{body{background:#fff;padding:0}.invoice{box-shadow:none;margin:0}}
+@media print{
+  body{background:#fff;padding:0;margin:0}
+  .invoice{box-shadow:none;margin:0;padding:10mm;max-width:none}
+  .no-print,.sidebar,.header,.footer,.buttons,button,nav,.dialog-header,.action-bar{display:none!important}
+  @page{size:A4;margin:0}
+}
 </style></head><body>
 <div class="invoice">
 <div class="header">

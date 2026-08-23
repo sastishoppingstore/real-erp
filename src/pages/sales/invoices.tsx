@@ -422,20 +422,36 @@ export default function InvoicesPage() {
       pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType, printItems
     });
 
-    // Open print window via Blob URL (most reliable cross-browser)
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, "_blank");
-    if (!win) {
-      // Fallback
+    // Tauri/desktop fix: use hidden iframe for printing instead of window.open
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 500);
+    } else {
+      // Fallback for Tauri: create blob and write to temp file
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.target = "_blank";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     }
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
   // WhatsApp handler for view dialog
@@ -446,11 +462,17 @@ export default function InvoicesPage() {
     const total = Number(inv.totalAmount || 0).toFixed(2);
     const msg = `*${companyName}*\n*Invoice: ${inv.invoiceNumber}*\nCustomer: ${custName}\nTotal: ${currency} ${total}\nDate: ${inv.date}`;
     const phone = detail.customer?.phone || companyPhone;
-    if (phone) {
-      window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
-    } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-    }
+    const waUrl = phone
+      ? `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    // Tauri/desktop: use hidden anchor click (window.open blocked in webview)
+    const a = document.createElement("a");
+    a.href = waUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     sendWhatsAppInvoice.mutate({ invoiceId: inv.id });
   };
 
