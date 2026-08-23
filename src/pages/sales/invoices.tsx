@@ -503,58 +503,9 @@ export default function InvoicesPage() {
   const handleWordExport = async (inv: any) => {
     if (!inv) return;
     try {
-      const { generateInvoiceDocx } = await import("@/lib/wordExport");
-      const { Packer } = await import("docx");
-      
-      const items = (detail?.items || []).map((it: any, i: number) => ({
-        no: i + 1,
-        name: it.description || "",
-        nameAr: it.descriptionAr || "",
-        unit: it.unit || "Hour",
-        totalHour: Number(it.quantity || 1),
-        rate: Number(it.unitPrice || 0),
-        total: Number(it.totalAmount || 0),
-      }));
-
-      const doc = await generateInvoiceDocx({
-        companyName: companyName || "YAFCO AL ARABIAH EST.",
-        companyNameAr: companyNameAr || "مؤسسة يافكو العربية",
-        companyLogo: companyLogo,
-        companyAddress: companyAddress || "Saudi Arabia - Yanbu Al Bahr - P.O.Box: 2326",
-        companyPhone: "",
-        companyVat: companyVat || "300995897900003",
-        companyCr: companyCr || "4700012896",
-        companyEmail: companyEmail || "info@yafco.com.sa",
-        companyWebsite: companyWebsite || "www.yafco.com.sa",
-        currency: currency || "SAR",
-        taxPercent: inv.taxPercent || "15",
-        customerName: detail?.customer?.name || inv.customerName || "Walk-in Customer",
-        customerNameAr: detail?.customer?.nameAr || inv.customerNameAr || "",
-        customerVat: detail?.customer?.vatNumber || inv.customerVat || "",
-        customerCr: detail?.customer?.crNumber || inv.customerCr || "",
-        customerAddress: detail?.customer?.address || inv.customerAddress || "",
-        customerAddressAr: detail?.customer?.addressAr || inv.customerAddressAr || "",
-        customerEmail: detail?.customer?.email || inv.customerEmail || "",
-        customerPhone: detail?.customer?.phone || inv.customerPhone || "",
-        customerPo: inv.poNumber || "",
-        invoiceNo: inv.invoiceNumber,
-        workedMonth: inv.workedMonth || "",
-        paymentType: inv.paymentType || "Credit",
-        cashier: inv.cashier || "مدير النظام",
-        date: inv.date || "",
-        time: inv.time || "",
-        dueDate: inv.dueDate || "",
-        poNumber: inv.poNumber || "",
-        subtotal: Number(inv.subTotal || 0),
-        vatTotal: Number(inv.taxAmount || 0),
-        grandTotal: Number(inv.totalAmount || 0),
-        dueInWords: inv.dueInWords || "",
-        notes: inv.notes || "",
-        notesAr: (inv as any).notesAr || "",
-        items,
-      });
-
-      const blob = await Packer.toBlob(doc);
+      const res = await fetch(`/api/word-export/${inv.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to generate Word document");
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
