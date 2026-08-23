@@ -454,26 +454,76 @@ export default function InvoicesPage() {
     }
   };
 
-  // Excel export function
-  const handleExcelExport = (inv: any) => {
+  // Word (.docx) export function - pixel-perfect replica of PDF
+  const handleWordExport = async (inv: any) => {
     if (!inv) return;
-    const items = detail?.items || [];
-    let csv = "Sr No,Job Description,Qty,Rate,Total\n";
-    items.forEach((it: any, i: number) => {
-      csv += `${i + 1},"${it.description || ''}",${it.quantity || 1},${it.unitPrice || 0},${it.totalAmount || 0}\n`;
-    });
-    csv += `\n,,,"Subtotal",${inv.subTotal || 0}\n`;
-    csv += `,,,"VAT (${inv.taxPercent || 15}%)",${inv.taxAmount || 0}\n`;
-    csv += `,,,"TOTAL",${inv.totalAmount || 0}\n`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Invoice-${inv.invoiceNumber}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    try {
+      const { generateInvoiceDocx } = await import("@/lib/wordExport");
+      const { Packer } = await import("docx");
+      
+      const items = (detail?.items || []).map((it: any, i: number) => {
+        const totalHour = Number(it.quantity || 1);
+        const rate = Number(it.unitPrice || 0);
+        const total = Number(it.totalAmount || 0);
+        const vat = total * 0.15;
+        return {
+          no: i + 1,
+          description: it.description || "",
+          descriptionAr: "",
+          unit: "Hour",
+          totalHour,
+          rate,
+          total,
+          vat,
+          grandTotal: total + vat,
+        };
+      });
+
+      const doc = await generateInvoiceDocx({
+        companyName: companyName || "Company",
+        companyNameAr: companyNameAr || "",
+        companyLogo: companyLogo,
+        companyAddress: companyAddress || "",
+        companyAddressAr: "",
+        companyPhone: "",
+        companyEmail: companyEmail || "",
+        companyWebsite: companyWebsite || "",
+        companyVat: companyVat || "",
+        companyCr: "",
+        companyStamp: companyStamp,
+        customerName: detail?.customer?.name || "Walk-in Customer",
+        customerNameAr: detail?.customer?.nameAr || "",
+        customerVat: detail?.customer?.vatNumber || "",
+        customerCr: detail?.customer?.crNumber || "",
+        customerAddress: detail?.customer?.address || "",
+        invoiceNo: inv.invoiceNumber,
+        workedMonth: inv.workedMonth || "",
+        paymentType: inv.paymentType || "Credit",
+        cashier: inv.cashier || "مدير النظام",
+        date: inv.date || "",
+        time: inv.time || new Date().toLocaleTimeString(),
+        dueDate: inv.dueDate || "",
+        poNumber: inv.poNumber || "",
+        items,
+        subtotal: Number(inv.subTotal || 0),
+        vatTotal: Number(inv.taxAmount || 0),
+        grandTotal: Number(inv.totalAmount || 0),
+        dueInWords: "",
+        vatPercent: Number(inv.taxPercent || 15),
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Invoice-${inv.invoiceNumber}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e: any) {
+      toast.error("Word export failed: " + e.message);
+    }
   };
 
   const handleWhatsAppFromView = () => {
@@ -752,8 +802,8 @@ export default function InvoicesPage() {
               <Button size="sm" variant="default" onClick={handlePrint} disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} title="Print A4 PDF">
                 📄 A4 Print
               </Button>
-              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice} onClick={() => detail?.invoice && handleExcelExport(detail.invoice)} title="Export Excel">
-                📊 Excel
+              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice} onClick={() => detail?.invoice && handleWordExport(detail.invoice)} title="Export to Word">
+                📝 Word
               </Button>
               <Button size="sm" variant="outline" onClick={() => detail?.invoice && loadInvoiceForEdit(detail.invoice.id)} disabled={invoiceDetail.isPending || !detail?.invoice}>
                 <Pencil className="h-4 w-4 mr-1" /> Edit
