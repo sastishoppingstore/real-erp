@@ -173,7 +173,7 @@ ${poNum ? `<b>PO :</b> ${poNum}` : ""}
 <td width="48%" valign="top" style="font-size:9pt;line-height:150%;padding-left:5pt;">
 <b>Client :</b>&nbsp;<br/>${custName}${custNameAr ? `, <span dir="rtl">${custNameAr}</span>` : ""}<br/>
 ${custVat ? `<b>Tax No.</b> ${custVat}<br/>` : ""}
-${custAddress ? `${custAddress}<br/>` : ""}
+${custAddr ? `${custAddr}<br/>` : ""}
 ${custCr ? `<b>CR </b>${custCr}` : ""}
 </td>
 </tr>
