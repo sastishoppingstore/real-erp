@@ -33,6 +33,7 @@ import { taskRouter } from "./taskRouter";
 import { notificationRouter } from "./notificationRouter";
 import { emailRouter } from "./emailRouter";
 import { wordRouter } from "./wordRouter";
+import { excelRouter } from "./excelRouter";
 import { syncRouter } from "./syncRouter";
 import { syncEnhancedRouter } from "./syncEnhancedRouter";
 import { licenseRouter } from "./licenseRouter";
@@ -122,6 +123,7 @@ export const appRouter = createRouter({
   notifications2: notificationRouter,
   emails: emailRouter,
 word: wordRouter,
+  excel: excelRouter,
   sync: syncRouter,
   syncEnhanced: syncEnhancedRouter,
   license: licenseRouter,

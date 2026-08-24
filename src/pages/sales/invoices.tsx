@@ -501,15 +501,14 @@ export default function InvoicesPage() {
     }
   };
 
-  // Word (.docx) export function - calls backend tRPC endpoint
-  const handleWordExport = async (inv: any) => {
+  // Excel (.xlsx) export function - calls backend tRPC endpoint
+  const handleExcelExport = async (inv: any) => {
     if (!inv || !inv.id) {
-      console.error("[WordExport] No invoice or missing ID:", inv);
       toast.error("No invoice selected for export");
       return;
     }
     try {
-      const res = await fetch("/api/trpc/word.generateWord", {
+      const res = await fetch("/api/trpc/excel.generateExcel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -517,28 +516,29 @@ export default function InvoicesPage() {
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error("[WordExport] HTTP error:", res.status, errText);
+        console.error("[ExcelExport] HTTP error:", res.status, errText);
         throw new Error(`Server returned ${res.status}`);
       }
       const data = await res.json();
-      // tRPC response can be { result: { data: { json: { html, invoiceNo } } } }
-      const html = data?.result?.data?.json?.html;
-      if (!html || typeof html !== "string" || html.length < 100) {
-        throw new Error("No valid HTML content in response");
-      }
-      const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"></head><body>${html}</body></html>`;
-      const blob = new Blob(["\ufeff", wordHtml], { type: "application/msword;charset=utf-8;" });
+      // tRPC response format: { result: { data: { json: { buffer_base64, invoiceNo } } } }
+      const bufferBase64 = data?.result?.data?.json?.buffer_base64;
+      if (!bufferBase64) throw new Error("No file content in response");
+      // Convert base64 to blob
+      const binaryStr = atob(bufferBase64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Invoice-${inv.invoiceNumber || inv.id}.doc`;
+      a.download = `Invoice-${inv.invoiceNumber || inv.id}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (e: any) {
-      console.error("[WordExport] Error:", e);
-      toast.error("Word export failed: " + (e?.message || "Unknown error"));
+      console.error("[ExcelExport] Error:", e);
+      toast.error("Excel export failed: " + (e?.message || "Unknown error"));
     }
   };
 
@@ -841,8 +841,8 @@ export default function InvoicesPage() {
               <Button size="sm" variant="default" onClick={handlePrint} disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} title="Print A4 PDF">
                 📄 A4 Print
               </Button>
-              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice} onClick={() => detail?.invoice && handleWordExport(detail.invoice)} title="Export to Word">
-                📝 Word
+              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice} onClick={() => detail?.invoice && handleExcelExport(detail.invoice)} title="Export to Excel">
+                📊 Excel
               </Button>
               <Button size="sm" variant="outline" onClick={() => detail?.invoice && loadInvoiceForEdit(detail.invoice.id)} disabled={invoiceDetail.isPending || !detail?.invoice}>
                 <Pencil className="h-4 w-4 mr-1" /> Edit
