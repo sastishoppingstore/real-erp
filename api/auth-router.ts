@@ -1,5 +1,29 @@
 import * as cookie from "cookie";
 import crypto from "node:crypto";
+
+// Desktop apps use scrypt; portal users use simple hash — verify both
+function verifyTenantPassword(password: string, stored: string): boolean {
+  if (!password || !stored) return false;
+  try {
+    if (stored.startsWith("scrypt$")) {
+      const [, salt, hash] = stored.split("$");
+      const candidate = crypto.scryptSync(password, salt, 64).toString("hex");
+      return candidate === hash;
+    }
+    if (stored.startsWith("pbkdf2_sha256$")) {
+      const parts = stored.split("$");
+      const salt = parts[1];
+      const hash = parts[2];
+      const candidate = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha256").toString("base64");
+      return candidate === hash;
+    }
+    // Simple hash fallback (for dev/test)
+    const hash = crypto.createHash("sha256").update(password).digest("hex");
+    return hash === stored;
+  } catch {
+    return false;
+  }
+}
 import { z } from "zod";
 import { Session } from "@contracts/constants";
 import { getSessionCookieOptions } from "./lib/cookies";
@@ -110,28 +134,47 @@ export const authRouter = createRouter({
     .mutation(async ({ input, ctx }) => {
       requireDesktopLicense(ctx.req.headers);
       const username = normalizeUsername(input.username);
+      const emailNorm = normalizeEmail(input.username);
+
+      // 1) Check super admin first (env-based)
       const expectedUsername = normalizeUsername(env.adminUsername);
       const validUsername = timingSafeEqualString(username, expectedUsername);
       const validPassword = timingSafeEqualString(input.password, env.adminPassword);
-
-      if (!validUsername || !validPassword) {
-        throw new Error("Invalid username or password.");
+      if (validUsername && validPassword) {
+        const unionId = `local:${expectedUsername}`;
+        const user = await ensureLocalUser({
+          unionId,
+          name: "YASCO Super Admin",
+          email: env.adminEmail || undefined,
+          role: "super_admin",
+        });
+        const token = await signSessionToken({ unionId, clientId: env.appId || LOCAL_CLIENT_ID });
+        await setLocalSession(ctx, unionId);
+        return { success: true, user, token };
       }
 
-      const unionId = `local:${expectedUsername}`;
-      const isSuperAdmin = true;
-      const user = await ensureLocalUser({
-        unionId,
-        name: isSuperAdmin ? "YASCO Super Admin" : "YASCO Admin",
-        email: env.adminEmail || undefined,
-        role: isSuperAdmin ? "super_admin" : "admin",
-      });
-      const token = await signSessionToken({
-        unionId,
-        clientId: env.appId || LOCAL_CLIENT_ID,
-      });
-      await setLocalSession(ctx, unionId);
-      return { success: true, user, token };
+      // 2) Check tenant user from database
+      const db = getDb();
+      const [tenantUser] = await db.select().from(schema.users)
+        .where((eq(schema.users.username, username) as any) || (eq(schema.users.email, emailNorm) as any))
+        .limit(1);
+
+      if (tenantUser && tenantUser.passwordEncrypted && verifyTenantPassword(input.password, tenantUser.passwordEncrypted)) {
+        const unionId = `email:${tenantUser.email}`;
+        const user = {
+          id: tenantUser.id,
+          tenantId: tenantUser.tenantId,
+          unionId,
+          name: tenantUser.name,
+          email: tenantUser.email,
+          role: tenantUser.role,
+        };
+        const token = await signSessionToken({ unionId, clientId: env.appId || LOCAL_CLIENT_ID });
+        await setLocalSession(ctx, unionId);
+        return { success: true, user, token };
+      }
+
+      throw new Error("Invalid username or password.");
     }),
 
   requestEmailOtp: publicQuery
