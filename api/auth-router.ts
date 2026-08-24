@@ -36,7 +36,7 @@ import { signSessionToken } from "./lib/session";
 import { findUserByUnionId, upsertUser } from "./queries/users";
 import { getDb } from "./queries/connection";
 import * as schema from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { createRouter, authedQuery, publicQuery } from "./middleware";
 import { templateEngine } from "./lib/notifications/templates";
 
@@ -156,7 +156,7 @@ export const authRouter = createRouter({
       // 2) Check tenant user from database
       const db = getDb();
       const [tenantUser] = await db.select().from(schema.users)
-        .where((eq(schema.users.username, username) as any) || (eq(schema.users.email, emailNorm) as any))
+        .where(or(eq(schema.users.username, username), eq(schema.users.email, emailNorm)))
         .limit(1);
 
       if (tenantUser && tenantUser.passwordEncrypted && verifyTenantPassword(input.password, tenantUser.passwordEncrypted)) {
