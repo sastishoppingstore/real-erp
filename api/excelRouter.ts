@@ -12,6 +12,7 @@ const GRAY_FILL = { type: "pattern" as const, pattern: "solid" as const, fgColor
 const BLUE_GRAY_FILL = { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFDCE6F1" } };
 const FONT_ARABIC = { name: "Calibri", size: 10 };
 const FONT_AR_BOLD = { name: "Calibri", size: 10, bold: true };
+const FONT_AR = { name: "Calibri", size: 10 };
 
 export const excelRouter = createRouter({
   generateExcel: authedMutation
