@@ -4,6 +4,7 @@ import { getDb } from "./queries/connection";
 import { customers, companySettings } from "@db/schema";
 import { eq } from "drizzle-orm";
 import ExcelJS from "exceljs";
+import crypto from "node:crypto";
 
 // Style constants
 const BORDER_THIN = { style: "thin" as const, color: { argb: "FF000000" } };
@@ -114,30 +115,53 @@ export const excelRouter = createRouter({
         { width: 18 },  // H - Grand Total
       ];
 
+      // ===== Prepare Logo & QR Images =====
+      const dataUriToBuffer = (dataUri: string): Buffer | null => {
+        try {
+          const match = dataUri.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (!match) return null;
+          return Buffer.from(match[2], "base64");
+        } catch { return null; }
+      };
+
+      const logoDataUri = co?.logo || "";
+      let logoBuf: Buffer | null = null;
+      if (logoDataUri) logoBuf = dataUriToBuffer(logoDataUri);
+
+      // Generate QR buffer
+      const qrPayload = JSON.stringify({ seller: coNameAr || coNameEn, vat: coVat, total: grandT.toFixed(2), tax: vatT.toFixed(2), date: dateStr });
+      const QRCode = require("qrcode");
+      const qrBuf: Buffer = await QRCode.toBuffer(qrPayload, { width: 200, margin: 1 });
+
       let row = 1;
 
       // ===== HEADER ROW: Logo | Company Name | QR =====
-      // Logo placeholder (row 1-5)
-      ws.mergeCells(`A1:B5`);
-      ws.getCell("A1").value = "";
-      ws.getCell("A1").border = BORDER_ALL;
       ws.getRow(1).height = 20;
       for (let i = 2; i <= 5; i++) ws.getRow(i).height = 20;
+
+      // Add LOGO natively (top-left, A1:B5)
+      ws.mergeCells("A1:B5");
+      if (logoBuf) {
+        const logoExt = logoDataUri.includes("image/jpeg") ? "jpeg" : "png";
+        const logoId = wb.addImage({ buffer: logoBuf, extension: logoExt as "png" | "jpeg" });
+        ws.addImage(logoId, { tl: { col: 0.1, row: 0.1 }, ext: { width: 100, height: 80 } });
+      }
 
       // Company Name Arabic + English (rows 1-5, cols C-G)
       ws.mergeCells("C1:G5");
       const companyNameCell = ws.getCell("C1");
-      companyNameCell.value = [
-        { richText: [
-          { font: { name: "Calibri", size: 20, bold: true, color: { argb: "FFA6272C" } }, text: coNameEn + "\n" },
-          { font: { name: "Calibri", size: 16, bold: true, color: { argb: "FF1E3A5F" } }, text: coNameAr },
-        ]},
-      ];
+      companyNameCell.value = {
+        richText: [
+          { font: { name: "Calibri", size: 20, bold: true, color: { argb: "FFA6272C" } }, text: coNameEn },
+          { font: { name: "Calibri", size: 16, bold: true, color: { argb: "FF1E3A5F" } }, text: "\n" + coNameAr },
+        ],
+      };
       companyNameCell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
 
-      // QR code area (rows 1-5, col H)
+      // Add QR CODE natively (top-right, H1:H5)
       ws.mergeCells("H1:H5");
-      ws.getCell("H1").border = BORDER_ALL;
+      const qrId = wb.addImage({ buffer: qrBuf, extension: "png" });
+      ws.addImage(qrId, { tl: { col: 7.1, row: 0.1 }, ext: { width: 90, height: 90 } });
 
       row = 7;
 
@@ -195,7 +219,6 @@ export const excelRouter = createRouter({
       ws.getCell(`A${row}`).border = BORDER_ALL;
       ws.getCell(`B${row}`).border = BORDER_ALL;
       ws.mergeCells(`D${row}:E${row}`);
-      ws.getCell(`D${row}).value`).value = "Due Date:";
       ws.getCell(`D${row}`).value = "Due Date:";
       ws.getCell(`D${row}`).font = FONT_AR_BOLD;
       ws.getCell(`F${row}`).value = dueDate || "";
