@@ -87,6 +87,8 @@ export const excelRouter = createRouter({
       const vatT = Number(inv.vat_amount || inv.vatAmount || inv.tax_amount || inv.taxAmount || 0);
       const grandT = Number(inv.grand_total || inv.grandTotal || inv.total_amount || inv.totalAmount || 0);
       const vatPct = Number(inv.vat_percent || inv.taxPercent || 15);
+      const notes = inv.notes || "";
+      const notesAr = inv.notes_ar || inv.notesAr || "";
 
       const created = inv.created_at ? new Date(inv.created_at) : new Date();
       const dateStr = `${created.getFullYear()}/${String(created.getMonth() + 1).padStart(2, "0")}/${String(created.getDate()).padStart(2, "0")}`;
