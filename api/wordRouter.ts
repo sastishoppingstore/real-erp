@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { createRouter, authedMutation } from "./middleware";
 import { getDb } from "./queries/connection";
-import { invoices, invoiceItems, customers, companySettings } from "@db/schema";
-import { eq, and } from "drizzle-orm";
+import { customers, companySettings } from "@db/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 export const wordRouter = createRouter({
   generateWord: authedMutation
@@ -11,21 +11,27 @@ export const wordRouter = createRouter({
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
 
-      const [invoice] = await db.select().from(invoices)
-        .where(and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, tenantId)));
+      // Get construction invoice using raw SQL (table not in drizzle schema)
+      const [invoiceRows] = await db.execute(sql`
+        SELECT * FROM construction_invoices WHERE id = ${input.invoiceId} AND tenant_id = ${tenantId}
+      `);
+      const invoice = (invoiceRows as any)?.[0];
       if (!invoice) throw new Error("Invoice not found");
 
-      const items = await db.select().from(invoiceItems)
-        .where(eq(invoiceItems.invoiceId, input.invoiceId));
+      const [itemRows] = await db.execute(sql`
+        SELECT * FROM construction_invoice_items WHERE invoice_id = ${input.invoiceId}
+      `);
+      const items = (itemRows as any) || [];
 
-      const [customer] = invoice.customerId
-        ? await db.select().from(customers).where(eq(customers.id, invoice.customerId))
-        : [null];
+      const [customerRows] = invoice.customer_id ? await db.execute(sql`
+        SELECT * FROM customers WHERE id = ${invoice.customer_id}
+      `) : [null];
+      const customer = customerRows?.[0] || null;
 
-      const [company] = await db.select().from(companySettings)
+      const [companyRows] = await db.select().from(companySettings)
         .where(eq(companySettings.tenantId, tenantId));
+      const company = companyRows;
 
-      // Build HTML for Word (Word can open HTML with inline styles)
       const companyName = company?.companyName || "YAFCO AL ARABIAH EST.";
       const companyNameAr = company?.companyNameAr || "مؤسسة يافكو العربية";
       const companyLogo = company?.logo || "";
@@ -35,22 +41,22 @@ export const wordRouter = createRouter({
       const companyWebsite = company?.website || "www.yafco.com.sa";
       const companyVat = company?.taxNumber || "300995897900003";
       const companyCr = company?.crNumber || "4700012896";
-      const currency = company?.defaultCurrency || "SAR";
+      const currency = company?.currency || "SAR";
 
       const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const totalHours = items.reduce((s: number, r: any) => s + Number(r.quantity || 1), 0);
-      const subtotal = Number(invoice.subTotal || 0);
-      const vatTotal = Number(invoice.taxAmount || 0);
-      const grandTotal = Number(invoice.totalAmount || 0);
+      const totalHours = items.reduce((s: number, r: any) => s + Number(r.total_hour || r.quantity || 0), 0);
+      const subtotal = Number(invoice.subtotal || invoice.sub_total || 0);
+      const vatTotal = Number(invoice.vat_amount || invoice.taxAmount || 0);
+      const grandTotal = Number(invoice.grand_total || invoice.totalAmount || 0);
 
       const printItems = items.map((it: any, i: number) => ({
         no: i + 1,
-        name: it.description || "",
-        nameAr: it.descriptionAr || "",
+        name: it.description_en || it.description || "",
+        nameAr: it.description_ar || "",
         unit: it.unit || "Hour",
-        totalHour: Number(it.quantity || 1),
-        rate: Number(it.unitPrice || 0),
-        total: Number(it.totalAmount || 0),
+        totalHour: Number(it.total_hour || it.quantity || 0),
+        rate: Number(it.rate || it.unitPrice || 0),
+        total: Number(it.line_total || it.totalAmount || 0),
       }));
 
       const qrPayload = JSON.stringify({
@@ -61,154 +67,127 @@ export const wordRouter = createRouter({
       const qrData = btoa(unescape(encodeURIComponent(qrPayload)));
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}`;
 
-      // Generate HTML that Word can render properly
       const html = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><title>Invoice ${invoice.invoiceNumber}</title>
+<head><meta charset="utf-8"><title>Invoice ${invoice.invoiceNo}</title>
 <style>
-body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0;padding:20px}
+body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0;padding:20px;color:#000}
 table{border-collapse:collapse;width:100%}
-td,th{border:0.5pt solid #000;padding:5pt 8pt}
-.header{display:table;width:100%;margin-bottom:15px}
-.logo-cell{display:table-cell;width:120px;text-align:center;vertical-align:middle}
-.company-cell{display:table-cell;text-align:center;vertical-align:middle;padding:0 15px}
-.qr-cell{display:table-cell;width:120px;text-align:center;vertical-align:middle}
-.title-bar{background:#E7E7E7;text-align:center;padding:8pt;font-size:13pt;font-weight:bold;border-top:1pt solid #000;border-bottom:1pt solid #000;margin:10pt 0}
-.meta-table{width:100%;border:0.75pt solid #000;margin:10pt 0}
-.meta-table td{border:0.5pt solid #000;font-size:9.5pt;padding:5pt 8pt}
-.client-table{width:100%;margin:10pt 0}
-.client-table td{border:0.5pt solid #000;font-size:9.5pt;padding:5pt 8pt;vertical-align:top}
-.client-table .label{font-weight:bold;background:#f9f9ff}
-.items-table{width:100%;margin:10pt 0}
-.items-table th{background:#E7E7E7;font-size:9pt;font-weight:bold;text-align:center;padding:6pt 4pt;border:0.5pt solid #000}
-.items-table td{font-size:9.5pt;text-align:center;padding:5pt 4pt;border:0.5pt solid #000}
-.totals-table{width:40%;margin-left:auto;margin-top:10pt}
-.totals-table td{font-size:10pt;padding:5pt 8pt;border:0.5pt solid #000}
-.totals-table .due{font-size:12pt;font-weight:bold;border:1.5pt double #000}
-.footer-band{background:#E7E7E7;text-align:center;padding:6pt;margin-top:20pt;font-size:9.5pt}
-@media print{@-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+td,th{border:0.5pt solid #000;padding:4pt 6pt}
+.header-table{border:none!important;margin-bottom:10px}
+.header-table td{border:none!important;padding:5px}
+.logo-cell{width:120px;text-align:center;vertical-align:top}
+.company-cell{text-align:center;vertical-align:top;padding:0 15px}
+.company-name{font-size:20pt;color:#A6272C;font-weight:bold;margin:0}
+.company-ar{font-size:14pt;color:#1e3a8a;font-weight:bold;margin:2px 0;direction:rtl}
+.qr-cell{width:120px;text-align:center;vertical-align:top}
+.title-bar{background:#D9D9D9;text-align:center;padding:8pt;font-size:13pt;font-weight:bold;border-top:1pt solid #000;border-bottom:1pt solid #000;margin:10px 0}
+.meta-tbl{margin:10px 0}
+.meta-tbl td{font-size:9.5pt;padding:5px 8px}
+.client-tbl{margin:10px 0}
+.client-tbl td{font-size:9.5pt;padding:5px 8px;vertical-align:top}
+.client-tbl .label{font-weight:bold;background:#f9f9ff;width:15%}
+.items-tbl th{background:#E7E7E7;font-size:9pt;text-align:center;padding:6px 4px}
+.items-tbl td{font-size:9.5pt;text-align:center;padding:5px 4px}
+.items-tbl td.left{text-align:left}
+.totals-tbl{width:40%;margin-left:auto;margin-top:10px}
+.totals-tbl td{font-size:10pt;padding:5px 8px}
+.due{font-size:12pt;font-weight:bold;border:1.5pt double #000}
+.footer-band{background:#D9D9D9;text-align:center;padding:6px;margin-top:20px;font-size:9.5pt}
 </style></head>
 <body>
-<div class="header">
-  <div class="logo-cell">${companyLogo ? `<img src="${companyLogo}" width="100" height="100" style="object-fit:contain"/>` : ''}</div>
-  <div class="company-cell">
-    <div style="font-size:18pt;color:#A6272C;font-weight:bold">${companyName}</div>
-    <div style="font-size:14pt;color:#1e3a8a;font-weight:bold" dir="rtl">${companyNameAr}</div>
-    <div style="font-size:9.5pt">${companyAddress}</div>
-    <div style="font-size:9.5pt;color:#0563C1;text-decoration:underline">${companyEmail}</div>
-    <div style="font-size:9pt"><strong>VAT No:</strong> ${companyVat} &nbsp; <strong>CR No:</strong> ${companyCr}</div>
-  </div>
-  <div class="qr-cell"><img src="${qrUrl}" width="100" height="100" style="object-fit:contain"/></div>
+<table class="header-table">
+<tr>
+<td class="logo-cell">${companyLogo ? `<img src="${companyLogo}" width="90" height="90" style="object-fit:contain"/>` : ''}</td>
+<td class="company-cell">
+<div style="font-size:20pt;color:#A6272C;font-weight:bold">${companyName}</div>
+<div class="company-ar">${companyNameAr}</div>
+<div style="font-size:9.5pt">${companyAddress}</div>
+<div style="font-size:9.5pt"><span style="color:#0563C1;text-decoration:underline">${companyEmail}</span></div>
+<div style="font-size:9.5pt"><strong>VAT No:</strong> ${companyVat} &nbsp;&nbsp;<strong>CR No:</strong> ${companyCr}</div>
+</td>
+<td class="qr-cell"><img src="${qrUrl}" width="110" height="110"/></td>
+</tr>
+</table>
+
+<div class="title-bar">فاتورة الضريبية - TAX INVOICE</div>
+
+<table class="meta-tbl">
+<tr><td style="width:15%"><b>Worked Month:</b></td><td style="width:35%">${invoice.workedMonth || '—'}</td><td style="width:15%"><b>Date:</b></td><td style="width:35%">${invoice.date || ''}</td></tr>
+<tr><td><b>Invoice. No:</b></td><td>${invoice.invoiceNo}</td><td><b>Time:</b></td><td>—</td></tr>
+<tr><td><b>Payment:</b></td><td>${invoice.paymentType || 'Credit'}</td><td><b>Due Date:</b></td><td>${invoice.dueDate || '—'}</td></tr>
+<tr><td><b>Cashier:</b></td><td>${invoice.cashier || 'مدير النظام'}</td><td><b>PO No:</b></td><td>${invoice.poNumber || '—'}</td></tr>
+</table>
+
+<table class="client-tbl">
+<tr><td class="label">Customer Name / اسم العميل</td><td colspan="3"><b>${customer?.name || invoice.customerName || ''}${customer?.nameAr || invoice.customerNameAr ? ' / ' + (customer?.nameAr || invoice.customerNameAr) : ''}</b></td></tr>
+<tr><td class="label">Tax No / الرقم الضريبي</td><td colspan="3">${customer?.vatNumber || customer?.taxNumber || invoice.customerVat || '—'}</td></tr>
+<tr><td class="label">CR No / رقم السجل</td><td colspan="3">${customer?.crNumber || customer?.commercialRegistration || invoice.customerCr || '—'}</td></tr>
+<tr><td class="label">Address / العنوان</td><td colspan="3">${customer?.address || invoice.customerAddress || '—'}${customer?.addressAr || invoice.customerAddressAr ? ' / ' + (customer?.addressAr || invoice.customerAddressAr) : ''}</td></tr>
+<tr><td class="label">Phone / الجوال</td><td colspan="3">${customer?.phone || invoice.customerPhone || '—'}</td></tr>
+<tr><td class="label">PO No / رقم طلب الشراء</td><td colspan="3">${invoice.poNumber || '—'}</td></tr>
+</table>
+
+<table class="items-tbl">
+<thead><tr>
+<th style="width:5%">تسلسل<br/>Sr. No.</th>
+<th style="width:25%">المسمى الوظيفي<br/>Job Description</th>
+<th style="width:8%">الوحدة<br/>Unit</th>
+<th style="width:12%">مجموع الساعات<br/>Total Hour</th>
+<th style="width:12%">سعر الساعة<br/>Rate/Hour</th>
+<th style="width:13%">الإجمالي<br/>Total</th>
+<th style="width:10%">ض القيمة المضافة 15%<br/>VAT 15%</th>
+<th style="width:15%">الاجمالي بالضريبة<br/>Grand Total</th>
+</tr></thead>
+<tbody>
+${printItems.map(i => `<tr>
+<td>${i.no}</td>
+<td class="left">${i.name}${i.nameAr ? `<br/><span dir="rtl">${i.nameAr}</span>` : ''}</td>
+<td>${i.unit}</td>
+<td>${fmt(i.totalHour)}</td>
+<td>${fmt(i.rate)}</td>
+<td>${fmt(i.total)}</td>
+<td>${fmt(i.total * 0.15)}</td>
+<td style="font-weight:bold">${fmt(i.total * 1.15)}</td>
+</tr>`).join('')}
+<tr>
+<td colspan="3" style="text-align:right;font-weight:bold">Total</td>
+<td style="font-weight:bold">${fmt(totalHours)}</td>
+<td></td>
+<td style="font-weight:bold">${fmt(subtotal)}</td>
+<td style="font-weight:bold">${fmt(vatTotal)}</td>
+<td style="font-weight:bold">${fmt(grandTotal)}</td>
+</tr>
+</tbody>
+</table>
+
+<table class="totals-tbl">
+<tr><td dir="rtl" style="text-align:right"><b>الاجمالي بدون الضریبة — Total</b></td><td>${fmt(subtotal)}</td></tr>
+<tr><td dir="rtl" style="text-align:right"><b>ض. القیمة المضافة 15% — VAT 15%</b></td><td>${fmt(vatTotal)}</td></tr>
+<tr><td dir="rtl" style="text-align:right" class="due"><b>إجمالي المبالغ المستحقة — Due</b></td><td class="due">${fmt(grandTotal)}</td></tr>
+</table>
+
+<div style="margin-top:10px;border-top:0.5pt solid #000;padding-top:5px">
+<table style="width:100%"><tr>
+<td><b>Due:</b> ${grandTotal.toLocaleString()} ${currency}</td>
+<td style="text-align:right;direction:rtl"><b>إجمالي المبالغ المستحقة:</b> ${grandTotal.toLocaleString()} ريال</td>
+</tr></table>
 </div>
 
-<div class="title-bar">فاتورة ضريبية - TAX INVOICE</div>
-
-<table class="meta-table">
-  <tr><td style="width:15%"><strong>Worked Month:</strong></td><td style="width:35%">${invoice.workedMonth || '—'}</td><td style="width:15%"><strong>Date:</strong></td><td style="width:35%">${invoice.date || '—'}</td></tr>
-  <tr><td><strong>Invoice. No:</strong></td><td>${invoice.invoiceNumber || '—'}</td><td><strong>Time:</strong></td><td>${invoice.time || '—'}</td></tr>
-  <tr><td><strong>Payment:</strong></td><td>${invoice.paymentType || 'Credit'}</td><td><strong>Due Date:</strong></td><td>${invoice.dueDate || '—'}</td></tr>
-  <tr><td><strong>Cashier:</strong></td><td>${invoice.cashier || 'مدير النظام'}</td><td><strong>PO No:</strong></td><td>${invoice.poNumber || '—'}</td></tr>
-</table>
-
-<table class="client-table">
-  <tr>
-    <td class="label" style="width:15%">Client Name</td>
-    <td style="width:35%"><strong>${customer?.name || (invoice as any).customerName || 'Walk-in Customer'}${customer?.nameAr ? ' / ' + customer.nameAr : ''}</strong></td>
-    <td class="label" style="width:15%">اسم العميل</td>
-    <td style="width:35%">${customer?.nameAr || (invoice as any).customerNameAr || customer?.name || '—'}</td>
-  </tr>
-  <tr>
-    <td class="label">Tax No (VAT)</td>
-    <td>${customer?.vatNumber || (invoice as any).customerVat || '—'}</td>
-    <td class="label">الرقم الضريبي</td>
-    <td>${customer?.vatNumber || (invoice as any).customerVat || '—'}</td>
-  </tr>
-  <tr>
-    <td class="label">CR No</td>
-    <td>${customer?.crNumber || (invoice as any).customerCr || '—'}</td>
-    <td class="label">رقم السجل</td>
-    <td>${customer?.crNumber || (invoice as any).customerCr || '—'}</td>
-  </tr>
-  <tr>
-    <td class="label">Address</td>
-    <td>${customer?.address || (invoice as any).customerAddress || '—'}${customer?.addressAr ? ' / ' + customer.addressAr : ''}</td>
-    <td class="label">العنوان</td>
-    <td>${customer?.addressAr || (invoice as any).customerAddressAr || customer?.address || '—'}</td>
-  </tr>
-  <tr>
-    <td class="label">Email</td>
-    <td>${customer?.email || (invoice as any).customerEmail || '—'}</td>
-    <td class="label">البريد الإلكتروني</td>
-    <td>${customer?.email || (invoice as any).customerEmail || '—'}</td>
-  </tr>
-  <tr>
-    <td class="label">Phone</td>
-    <td>${customer?.phone || (invoice as any).customerPhone || '—'}</td>
-    <td class="label">الجوال</td>
-    <td>${customer?.phone || (invoice as any).customerPhone || '—'}</td>
-  </tr>
-  <tr>
-    <td class="label">PO No</td>
-    <td>${invoice.poNumber || customer?.crNumber || '—'}</td>
-    <td class="label">رقم طلب الشراء</td>
-    <td>${invoice.poNumber || customer?.crNumber || '—'}</td>
-  </tr>
-</table>
-
-<table class="items-table">
-  <thead><tr>
-    <th style="width:5%">تسلسل<br/>Sr. No.</th>
-    <th style="width:25%">المسمى الوظيفي<br/>Job Description</th>
-    <th style="width:8%">الوحدة<br/>Unit</th>
-    <th style="width:12%">مجموع الساعات<br/>Total Hour</th>
-    <th style="width:12%">سعر الساعة<br/>Rate/Hour</th>
-    <th style="width:13%">الإجمالي<br/>Total</th>
-    <th style="width:10%">ض القيمة المضافة 15%<br/>VAT 15%</th>
-    <th style="width:15%">الاجمالي بالضريبة<br/>Grand Total</th>
-  </tr></thead>
-  <tbody>
-    ${printItems.map(i => `<tr>
-      <td>${i.no}</td>
-      <td style="text-align:left">${i.name}${i.nameAr ? `<br/><span dir="rtl" style="font-size:9pt;color:#555">${i.nameAr}</span>` : ''}</td>
-      <td>Hour</td>
-      <td>${i.totalHour}</td>
-      <td>${fmt(i.rate)}</td>
-      <td>${fmt(i.total)}</td>
-      <td>${fmt(i.total * 0.15)}</td>
-      <td>${fmt(i.total * 1.15)}</td>
-    </tr>`).join('')}
-    <tr>
-      <td colspan="3" style="font-weight:bold;text-align:right">Total</td>
-      <td style="font-weight:bold">${totalHours}</td>
-      <td></td>
-      <td style="font-weight:bold">${fmt(subtotal)}</td>
-      <td style="font-weight:bold">${fmt(vatTotal)}</td>
-      <td style="font-weight:bold">${fmt(grandTotal)}</td>
-    </tr>
-  </tbody>
-</table>
-
-<table class="totals-table">
-  <tr><td style="text-align:right;direction:rtl"><strong>الاجمالي بدون الضريبة — Total</strong></td><td>${fmt(subtotal)}</td></tr>
-  <tr><td style="text-align:right;direction:rtl"><strong>ض. القيمة المضافة ${invoice.taxPercent || 15}% — VAT ${invoice.taxPercent || 15}%</strong></td><td>${fmt(vatTotal)}</td></tr>
-  <tr><td class="due" style="text-align:right;direction:rtl"><strong>إجمالي المبالغ المستحقة — Due</strong></td><td class="due">${fmt(grandTotal)}</td></tr>
-</table>
-
-<div style="margin-top:10pt;border-top:0.5pt solid #000;padding-top:5pt">
-  <table style="width:100%"><tr>
-    <td><strong>Due:</strong> ${grandTotal.toLocaleString('en-US')} ${currency}</td>
-    <td style="text-align:right;direction:rtl"><strong>إجمالي المبالغ المستحقة:</strong> ${grandTotal.toLocaleString('en-US')} ريال</td>
-  </tr></table>
-</div>
-
-${invoice.notes || (invoice as any).notesAr ? `<div style="margin-top:15pt;padding:12pt;background:#f9f9ff;border-radius:5pt;border:1pt solid #e5e7eb">
-  ${(invoice as any).notesAr ? `<div dir="rtl" style="text-align:right;font-size:13pt;margin-top:4pt">ملاحظات: ${(invoice as any).notesAr}</div>` : ''}
-  ${invoice.notes ? `<div style="font-size:13pt">Notes: ${invoice.notes}</div>` : ''}
-</div>` : ''}
+${notesHtml(invoice)}
 
 <div class="footer-band">Website: ${companyWebsite}</div>
 </body></html>`;
 
-      return { html, invoiceNo: invoice.invoiceNumber };
+      function notesHtml(inv: any): string {
+        if (!inv.notes && !inv.notesAr) return "";
+        let h = '<div style="margin-top:10px;padding:10px;background:#f9faff;border:1px solid #e5e7eb">';
+        if (inv.notesAr) h += `<div dir="rtl" style="text-align:right;margin-bottom:4px">ملاحظات: ${inv.notesAr}</div>`;
+        if (inv.notes) h += `<div>Notes: ${inv.notes}</div>`;
+        h += '</div>';
+        return h;
+      }
+
+      return { html, invoiceNo: invoice.invoiceNo };
     }),
 });
