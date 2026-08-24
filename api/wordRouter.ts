@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createRouter, authedMutation } from "./middleware";
 import { getDb } from "./queries/connection";
 import { customers, companySettings } from "@db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export const wordRouter = createRouter({
   generateWord: authedMutation
@@ -11,183 +11,238 @@ export const wordRouter = createRouter({
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
 
-      // Get construction invoice using raw SQL (table not in drizzle schema)
-      const [invoiceRows] = await db.execute(sql`
-        SELECT * FROM construction_invoices WHERE id = ${input.invoiceId} AND tenant_id = ${tenantId}
-      `);
-      const invoice = (invoiceRows as any)?.[0];
-      if (!invoice) throw new Error("Invoice not found");
+      // Get construction invoice using raw SQL
+      const invoiceResult = await db.execute(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (`SELECT * FROM construction_invoices WHERE id = ${input.invoiceId} AND tenant_id = ${tenantId}`) as any
+      );
+      const invoiceRows = (invoiceResult as any)?.[0] || [];
+      const inv = Array.isArray(invoiceRows) ? invoiceRows[0] : null;
+      if (!inv) throw new Error("Invoice not found");
 
-      const [itemRows] = await db.execute(sql`
-        SELECT * FROM construction_invoice_items WHERE invoice_id = ${input.invoiceId}
-      `);
-      const items = (itemRows as any) || [];
+      // Get items
+      const itemResult = await db.execute(
+        (`SELECT * FROM construction_invoice_items WHERE invoice_id = ${input.invoiceId} ORDER BY sr`) as any
+      );
+      const items = ((itemResult as any)?.[0] as any[]) || [];
 
-      const [customerRows] = invoice.customer_id ? await db.execute(sql`
-        SELECT * FROM customers WHERE id = ${invoice.customer_id}
-      `) : [null];
-      const customer = customerRows?.[0] || null;
+      // Get customer
+      let customer: any = null;
+      if (inv.customer_id) {
+        const [custRow] = await db.select().from(customers).where(eq(customers.id, inv.customer_id));
+        customer = custRow || null;
+      }
 
-      const [companyRows] = await db.select().from(companySettings)
-        .where(eq(companySettings.tenantId, tenantId));
-      const company = companyRows;
+      // Get company settings
+      const [company] = await db.select().from(companySettings).where(eq(companySettings.tenantId, tenantId));
 
-      const companyName = company?.companyName || "YAFCO AL ARABIAH EST.";
+      const companyNameEn = company?.companyName || "YAFCO AL ARABIAH EST.";
       const companyNameAr = company?.companyNameAr || "مؤسسة يافكو العربية";
       const companyLogo = company?.logo || "";
-      const companyAddress = company?.address || "Saudi Arabia - Yanbu Al Bahr - P.O.Box: 2326";
-      const companyPhone = company?.phone || "";
-      const companyEmail = company?.email || "info@yafco.com.sa";
-      const companyWebsite = company?.website || "www.yafco.com.sa";
-      const companyVat = company?.taxNumber || "300995897900003";
-      const companyCr = company?.crNumber || "4700012896";
-      const currency = company?.currency || "SAR";
+      const companyAddress = "Saudi Arabia - Yanbu Al Bahr - P.O.Box : 2326";
+      const companyEmail = "info@yafco.com.sa";
+      const companyWebsite = "www.yafco.com.sa";
+      const companyVat = "300995897900003";
+      const companyCr = "4700012896";
 
-      const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const custNameEn = customer?.name || inv.customer_name || "";
+      const custNameAr = customer?.name_ar || inv.customer_name_ar || "";
+      const custVat = customer?.vat_number || customer?.tax_number || inv.customer_vat || "";
+      const custCr = customer?.cr_number || customer?.commercial_registration || inv.customer_cr || "";
+      const custAddress = customer?.address || inv.customer_address || "";
+
+      const fmt = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtVat = (v: number) => Number.isInteger(v) ? String(v) : v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
       const totalHours = items.reduce((s: number, r: any) => s + Number(r.total_hour || r.quantity || 0), 0);
-      const subtotal = Number(invoice.subtotal || invoice.sub_total || 0);
-      const vatTotal = Number(invoice.vat_amount || invoice.taxAmount || 0);
-      const grandTotal = Number(invoice.grand_total || invoice.totalAmount || 0);
+      const subtotal = Number(inv.subtotal || inv.sub_total || 0);
+      const vatAmount = Number(inv.vat_amount || inv.tax_amount || 0);
+      const grandTotal = Number(inv.grand_total || inv.total_amount || 0);
+      const vatPercent = Number(inv.vat_percent || 15);
 
-      const printItems = items.map((it: any, i: number) => ({
-        no: i + 1,
-        name: it.description_en || it.description || "",
-        nameAr: it.description_ar || "",
-        unit: it.unit || "Hour",
-        totalHour: Number(it.total_hour || it.quantity || 0),
-        rate: Number(it.rate || it.unit_price || 0),
-        total: Number(it.line_total || it.total_amount || 0),
-      }));
+      const created = inv.created_at ? new Date(inv.created_at) : new Date();
+      const dateStr = `${created.getFullYear()}/${String(created.getMonth() + 1).padStart(2, "0")}/${String(created.getDate()).padStart(2, "0")}`;
+      const timeStr = created.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
+      // QR code URL
       const qrPayload = JSON.stringify({
-        seller: companyNameAr || companyName, vat: companyVat,
-        total: grandTotal.toFixed(2), tax: vatTotal.toFixed(2),
-        date: invoice.date || new Date().toISOString(),
+        seller: companyNameAr, vat: companyVat,
+        total: grandTotal.toFixed(2), tax: vatAmount.toFixed(2),
+        date: dateStr,
       });
-      const qrData = btoa(unescape(encodeURIComponent(qrPayload)));
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}`;
+      const qrData = Buffer.from(qrPayload, "utf-8").toString("base64");
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+
+      // Build item rows with inline styles (Word-safe)
+      const itemRowsHtml = items.length > 0 ? items.map((r: any, i: number) => `
+        <tr>
+          <td style="border:1px solid #000;padding:4pt;text-align:center;font-size:9.5pt;height:40px;">${i + 1}</td>
+          <td style="border:1px solid #000;padding:4pt 6pt;text-align:left;font-size:9.5pt;height:40px;">${r.description_en || ""}${r.description_ar ? `<span dir="rtl"> (${r.description_ar})</span>` : ""}</td>
+          <td style="border:1px solid #000;padding:4pt;text-align:center;font-size:9.5pt;height:40px;">${r.unit || ""}</td>
+          <td style="border:1px solid #000;padding:4pt;text-align:center;font-size:9.5pt;height:40px;">${fmt(Number(r.total_hour || r.quantity || 0))}</td>
+          <td style="border:1px solid #000;padding:4pt 6pt;text-align:right;font-size:9.5pt;height:40px;">${fmt(Number(r.rate || r.unit_price || 0))}</td>
+          <td style="border:1px solid #000;padding:4pt 6pt;text-align:right;font-size:9.5pt;height:40px;">${fmt(Number(r.line_total || r.total_amount || 0))}</td>
+          <td style="border:1px solid #000;padding:4pt 6pt;text-align:right;font-size:9.5pt;height:40px;">${fmtVat(Number(r.line_total || r.total_amount || 0) * (vatPercent / 100))}</td>
+          <td style="border:1px solid #000;padding:4pt 6pt;text-align:right;font-size:9.5pt;font-weight:600;height:40px;">${fmt(Number(r.line_total || r.total_amount || 0) * (1 + vatPercent / 100))}</td>
+        </tr>`).join("") : `<tr><td colspan="8" style="border:1px solid #000;text-align:center;color:#999;height:40px;">—</td></tr>`;
 
       const html = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><title>Invoice ${invoice.invoice_no}</title>
+<head>
+<meta charset="utf-8">
+<title>TAX INVOICE - ${inv.invoice_no || ""}</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100%</w:Zoom>
+</w:WordDocument>
+</xml>
+<![endif]-->
 <style>
-body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0;padding:20px;color:#000}
-table{border-collapse:collapse;width:100%}
-td,th{border:0.5pt solid #000;padding:4pt 6pt}
-.header-table{border:none!important;margin-bottom:10px}
-.header-table td{border:none!important;padding:5px}
-.logo-cell{width:120px;text-align:center;vertical-align:top}
-.company-cell{text-align:center;vertical-align:top;padding:0 15px}
-.company-name{font-size:20pt;color:#A6272C;font-weight:bold;margin:0}
-.company-ar{font-size:14pt;color:#1e3a8a;font-weight:bold;margin:2px 0;direction:rtl}
-.qr-cell{width:120px;text-align:center;vertical-align:top}
-.title-bar{background:#D9D9D9;text-align:center;padding:8pt;font-size:13pt;font-weight:bold;border-top:1pt solid #000;border-bottom:1pt solid #000;margin:10px 0}
-.meta-tbl{margin:10px 0}
-.meta-tbl td{font-size:9.5pt;padding:5px 8px}
-.client-tbl{margin:10px 0}
-.client-tbl td{font-size:9.5pt;padding:5px 8px;vertical-align:top}
-.client-tbl .label{font-weight:bold;background:#f9f9ff;width:15%}
-.items-tbl th{background:#E7E7E7;font-size:9pt;text-align:center;padding:6px 4px}
-.items-tbl td{font-size:9.5pt;text-align:center;padding:5px 4px}
-.items-tbl td.left{text-align:left}
-.totals-tbl{width:40%;margin-left:auto;margin-top:10px}
-.totals-tbl td{font-size:10pt;padding:5px 8px}
-.due{font-size:12pt;font-weight:bold;border:1.5pt double #000}
-.footer-band{background:#D9D9D9;text-align:center;padding:6px;margin-top:20px;font-size:9.5pt}
-</style></head>
+@page { size: 215.9mm 279.4mm; margin: 10mm; }
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #000000; background: #FFFFFF; margin: 0; padding: 0; }
+table { border-collapse: collapse; width: 100%; }
+td { vertical-align: top; }
+p { margin: 0; padding: 0; }
+img { max-width: 130px; max-height: 90px; }
+</style>
+</head>
 <body>
-<table class="header-table">
+
+<!-- HEADER ZONE -->
+<table style="width:100%;border-collapse:collapse;margin-bottom:5px;">
 <tr>
-<td class="logo-cell">${companyLogo ? `<img src="${companyLogo}" width="90" height="90" style="object-fit:contain"/>` : ''}</td>
-<td class="company-cell">
-<div style="font-size:20pt;color:#A6272C;font-weight:bold">${companyName}</div>
-<div class="company-ar">${companyNameAr}</div>
-<div style="font-size:9.5pt">${companyAddress}</div>
-<div style="font-size:9.5pt"><span style="color:#0563C1;text-decoration:underline">${companyEmail}</span></div>
-<div style="font-size:9.5pt"><strong>VAT No:</strong> ${companyVat} &nbsp;&nbsp;<strong>CR No:</strong> ${companyCr}</div>
+<td style="width:18%;text-align:center;vertical-align:top;">
+${companyLogo ? `<img src="${companyLogo}" alt="Logo" style="max-width:130px;max-height:90px;" />` : ""}
 </td>
-<td class="qr-cell"><img src="${qrUrl}" width="110" height="110"/></td>
+<td style="width:44%;text-align:center;vertical-align:top;">
+<div dir="rtl" style="font-size:22pt;font-weight:bold;color:#A6272C;margin-bottom:4pt;">
+${companyNameAr}
+</div>
+<div style="background:#D9D9D9;padding:6pt 15pt;display:inline-block;border:1px solid #999999;">
+<span style="font-size:16pt;font-weight:bold;color:#000000;">TAX INVOICE</span>
+<span style="font-size:14pt;font-weight:bold;color:#000000;"> - </span>
+<span dir="rtl" style="font-size:15pt;font-weight:bold;color:#000000;">فاتورة الضريبية</span>
+</div>
+</td>
+<td style="width:18%;text-align:center;vertical-align:top;">
+<img src="${qrUrl}" alt="QR" style="width:110px;height:110px;" />
+</td>
 </tr>
 </table>
 
-<div class="title-bar">فاتورة الضريبية - TAX INVOICE</div>
-
-<table class="meta-tbl">
-<tr><td style="width:15%"><b>Worked Month:</b></td><td style="width:35%">${invoice.worked_month || '—'}</td><td style="width:15%"><b>Date:</b></td><td style="width:35%">${invoice.date || ''}</td></tr>
-<tr><td><b>Invoice. No:</b></td><td>${invoice.invoice_no}</td><td><b>Time:</b></td><td>—</td></tr>
-<tr><td><b>Payment:</b></td><td>${invoice.payment_type || 'Credit'}</td><td><b>Due Date:</b></td><td>${invoice.due_date || '—'}</td></tr>
-<tr><td><b>Cashier:</b></td><td>${invoice.cashier || 'مدير النظام'}</td><td><b>PO No:</b></td><td>${invoice.po_number || '—'}</td></tr>
+<!-- GRAY BAR -->
+<table style="width:100%;border-collapse:collapse;">
+<tr><td style="background:#D9D9D9;height:20px;font-size:2pt;">&nbsp;</td></tr>
 </table>
 
-<table class="client-tbl">
-<tr><td class="label">Customer Name / اسم العميل</td><td colspan="3"><b>${customer?.name || invoice.customer_name || ''}${customer?.name_ar || invoice.customer_name_ar ? ' / ' + (customer?.name_ar || invoice.customer_name_ar) : ''}</b></td></tr>
-<tr><td class="label">Tax No / الرقم الضريبي</td><td colspan="3">${customer?.vat_number || customer?.tax_number || invoice.customer_vat || '—'}</td></tr>
-<tr><td class="label">CR No / رقم السجل</td><td colspan="3">${customer?.cr_number || customer?.commercial_registration || invoice.customer_cr || '—'}</td></tr>
-<tr><td class="label">Address / العنوان</td><td colspan="3">${customer?.address || invoice.customer_address || '—'}${customer?.address_ar || invoice.customer_address_ar ? ' / ' + (customer?.address_ar || invoice.customer_address_ar) : ''}</td></tr>
-<tr><td class="label">Phone / الجوال</td><td colspan="3">${customer?.phone || invoice.customer_phone || '—'}</td></tr>
-<tr><td class="label">PO No / رقم طلب الشراء</td><td colspan="3">${invoice.po_number || '—'}</td></tr>
-</table>
-
-<table class="items-tbl">
-<thead><tr>
-<th style="width:5%">تسلسل<br/>Sr. No.</th>
-<th style="width:25%">المسمى الوظيفي<br/>Job Description</th>
-<th style="width:8%">الوحدة<br/>Unit</th>
-<th style="width:12%">مجموع الساعات<br/>Total Hour</th>
-<th style="width:12%">سعر الساعة<br/>Rate/Hour</th>
-<th style="width:13%">الإجمالي<br/>Total</th>
-<th style="width:10%">ض القيمة المضافة 15%<br/>VAT 15%</th>
-<th style="width:15%">الاجمالي بالضريبة<br/>Grand Total</th>
-</tr></thead>
-<tbody>
-${printItems.map(i => `<tr>
-<td>${i.no}</td>
-<td class="left">${i.name}${i.nameAr ? `<br/><span dir="rtl">${i.nameAr}</span>` : ''}</td>
-<td>${i.unit}</td>
-<td>${fmt(i.totalHour)}</td>
-<td>${fmt(i.rate)}</td>
-<td>${fmt(i.total)}</td>
-<td>${fmt(i.total * 0.15)}</td>
-<td style="font-weight:bold">${fmt(i.total * 1.15)}</td>
-</tr>`).join('')}
+<!-- META INFO -->
+<table style="width:100%;border-collapse:collapse;margin-bottom:12px;border:0.75pt solid #000000;">
 <tr>
-<td colspan="3" style="text-align:right;font-weight:bold">Total</td>
-<td style="font-weight:bold">${fmt(totalHours)}</td>
-<td></td>
-<td style="font-weight:bold">${fmt(subtotal)}</td>
-<td style="font-weight:bold">${fmt(vatTotal)}</td>
-<td style="font-weight:bold">${fmt(grandTotal)}</td>
+<td style="width:50%;vertical-align:top;padding:0;">
+<table style="width:100%;border-collapse:collapse;">
+<tr><td style="width:40%;font-weight:bold;font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;border-right:0.5pt solid #000000;">Worked Month:</td><td style="font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;">${inv.worked_month || "&nbsp;"}</td></tr>
+<tr><td style="font-weight:bold;font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;border-right:0.5pt solid #000000;">Invoice. No:</td><td style="font-weight:bold;font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;">${inv.invoice_no || "&nbsp;"}</td></tr>
+<tr><td style="font-weight:bold;font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;border-right:0.5pt solid #000000;">Payment:</td><td style="font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;">${inv.payment_type || "Credit"}</td></tr>
+<tr><td style="font-weight:bold;font-size:9.5pt;padding:3pt 6pt;border-right:0.5pt solid #000000;">Cashier:</td><td dir="rtl" style="text-align:right;font-size:9.5pt;padding:3pt 6pt;">${inv.cashier || "مدير النظام"}</td></tr>
+</table>
+</td>
+<td style="width:50%;vertical-align:bottom;padding:0;">
+<table style="width:100%;border-collapse:collapse;">
+<tr><td style="width:30%;font-weight:bold;font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;">Date:</td><td style="font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;">${dateStr}</td></tr>
+<tr><td style="font-weight:bold;font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;">Time:</td><td style="font-size:9.5pt;padding:3pt 6pt;border-bottom:0.5pt solid #000000;">${timeStr}</td></tr>
+<tr><td style="font-weight:bold;font-size:9.5pt;padding:3pt 6pt;">Due Date:</td><td style="font-size:9.5pt;padding:3pt 6pt;">${inv.due_date || "&nbsp;"}</td></tr>
+</table>
+</td>
+</tr>
+</table>
+
+<!-- COMPANY / CLIENT AREA -->
+<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+<tr>
+<td style="width:48%;vertical-align:top;padding:5pt 8pt;font-size:9.5pt;line-height:1.5;">
+<b>Company:</b>&nbsp;${companyNameEn}<br/>
+<span dir="rtl">${companyNameAr}</span><br/>
+${companyCr}<br/>
+<b>VAT No:</b> ${companyVat}&nbsp;<span dir="rtl">:الرقم الضريبي</span><br/>
+<b>Address:</b><br/>
+Saudi Arabia - Yanbu Al Bahr -<br/>
+P.O.Box : 2326<br/>
+<span dir="rtl" style="display:block;text-align:left;">المملكة العربية السعودية - ينبع البحر - ص . ب 2326:</span><br/>
+<b>Email: </b><span style="color:#0563C1;text-decoration:underline;">${companyEmail}</span><br/>
+${inv.po_number ? `<b>PO :</b> ${inv.po_number}<br/>` : ""}
+</td>
+<td style="width:4px;border-left:4px solid #000000;min-height:120px;"></td>
+<td style="width:48%;vertical-align:top;padding:5pt 8pt;font-size:9.5pt;line-height:1.5;">
+<b>Client :</b><br/>
+${custNameEn}${custNameAr ? `, <span dir="rtl">${custNameAr}</span>` : ""}<br/>
+${custVat ? `<b>Tax No.</b> ${custVat}<br/>` : ""}
+${custAddress ? `${custAddress}<br/>` : ""}
+${custCr ? `<b>CR </b>${custCr}` : ""}
+</td>
+</tr>
+</table>
+
+<!-- MAIN TABLE HEADERS -->
+<table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+<thead>
+<tr>
+<th style="width:7%;border:1px solid #000000;background:#D9D9D9;padding:4pt;text-align:center;font-size:9pt;font-weight:bold;height:34px;" dir="rtl">تسلسل</th>
+<th style="width:24%;border:1px solid #000000;background:#D9D9D9;padding:4pt;text-align:center;font-size:9pt;font-weight:bold;height:34px;" dir="rtl">المسمى الوظيفي</th>
+<th style="width:6.5%;border:1px solid #000000;background:#D9D9D9;padding:4pt;text-align:center;font-size:9pt;font-weight:bold;height:34px;" dir="rtl">الوحدة</th>
+<th style="width:7.5%;border:1px solid #000000;background:#D9D9D9;padding:4pt;text-align:center;font-size:9pt;font-weight:bold;height:34px;" dir="rtl">مجموع الساعات</th>
+<th style="width:11.5%;border:1px solid #000000;background:#D9D9D9;padding:4pt;text-align:center;font-size:9pt;font-weight:bold;height:34px;" dir="rtl">سعر الساعة</th>
+<th style="width:11.5%;border:1px solid #000000;background:#D9D9D9;padding:4pt;text-align:center;font-size:9pt;font-weight:bold;height:34px;" dir="rtl">الإجمالي</th>
+<th style="width:9%;border:1px solid #000000;background:#D9D9D9;padding:4pt;text-align:center;font-size:9pt;font-weight:bold;height:34px;" dir="rtl">ض القيمة المضافة</th>
+<th style="width:19%;border:1px solid #000000;background:#D9D9D9;padding:4pt;text-align:center;font-size:9pt;font-weight:bold;height:34px;" dir="rtl">الاجمالي بالضريبة</th>
+</tr>
+<tr>
+<th style="width:7%;border:1px solid #000000;background:#DCE6F1;padding:4pt;text-align:center;font-size:8.5pt;font-weight:bold;height:35px;">Sr. No.</th>
+<th style="width:24%;border:1px solid #000000;background:#DCE6F1;padding:4pt;text-align:center;font-size:8.5pt;font-weight:bold;height:35px;">Job Description</th>
+<th style="width:6.5%;border:1px solid #000000;background:#DCE6F1;padding:4pt;text-align:center;font-size:8.5pt;font-weight:bold;height:35px;">Unit</th>
+<th style="width:7.5%;border:1px solid #000000;background:#DCE6F1;padding:4pt;text-align:center;font-size:8.5pt;font-weight:bold;height:35px;">Total Hour</th>
+<th style="width:11.5%;border:1px solid #000000;background:#DCE6F1;padding:4pt;text-align:center;font-size:8.5pt;font-weight:bold;height:35px;">Rate/ Hour</th>
+<th style="width:11.5%;border:1px solid #000000;background:#DCE6F1;padding:4pt;text-align:center;font-size:8.5pt;font-weight:bold;height:35px;">Total</th>
+<th style="width:9%;border:1px solid #000000;background:#DCE6F1;padding:4pt;text-align:center;font-size:8.5pt;font-weight:bold;height:35px;">VAT 15%</th>
+<th style="width:19%;border:1px solid #000000;background:#DCE6F1;padding:4pt;text-align:center;font-size:8.5pt;font-weight:bold;height:35px;">Grand Total</th>
+</tr>
+</thead>
+<tbody>
+${itemRowsHtml}
+<tr>
+<td colspan="3" style="border:1px solid #000000;padding:4pt 6pt;text-align:right;font-weight:bold;font-size:10pt;width:37.5%;">Total</td>
+<td style="border:1px solid #000000;padding:4pt;text-align:center;font-weight:bold;font-size:10pt;width:7.5%;">${fmt(totalHours)}</td>
+<td style="border:1px solid #000000;width:11.5%;">&nbsp;</td>
+<td style="border:1px solid #000000;padding:4pt 6pt;text-align:right;font-weight:bold;font-size:10pt;width:11.5%;">${fmt(subtotal)}</td>
+<td style="border:1px solid #000000;padding:4pt 6pt;text-align:right;font-weight:bold;font-size:10pt;width:9%;">${fmt(vatAmount)}</td>
+<td style="border:1px solid #000000;padding:4pt 6pt;text-align:right;font-weight:bold;font-size:10pt;width:19%;">${fmt(grandTotal)}</td>
 </tr>
 </tbody>
 </table>
 
-<table class="totals-tbl">
-<tr><td dir="rtl" style="text-align:right"><b>الاجمالي بدون الضریبة — Total</b></td><td>${fmt(subtotal)}</td></tr>
-<tr><td dir="rtl" style="text-align:right"><b>ض. القیمة المضافة 15% — VAT 15%</b></td><td>${fmt(vatTotal)}</td></tr>
-<tr><td dir="rtl" style="text-align:right" class="due"><b>إجمالي المبالغ المستحقة — Due</b></td><td class="due">${fmt(grandTotal)}</td></tr>
+<!-- TOTALS SUMMARY -->
+<table style="width:195pt;border-collapse:collapse;margin-left:auto;margin-top:8pt;font-size:10pt;">
+<tr><td dir="rtl" style="text-align:right;padding:3pt 6pt;"><b>الإجمالي بدون الضريبة</b></td><td style="text-align:right;padding:3pt 6pt;font-weight:600;">${fmt(subtotal)}</td></tr>
+<tr><td dir="rtl" style="text-align:right;padding:3pt 6pt;"><b>ض. القيمة المضافة ${vatPercent}%</b></td><td style="text-align:right;padding:3pt 6pt;font-weight:600;">${fmt(vatAmount)}</td></tr>
+<tr><td dir="rtl" style="text-align:right;padding:5pt 8pt;border-top:0.75pt double #000000;border-bottom:0.75pt double #000000;font-weight:bold;font-size:12pt;">إجمالي المبالغ المستحقة</td><td style="text-align:right;padding:5pt 8pt;border-top:0.75pt double #000000;border-bottom:0.75pt double #000000;font-weight:bold;font-size:12pt;">${fmt(grandTotal)}</td></tr>
 </table>
 
-<div style="margin-top:10px;border-top:0.5pt solid #000;padding-top:5px">
-<table style="width:100%"><tr>
-<td><b>Due:</b> ${grandTotal.toLocaleString()} ${currency}</td>
-<td style="text-align:right;direction:rtl"><b>إجمالي المبالغ المستحقة:</b> ${grandTotal.toLocaleString()} ريال</td>
-</tr></table>
+<!-- AMOUNT IN WORDS -->
+<div style="margin-top:6pt;border-top:0.5pt solid #000000;padding-top:4pt;font-size:9.5pt;width:100%;">
+<b>Due</b>&nbsp;&nbsp;&nbsp;&nbsp;<b>SAR</b>
 </div>
 
-${notesHtml(invoice)}
+<!-- WEBSITE FOOTER -->
+<table style="width:100%;border-collapse:collapse;margin-top:16pt;">
+<tr><td style="background:#D9D9D9;text-align:center;padding:14pt 0;">
+<span style="font-size:18pt;font-weight:bold;color:#000000;">Website: ${companyWebsite}</span>
+</td></tr>
+</table>
 
-<div class="footer-band">Website: ${companyWebsite}</div>
-</body></html>`;
+</body>
+</html>`;
 
-      function notesHtml(inv: any): string {
-        if (!inv.notes && !inv.notesAr) return "";
-        let h = '<div style="margin-top:10px;padding:10px;background:#f9faff;border:1px solid #e5e7eb">';
-        if (inv.notesAr) h += `<div dir="rtl" style="text-align:right;margin-bottom:4px">ملاحظات: ${inv.notesAr}</div>`;
-        if (inv.notes) h += `<div>Notes: ${inv.notes}</div>`;
-        h += '</div>';
-        return h;
-      }
-
-      return { html, invoiceNo: invoice.invoice_no };
+      return { html, invoiceNo: inv.invoice_no };
     }),
 });

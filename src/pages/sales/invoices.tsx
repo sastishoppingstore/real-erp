@@ -435,6 +435,8 @@ export default function InvoicesPage() {
     const pCustAddrAr = useDetail ? detailCustomer?.addressAr : customerAddressAr;
     const pCustVat = useDetail ? (detailCustomer?.vatNumber || detailCustomer?.taxNumber) : customerVat;
     const pCustCr = useDetail ? detailCustomer?.crNumber : customerCr;
+    const pCustEmail = useDetail ? (detailCustomer?.email || "") : customerEmail;
+    const pCustPo = useDetail ? detailInvoice?.poNumber : poNo;
     const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
 
     const html = generateInvoiceHtml({
@@ -454,7 +456,7 @@ export default function InvoicesPage() {
       note: note || "",
       noteAr: noteAr || "",
       pSub, pDisc, pVat, pTotal,
-    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pCustEmail: dCust?.email, pCustPo: dInv.poNumber, pType,
+    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pCustEmail, pCustPo, pType,
       workedMonth: useDetail ? detailInvoice?.workedMonth : undefined,
       invoiceNo: useDetail ? detailInvoice?.invoiceNumber : undefined,
       paymentType: useDetail ? detailInvoice?.paymentType : "Credit",
@@ -499,17 +501,27 @@ export default function InvoicesPage() {
     }
   };
 
-  // Word (.docx) export function - client-side generation
+  // Word (.docx) export function - calls backend tRPC endpoint
   const handleWordExport = async (inv: any) => {
-    if (!inv) return;
+    if (!inv || !detail?.invoice) return;
     try {
-      const res = await fetch(`/api/word-export/${inv.id}`, { credentials: "include" });
+      const res = await fetch("/api/trpc/word.generateWord", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ json: { invoiceId: inv.id } }),
+      });
       if (!res.ok) throw new Error("Failed to generate Word document");
-      const blob = await res.blob();
+      const data = await res.json();
+      const html = data?.result?.data?.json?.html;
+      if (!html) throw new Error("No HTML content returned");
+      // Wrap HTML in a Word-compatible blob
+      const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">${html}</html>`;
+      const blob = new Blob(['\ufeff', wordHtml], { type: "application/msword;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Invoice-${inv.invoiceNumber}.docx`;
+      a.download = `Invoice-${inv.invoiceNumber}.doc`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
