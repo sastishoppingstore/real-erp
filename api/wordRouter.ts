@@ -55,8 +55,8 @@ export const wordRouter = createRouter({
         nameAr: it.description_ar || "",
         unit: it.unit || "Hour",
         totalHour: Number(it.total_hour || it.quantity || 0),
-        rate: Number(it.rate || it.unitPrice || 0),
-        total: Number(it.line_total || it.totalAmount || 0),
+        rate: Number(it.rate || it.unit_price || 0),
+        total: Number(it.line_total || it.total_amount || 0),
       }));
 
       const qrPayload = JSON.stringify({
@@ -69,7 +69,7 @@ export const wordRouter = createRouter({
 
       const html = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><title>Invoice ${invoice.invoiceNo}</title>
+<head><meta charset="utf-8"><title>Invoice ${invoice.invoice_no}</title>
 <style>
 body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0;padding:20px;color:#000}
 table{border-collapse:collapse;width:100%}
@@ -113,19 +113,19 @@ td,th{border:0.5pt solid #000;padding:4pt 6pt}
 <div class="title-bar">فاتورة الضريبية - TAX INVOICE</div>
 
 <table class="meta-tbl">
-<tr><td style="width:15%"><b>Worked Month:</b></td><td style="width:35%">${invoice.workedMonth || '—'}</td><td style="width:15%"><b>Date:</b></td><td style="width:35%">${invoice.date || ''}</td></tr>
-<tr><td><b>Invoice. No:</b></td><td>${invoice.invoiceNo}</td><td><b>Time:</b></td><td>—</td></tr>
-<tr><td><b>Payment:</b></td><td>${invoice.paymentType || 'Credit'}</td><td><b>Due Date:</b></td><td>${invoice.dueDate || '—'}</td></tr>
-<tr><td><b>Cashier:</b></td><td>${invoice.cashier || 'مدير النظام'}</td><td><b>PO No:</b></td><td>${invoice.poNumber || '—'}</td></tr>
+<tr><td style="width:15%"><b>Worked Month:</b></td><td style="width:35%">${invoice.worked_month || '—'}</td><td style="width:15%"><b>Date:</b></td><td style="width:35%">${invoice.date || ''}</td></tr>
+<tr><td><b>Invoice. No:</b></td><td>${invoice.invoice_no}</td><td><b>Time:</b></td><td>—</td></tr>
+<tr><td><b>Payment:</b></td><td>${invoice.payment_type || 'Credit'}</td><td><b>Due Date:</b></td><td>${invoice.due_date || '—'}</td></tr>
+<tr><td><b>Cashier:</b></td><td>${invoice.cashier || 'مدير النظام'}</td><td><b>PO No:</b></td><td>${invoice.po_number || '—'}</td></tr>
 </table>
 
 <table class="client-tbl">
-<tr><td class="label">Customer Name / اسم العميل</td><td colspan="3"><b>${customer?.name || invoice.customerName || ''}${customer?.nameAr || invoice.customerNameAr ? ' / ' + (customer?.nameAr || invoice.customerNameAr) : ''}</b></td></tr>
-<tr><td class="label">Tax No / الرقم الضريبي</td><td colspan="3">${customer?.vatNumber || customer?.taxNumber || invoice.customerVat || '—'}</td></tr>
-<tr><td class="label">CR No / رقم السجل</td><td colspan="3">${customer?.crNumber || customer?.commercialRegistration || invoice.customerCr || '—'}</td></tr>
-<tr><td class="label">Address / العنوان</td><td colspan="3">${customer?.address || invoice.customerAddress || '—'}${customer?.addressAr || invoice.customerAddressAr ? ' / ' + (customer?.addressAr || invoice.customerAddressAr) : ''}</td></tr>
-<tr><td class="label">Phone / الجوال</td><td colspan="3">${customer?.phone || invoice.customerPhone || '—'}</td></tr>
-<tr><td class="label">PO No / رقم طلب الشراء</td><td colspan="3">${invoice.poNumber || '—'}</td></tr>
+<tr><td class="label">Customer Name / اسم العميل</td><td colspan="3"><b>${customer?.name || invoice.customer_name || ''}${customer?.nameAr || invoice.customer_nameAr ? ' / ' + (customer?.nameAr || invoice.customer_nameAr) : ''}</b></td></tr>
+<tr><td class="label">Tax No / الرقم الضريبي</td><td colspan="3">${customer?.vatNumber || customer?.taxNumber || invoice.customer_vat || '—'}</td></tr>
+<tr><td class="label">CR No / رقم السجل</td><td colspan="3">${customer?.crNumber || customer?.commercialRegistration || invoice.customer_cr || '—'}</td></tr>
+<tr><td class="label">Address / العنوان</td><td colspan="3">${customer?.address || invoice.customer_address || '—'}${customer?.addressAr || invoice.customer_address_ar ? ' / ' + (customer?.addressAr || invoice.customer_address_ar) : ''}</td></tr>
+<tr><td class="label">Phone / الجوال</td><td colspan="3">${customer?.phone || invoice.customer_phone || '—'}</td></tr>
+<tr><td class="label">PO No / رقم طلب الشراء</td><td colspan="3">${invoice.po_number || '—'}</td></tr>
 </table>
 
 <table class="items-tbl">
@@ -188,6 +188,6 @@ ${notesHtml(invoice)}
         return h;
       }
 
-      return { html, invoiceNo: invoice.invoiceNo };
+      return { html, invoiceNo: invoice.invoice_no };
     }),
 });
