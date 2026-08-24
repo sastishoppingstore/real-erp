@@ -120,10 +120,10 @@ td,th{border:0.5pt solid #000;padding:4pt 6pt}
 </table>
 
 <table class="client-tbl">
-<tr><td class="label">Customer Name / اسم العميل</td><td colspan="3"><b>${customer?.name || invoice.customer_name || ''}${customer?.nameAr || invoice.customer_nameAr ? ' / ' + (customer?.nameAr || invoice.customer_nameAr) : ''}</b></td></tr>
-<tr><td class="label">Tax No / الرقم الضريبي</td><td colspan="3">${customer?.vatNumber || customer?.taxNumber || invoice.customer_vat || '—'}</td></tr>
-<tr><td class="label">CR No / رقم السجل</td><td colspan="3">${customer?.crNumber || customer?.commercialRegistration || invoice.customer_cr || '—'}</td></tr>
-<tr><td class="label">Address / العنوان</td><td colspan="3">${customer?.address || invoice.customer_address || '—'}${customer?.addressAr || invoice.customer_address_ar ? ' / ' + (customer?.addressAr || invoice.customer_address_ar) : ''}</td></tr>
+<tr><td class="label">Customer Name / اسم العميل</td><td colspan="3"><b>${customer?.name || invoice.customer_name || ''}${customer?.name_ar || invoice.customer_name_ar ? ' / ' + (customer?.name_ar || invoice.customer_name_ar) : ''}</b></td></tr>
+<tr><td class="label">Tax No / الرقم الضريبي</td><td colspan="3">${customer?.vat_number || customer?.tax_number || invoice.customer_vat || '—'}</td></tr>
+<tr><td class="label">CR No / رقم السجل</td><td colspan="3">${customer?.cr_number || customer?.commercial_registration || invoice.customer_cr || '—'}</td></tr>
+<tr><td class="label">Address / العنوان</td><td colspan="3">${customer?.address || invoice.customer_address || '—'}${customer?.address_ar || invoice.customer_address_ar ? ' / ' + (customer?.address_ar || invoice.customer_address_ar) : ''}</td></tr>
 <tr><td class="label">Phone / الجوال</td><td colspan="3">${customer?.phone || invoice.customer_phone || '—'}</td></tr>
 <tr><td class="label">PO No / رقم طلب الشراء</td><td colspan="3">${invoice.po_number || '—'}</td></tr>
 </table>
