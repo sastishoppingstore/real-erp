@@ -503,7 +503,11 @@ export default function InvoicesPage() {
 
   // Word (.docx) export function - calls backend tRPC endpoint
   const handleWordExport = async (inv: any) => {
-    if (!inv || !detail?.invoice) return;
+    if (!inv || !inv.id) {
+      console.error("[WordExport] No invoice or missing ID:", inv);
+      toast.error("No invoice selected for export");
+      return;
+    }
     try {
       const res = await fetch("/api/trpc/word.generateWord", {
         method: "POST",
@@ -511,23 +515,30 @@ export default function InvoicesPage() {
         credentials: "include",
         body: JSON.stringify({ json: { invoiceId: inv.id } }),
       });
-      if (!res.ok) throw new Error("Failed to generate Word document");
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("[WordExport] HTTP error:", res.status, errText);
+        throw new Error(`Server returned ${res.status}`);
+      }
       const data = await res.json();
+      // tRPC response can be { result: { data: { json: { html, invoiceNo } } } }
       const html = data?.result?.data?.json?.html;
-      if (!html) throw new Error("No HTML content returned");
-      // Wrap HTML in a Word-compatible blob
-      const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">${html}</html>`;
-      const blob = new Blob(['\ufeff', wordHtml], { type: "application/msword;charset=utf-8;" });
+      if (!html || typeof html !== "string" || html.length < 100) {
+        throw new Error("No valid HTML content in response");
+      }
+      const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"></head><body>${html}</body></html>`;
+      const blob = new Blob(["\ufeff", wordHtml], { type: "application/msword;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Invoice-${inv.invoiceNumber}.doc`;
+      a.download = `Invoice-${inv.invoiceNumber || inv.id}.doc`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (e: any) {
-      toast.error("Word export failed: " + e.message);
+      console.error("[WordExport] Error:", e);
+      toast.error("Word export failed: " + (e?.message || "Unknown error"));
     }
   };
 
