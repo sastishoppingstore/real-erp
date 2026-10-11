@@ -1,13 +1,10 @@
-import { useMemo, useCallback } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
-import { useLayoutTheme } from "@/providers/layoutTheme";
 import { AppIcon } from "./AppIcon";
 import { MODULE_REGISTRY } from "@/config/moduleRegistry";
 import { useTenantModules, isPathAllowed } from "@/hooks/useTenantModules";
-import { Button } from "@/components/ui/button";
-import { PanelLeftOpen } from "lucide-react";
 
 const categoryLabels: Record<string, { label: string; labelAr: string }> = {
   core: { label: "Core Business", labelAr: "الأعمال الأساسية" },
@@ -21,7 +18,6 @@ export default function AppLauncherHome() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const rtl = language === "ar";
-  const { setLayoutTheme } = useLayoutTheme();
 
   const { data: companySettings } = trpc.settings.companySettingsGet.useQuery(undefined, {
     retry: false,
@@ -58,10 +54,6 @@ export default function AppLauncherHome() {
 
   const companyName = companySettings?.companyName || (rtl ? "شركتك" : "Your Company");
 
-  const handleSwitchToSidebar = useCallback(() => {
-    setLayoutTheme("sidebar");
-  }, [setLayoutTheme]);
-
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
       {/* Header */}
@@ -78,16 +70,6 @@ export default function AppLauncherHome() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSwitchToSidebar}
-            className="gap-2 text-slate-600 dark:text-slate-300"
-          >
-            <PanelLeftOpen className="size-4" />
-            <span className="hidden sm:inline">{rtl ? "القائمة الجانبية" : "Sidebar View"}</span>
-            <span className="sm:hidden">{rtl ? "قائمة" : "Menu"}</span>
-          </Button>
         </div>
       </div>
 

@@ -10,9 +10,18 @@ import {
   Building2, HardHat, FileText, Receipt, Users, Wrench, CalendarCheck,
   FileSpreadsheet, ClipboardList, ShieldCheck, Briefcase, FileBarChart,
   Handshake, Plus, ArrowRight, Wallet, TrendingUp, Landmark, Eye,
+  Warehouse, Boxes, Package, ArrowLeftRight,
 } from "lucide-react";
 
 const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+interface Tile {
+  label: string;
+  labelAr: string;
+  icon: any;
+  path: string;
+  color: string;
+}
 
 export default function ConstructionDashboard() {
   const navigate = useNavigate();
@@ -26,7 +35,10 @@ export default function ConstructionDashboard() {
   const totalContractValue = projects?.reduce((sum, p) => sum + Number(p.contractValue || 0), 0) || 0;
   const totalInvoiced = (invoices || []).reduce((s: number, i: any) => s + Number(i.grandTotal || 0), 0);
   const outstanding = Math.max(0, totalContractValue - totalInvoiced);
-  // Monthly invoiced totals (last 6 months) — Sahl-style sales analysis.
+  const recentInvoices = [...(invoices || [])]
+    .sort((a: any, b: any) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .slice(0, 5);
+
   const monthlySales = (() => {
     const buckets = new Map<string, number>();
     const now = new Date();
@@ -40,42 +52,43 @@ export default function ConstructionDashboard() {
     });
     return [...buckets.entries()].map(([m, v]) => ({ month: m.slice(5), total: Math.round(v) }));
   })();
-  const recentInvoices = [...(invoices || [])]
-    .sort((a: any, b: any) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
-    .slice(0, 5);
 
-  // Sahl-style main category tiles (every tile opens a real module page)
-  const mainTiles = [
-    { label: "Contracts", labelAr: "العقود", icon: FileText, path: "/app/construction/contracts", gradient: "from-emerald-600 to-green-500" },
-    { label: "BOQ", labelAr: "جداول الكميات", icon: FileSpreadsheet, path: "/app/construction/boq", gradient: "from-teal-600 to-emerald-500" },
-    { label: "Tax Invoices", labelAr: "الفواتير الضريبية", icon: Receipt, path: "/app/construction/invoices", gradient: "from-green-600 to-lime-500" },
-    { label: "Sales", labelAr: "المبيعات", icon: TrendingUp, path: "/app/construction/sales-invoices", gradient: "from-lime-600 to-green-500" },
-    { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/cvr", gradient: "from-emerald-700 to-teal-600" },
+  // Sahl-style flat bright tiles — every tile opens a real module page.
+  const mainTiles: Tile[] = [
+    { label: "Contracts", labelAr: "العقود", icon: FileText, path: "/app/construction/contracts", color: "bg-green-500" },
+    { label: "BOQ", labelAr: "جداول الكميات", icon: FileSpreadsheet, path: "/app/construction/boq", color: "bg-emerald-600" },
+    { label: "Tax Invoices", labelAr: "الفواتير الضريبية", icon: Receipt, path: "/app/construction/invoices", color: "bg-lime-600" },
+    { label: "Sales", labelAr: "المبيعات", icon: TrendingUp, path: "/app/construction/sales-invoices", color: "bg-teal-500" },
+    { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/cvr", color: "bg-cyan-700" },
   ];
-  // Setup / master-data tour tiles
-  const setupTiles = [
-    { label: "WBS", labelAr: "هيكل العمل", icon: ClipboardList, path: "/app/construction/wbs", gradient: "from-sky-600 to-blue-500" },
-    { label: "BOQ Import", labelAr: "استيراد الكميات", icon: FileSpreadsheet, path: "/app/construction/boq/import", gradient: "from-blue-600 to-indigo-500" },
-    { label: "Materials", labelAr: "المواد", icon: Building2, path: "/app/construction/materials", gradient: "from-cyan-600 to-sky-500" },
-    { label: "Subcontractors", labelAr: "المقاولون", icon: Users, path: "/app/construction/subcontractors", gradient: "from-indigo-600 to-blue-500" },
-    { label: "Equipment", labelAr: "المعدات", icon: Wrench, path: "/app/construction/equipment-schedule", gradient: "from-slate-600 to-slate-500" },
-    { label: "HSE & Safety", labelAr: "السلامة", icon: ShieldCheck, path: "/app/construction/hse", gradient: "from-amber-500 to-yellow-500" },
+  const warehouseTiles: Tile[] = [
+    { label: "Warehouses", labelAr: "المخازن", icon: Warehouse, path: "/app/inventory/warehouses", color: "bg-teal-600" },
+    { label: "Stock Levels", labelAr: "مستويات المخزون", icon: Boxes, path: "/app/inventory/stock", color: "bg-emerald-500" },
+    { label: "Products", labelAr: "الأصناف", icon: Package, path: "/app/inventory/products", color: "bg-green-600" },
+    { label: "Transfers", labelAr: "التحويلات المخزنية", icon: ArrowLeftRight, path: "/app/inventory/transfers", color: "bg-cyan-600" },
+    { label: "Materials", labelAr: "مواد الموقع", icon: Building2, path: "/app/construction/materials", color: "bg-lime-600" },
   ];
-  // Big daily-action tiles (Sahl sale/purchase/expense/stock-take row)
-  const actionTiles = [
-    { label: "New Tax Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/construction/invoices", gradient: "from-green-500 to-emerald-600" },
-    { label: "New Contract", labelAr: "عقد جديد", icon: HardHat, path: "/app/construction/contracts/new", gradient: "from-orange-500 to-red-500" },
-    { label: "Advance Payments", labelAr: "الدفعات المقدمة", icon: Handshake, path: "/app/construction/advance-payments", gradient: "from-rose-500 to-red-500" },
-    { label: "Daily Report", labelAr: "التقرير اليومي", icon: CalendarCheck, path: "/app/construction/daily-reports/new", gradient: "from-teal-500 to-emerald-600" },
+  const setupTiles: Tile[] = [
+    { label: "WBS", labelAr: "هيكل العمل", icon: ClipboardList, path: "/app/construction/wbs", color: "bg-sky-600" },
+    { label: "BOQ Import", labelAr: "استيراد الكميات", icon: FileSpreadsheet, path: "/app/construction/boq/import", color: "bg-blue-600" },
+    { label: "Subcontractors", labelAr: "المقاولون", icon: Users, path: "/app/construction/subcontractors", color: "bg-indigo-500" },
+    { label: "Equipment", labelAr: "المعدات", icon: Wrench, path: "/app/construction/equipment-schedule", color: "bg-slate-500" },
+    { label: "HSE & Safety", labelAr: "السلامة", icon: ShieldCheck, path: "/app/construction/hse", color: "bg-amber-500" },
+    { label: "Daily Reports", labelAr: "التقارير اليومية", icon: Eye, path: "/app/construction/daily-reports", color: "bg-cyan-500" },
   ];
-  // Operations row
-  const opsTiles = [
-    { label: "Variations", labelAr: "التغييرات", icon: FileText, path: "/app/construction/variations", gradient: "from-emerald-600 to-green-500" },
-    { label: "Sub Payments", labelAr: "مدفوعات المقاولين", icon: Wallet, path: "/app/construction/sub-payments", gradient: "from-teal-600 to-cyan-600" },
-    { label: "Compliance", labelAr: "المطابقة", icon: ShieldCheck, path: "/app/construction/compliance/sbc", gradient: "from-green-600 to-emerald-500" },
-    { label: "Saudization", labelAr: "السعودة", icon: Briefcase, path: "/app/construction/saudization", gradient: "from-lime-600 to-green-500" },
-    { label: "Daily Reports", labelAr: "التقارير اليومية", icon: Eye, path: "/app/construction/daily-reports", gradient: "from-cyan-600 to-teal-500" },
-    { label: "Decennial", labelAr: "الضمان العشري", icon: Landmark, path: "/app/construction/decennial", gradient: "from-emerald-700 to-green-600" },
+  const actionTiles: Tile[] = [
+    { label: "New Tax Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/construction/invoices", color: "bg-green-500" },
+    { label: "New Contract", labelAr: "عقد جديد", icon: HardHat, path: "/app/construction/contracts/new", color: "bg-orange-600" },
+    { label: "Advance Payments", labelAr: "الدفعات المقدمة", icon: Handshake, path: "/app/construction/advance-payments", color: "bg-rose-500" },
+    { label: "Daily Report", labelAr: "التقرير اليومي", icon: CalendarCheck, path: "/app/construction/daily-reports/new", color: "bg-teal-500" },
+  ];
+  const opsTiles: Tile[] = [
+    { label: "Variations", labelAr: "التغييرات", icon: FileText, path: "/app/construction/variations", color: "bg-emerald-600" },
+    { label: "Sub Payments", labelAr: "مدفوعات المقاولين", icon: Wallet, path: "/app/construction/sub-payments", color: "bg-teal-600" },
+    { label: "Compliance", labelAr: "المطابقة", icon: ShieldCheck, path: "/app/construction/compliance/sbc", color: "bg-green-600" },
+    { label: "Saudization", labelAr: "السعودة", icon: Briefcase, path: "/app/construction/saudization", color: "bg-lime-600" },
+    { label: "Decennial", labelAr: "الضمان العشري", icon: Landmark, path: "/app/construction/decennial", color: "bg-emerald-700" },
+    { label: "Progress Billing", labelAr: "فوترة المراحل", icon: FileBarChart, path: "/app/verticals/construction/progress-billing", color: "bg-cyan-700" },
   ];
 
   if (statsLoading || projectsLoading || invLoading) {
@@ -89,22 +102,31 @@ export default function ConstructionDashboard() {
     );
   }
 
-  const Tile = ({ t, big }: { t: (typeof mainTiles)[number]; big?: boolean }) => (
+  const Tile = ({ t, big }: { t: Tile; big?: boolean }) => (
     <button
       key={t.path + t.label}
       onClick={() => navigate(t.path)}
-      className={`group flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br ${t.gradient} text-white shadow-md transition-all hover:shadow-xl hover:-translate-y-0.5 ${big ? "p-6 min-h-[128px]" : "p-4 min-h-[104px]"}`}
+      className={`group flex flex-col items-center justify-center gap-1.5 rounded-xl ${t.color} px-2 text-white shadow transition-all hover:shadow-xl hover:brightness-110 ${big ? "py-6 min-h-[128px]" : "py-4 min-h-[120px] w-full max-w-[180px] justify-self-center"}`}
     >
-      <t.icon className={`${big ? "h-9 w-9" : "h-7 w-7"} drop-shadow`} />
-      <span className={`font-bold leading-tight ${big ? "text-base" : "text-sm"}`}>{rtl ? t.labelAr : t.label}</span>
-      <span className="text-[11px] opacity-80 leading-tight">{rtl ? t.label : t.labelAr}</span>
+      <t.icon className={`${big ? "h-9 w-9" : "h-7 w-7"}`} strokeWidth={1.8} />
+      <span className={`font-bold leading-tight ${big ? "text-base" : "text-sm"}`}>{t.labelAr}</span>
+      <span className="text-[11px] leading-tight opacity-85">{t.label}</span>
     </button>
   );
 
+  const Section = ({ title, titleAr, children }: { title: string; titleAr: string; children: React.ReactNode }) => (
+    <div>
+      <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+        {titleAr} <span className="opacity-60">· {title}</span>
+      </h3>
+      {children}
+    </div>
+  );
+
   return (
-    <div className="space-y-6" dir={rtl ? "rtl" : "ltr"}>
-      {/* ===== Hero totals strip (Sahl-style) ===== */}
-      <div className="overflow-hidden rounded-2xl bg-gradient-to-l from-emerald-950 via-green-900 to-emerald-900 p-5 text-white shadow-xl">
+    <div className="space-y-6 rounded-2xl bg-gradient-to-br from-neutral-900 via-stone-900 to-neutral-900 p-4 lg:p-5" dir={rtl ? "rtl" : "ltr"}>
+      {/* ===== Hero totals strip ===== */}
+      <div className="overflow-hidden rounded-2xl bg-gradient-to-l from-emerald-950 via-green-900 to-emerald-900 p-5 text-white shadow-xl ring-1 ring-white/10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold">{rtl ? "لوحة تحكم المقاولات" : "Construction Dashboard"}</h2>
@@ -122,44 +144,43 @@ export default function ConstructionDashboard() {
             { l: "Active Projects", ar: "المشاريع النشطة", v: String(stats?.activeProjects ?? activeProjects.length) },
           ].map((k) => (
             <div key={k.l} className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur">
-              <p className="text-xs text-emerald-200">{rtl ? k.ar : k.l}</p>
+              <p className="text-xs text-emerald-200">{k.ar}</p>
               <p className="mt-1 text-xl font-bold">{k.v}</p>
-              <p className="text-[11px] text-emerald-200/70">{rtl ? k.l : k.ar}</p>
+              <p className="text-[11px] text-emerald-200/70">{k.l}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ===== Main modules ===== */}
-      <div>
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">{rtl ? "الأقسام الرئيسية" : "Main Modules"}</h3>
+      <Section title="Main Modules" titleAr="الأقسام الرئيسية">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {mainTiles.map((t) => <Tile key={t.label} t={t} />)}
         </div>
-      </div>
+      </Section>
 
-      {/* ===== Big daily actions ===== */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {actionTiles.map((t) => <Tile key={t.label} t={t} big />)}
       </div>
 
-      {/* ===== Setup tour ===== */}
-      <div>
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">{rtl ? "جولة سريعة للإعداد" : "Quick Setup Tour"}</h3>
+      <Section title="Warehouse" titleAr="المخزن">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {warehouseTiles.map((t) => <Tile key={t.label} t={t} />)}
+        </div>
+      </Section>
+
+      <Section title="Quick Setup Tour" titleAr="جولة سريعة للإعداد">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {setupTiles.map((t) => <Tile key={t.label} t={t} />)}
         </div>
-      </div>
+      </Section>
 
-      {/* ===== Operations ===== */}
-      <div>
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">{rtl ? "العمليات" : "Operations"}</h3>
+      <Section title="Operations" titleAr="العمليات">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {opsTiles.map((t) => <Tile key={t.label} t={t} />)}
         </div>
-      </div>
+      </Section>
 
-      {/* ===== Sales analysis (Sahl reports row) ===== */}
+      {/* ===== Sales analysis ===== */}
       <Card>
         <CardHeader>
           <CardTitle>{rtl ? "تحليل المبيعات — آخر 6 أشهر" : "Sales Analysis — Last 6 Months"}</CardTitle>
@@ -250,8 +271,9 @@ export default function ConstructionDashboard() {
         ].map((k) => (
           <Card key={k.l}>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{rtl ? k.ar : k.l}</p>
+              <p className="text-xs text-muted-foreground">{k.ar}</p>
               <p className="mt-1 text-2xl font-bold">{k.v}</p>
+              <p className="text-[11px] text-muted-foreground/70">{k.l}</p>
             </CardContent>
           </Card>
         ))}

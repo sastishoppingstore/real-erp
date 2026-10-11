@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { trpc } from "./trpc";
 
 export type LayoutTheme = "sidebar" | "app_launcher" | "launcher_theme";
@@ -11,40 +11,28 @@ interface LayoutThemeContextValue {
 }
 
 const LayoutThemeContext = createContext<LayoutThemeContextValue>({
-  layoutTheme: "sidebar",
+  layoutTheme: "launcher_theme",
   setLayoutTheme: () => {},
-  isAppLauncher: false,
+  isAppLauncher: true,
   isLoading: true,
 });
 
 export function LayoutThemeProvider({ children }: { children: ReactNode }) {
-  const { data: settings, isLoading } = trpc.settings.themeGet.useQuery(undefined, {
+  const { isLoading } = trpc.settings.themeGet.useQuery(undefined, {
     retry: false,
     staleTime: 1000 * 60 * 10,
   });
-  const updateTheme = trpc.settings.themeUpdate.useMutation();
-  const [layoutTheme, setLayoutThemeState] = useState<LayoutTheme>("launcher_theme");
 
-  useEffect(() => {
-    if (settings?.layoutTheme) {
-      const theme = settings.layoutTheme;
-      if (theme === "sidebar" || theme === "app_launcher" || theme === "launcher_theme") {
-        setLayoutThemeState(theme);
-      }
-    }
-  }, [settings?.layoutTheme]);
-
-  const setLayoutTheme = (theme: LayoutTheme) => {
-    setLayoutThemeState(theme);
-    updateTheme.mutate({ layoutTheme: theme });
-  };
+  // Single locked theme for every tenant: the extra themes are removed,
+  // so switching is a no-op and everyone stays on the launcher theme.
+  const setLayoutTheme = (_theme: LayoutTheme) => {};
 
   return (
     <LayoutThemeContext.Provider
       value={{
-        layoutTheme,
+        layoutTheme: "launcher_theme",
         setLayoutTheme,
-        isAppLauncher: layoutTheme === "app_launcher" || layoutTheme === "launcher_theme",
+        isAppLauncher: true,
         isLoading,
       }}
     >

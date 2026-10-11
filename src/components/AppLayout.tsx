@@ -660,21 +660,6 @@ const SidebarContent = memo(function SidebarContent({ collapsed, onNavigate }: {
 
       {/* Bottom Actions */}
       <div className={cn("border-t border-slate-700 p-3 space-y-1", collapsed && "p-2")}>
-        {isAppLauncher && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { setLayoutTheme("sidebar"); }}
-            className={cn(
-              "w-full text-slate-300 hover:text-white hover:bg-slate-800",
-              collapsed ? "justify-center px-0" : "justify-start gap-2"
-            )}
-            title={rtl ? "التبديل إلى القائمة الجانبية" : "Switch to Sidebar"}
-          >
-            <LayoutDashboard className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>{rtl ? "قائمة جانبية" : "Sidebar View"}</span>}
-          </Button>
-        )}
         <Button
           variant="ghost"
           size="sm"

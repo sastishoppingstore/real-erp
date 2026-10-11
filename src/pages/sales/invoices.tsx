@@ -40,9 +40,11 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
   const pType = dInv.invoiceType === "zatca" ? "zatca" : "standard";
   const printItemsWithAr = (detail.items || []).map((it: any, i: number) => ({
     no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
-    nameAr: it.descriptionAr || "",
+    nameAr: it.descriptionAr || "", productId: it.productId ?? null,
     qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
   }));
+  const pBalAfter = dCust?.currentBalance != null ? Number(dCust.currentBalance) : null;
+  const pBalPrior = pBalAfter !== null ? pBalAfter - pTotal : null;
   const html = generateInvoiceHtml({
     companyName: companyData.companyName || "YAFCO AL ARABIAH EST.",
     companyNameAr: companyData.companyNameAr || "مؤسسة يافكو العربية",
@@ -61,6 +63,11 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
     noteAr: dInv.notesAr || "",
     pSub, pDisc, pVat, pTotal,
     pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType,
+    title: pType === "zatca" ? "TAX INVOICE" : "SALES INVOICE",
+    titleAr: pType === "zatca" ? "فاتورة ضريبية" : "فاتورة مبيعات",
+    paid: Number(dInv.paidAmount || 0),
+    creditDue: Number(dInv.balanceDue || 0),
+    balPrior: pBalPrior, balAfter: pBalAfter, hasAccount: !!dCust?.id,
     workedMonth: dInv.workedMonth,
     invoiceNo: dInv.invoiceNumber,
     paymentType: dInv.paymentType,
@@ -417,10 +424,10 @@ export default function InvoicesPage() {
     const printItems = useDetail
       ? detailItems.map((it: any, i: number) => ({
           no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
-          nameAr: it.descriptionAr || "",
+          nameAr: it.descriptionAr || "", productId: it.productId ?? null,
           qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
         }))
-      : cart.map((item, i) => ({ no: i + 1, name: item.name, nameAr: item.nameAr, qty: item.qty, rate: item.price, total: item.price * item.qty }));
+      : cart.map((item, i) => ({ no: i + 1, name: item.name, nameAr: item.nameAr, productId: (item as any).sku || null, qty: item.qty, rate: item.price, total: item.price * item.qty }));
     if (printItems.length === 0) { toast.error("Add items to cart before printing"); return; }
 
     const pSub = useDetail ? Number(detailInvoice?.subTotal || 0) : subtotal;
@@ -456,6 +463,13 @@ export default function InvoicesPage() {
       noteAr: noteAr || "",
       pSub, pDisc, pVat, pTotal,
     pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pCustEmail, pCustPo, pType,
+      title: pType === "zatca" ? "TAX INVOICE" : "SALES INVOICE",
+      titleAr: pType === "zatca" ? "فاتورة ضريبية" : "فاتورة مبيعات",
+      paid: useDetail ? Number(detailInvoice?.paidAmount || 0) : 0,
+      creditDue: useDetail ? Number(detailInvoice?.balanceDue || 0) : 0,
+      balPrior: useDetail && detailCustomer?.currentBalance != null ? Number(detailCustomer.currentBalance) - pTotal : null,
+      balAfter: useDetail && detailCustomer?.currentBalance != null ? Number(detailCustomer.currentBalance) : null,
+      hasAccount: useDetail ? !!detailCustomer?.id : false,
       workedMonth: useDetail ? detailInvoice?.workedMonth : undefined,
       invoiceNo: useDetail ? detailInvoice?.invoiceNumber : undefined,
       paymentType: useDetail ? detailInvoice?.paymentType : "Credit",

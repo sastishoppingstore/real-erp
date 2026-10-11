@@ -23,11 +23,38 @@ export default function Login() {
   const [message, setMessage] = useState("");
   const [devOtp, setDevOtp] = useState("");
 
+  // Business home: tenants land on their own vertical's dashboard
+  // (construction -> /app/construction), everyone else -> /app.
+  const LANDING_PRIORITY: Array<[string, string]> = [
+    ["construction", "/app/construction"],
+    ["workshop", "/app/verticals/workshop"],
+    ["healthcare", "/app/verticals/healthcare"],
+    ["education", "/app/verticals/education"],
+    ["hotel", "/app/verticals/hotel"],
+    ["real_estate", "/app/verticals/real-estate"],
+    ["transport", "/app/verticals/transport"],
+    ["travel", "/app/verticals/travel"],
+  ];
+
   const finishLogin = async (data?: { token?: string }) => {
     if (data?.token) {
       localStorage.setItem("erp_sid", data.token);
     }
     await utils.auth.me.invalidate();
+    try {
+      const res = await utils.settings.modulesGet.fetch(undefined);
+      const mods = (res as any)?.modules as string[] | undefined;
+      if (mods?.length) {
+        for (const [m, path] of LANDING_PRIORITY) {
+          if (mods.includes(m)) {
+            navigate(path);
+            return;
+          }
+        }
+      }
+    } catch {
+      /* fall through to default home */
+    }
     navigate("/app");
   };
 

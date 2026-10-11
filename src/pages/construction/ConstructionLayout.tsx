@@ -10,7 +10,7 @@ import {
   FileEdit, Handshake, FileBarChart, ScrollText, FileClock, CalendarCheck,
   Users, ShieldCheck, HardHat, Thermometer, GraduationCap, Eye,
   Wrench, Package, ChevronDown, ChevronRight, Briefcase, Landmark,
-  AlertTriangle, Receipt, Activity, ShoppingCart,
+  AlertTriangle, Receipt, Activity, ShoppingCart, Warehouse, Boxes, ArrowLeftRight,
 } from "lucide-react";
 
 const navSections = [
@@ -37,6 +37,16 @@ const navSections = [
       { label: "Sub Payments", path: "/app/construction/sub-payments", icon: Users },
       { label: "Tax Invoices", path: "/app/construction/invoices", icon: Receipt },
       { label: "Sales Invoices", path: "/app/construction/sales-invoices", icon: ShoppingCart },
+    ],
+  },
+  {
+    label: "Warehouse",
+    items: [
+      { label: "Warehouses", path: "/app/inventory/warehouses", icon: Warehouse },
+      { label: "Stock Levels", path: "/app/inventory/stock", icon: Boxes },
+      { label: "Products", path: "/app/inventory/products", icon: Package },
+      { label: "Transfers", path: "/app/inventory/transfers", icon: ArrowLeftRight },
+      { label: "Site Materials", path: "/app/construction/materials", icon: Building2 },
     ],
   },
   {
