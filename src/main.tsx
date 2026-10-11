@@ -60,22 +60,30 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// Immediate force unregister old service worker and clear cache on first load
+// One-shot purge of stale service workers / caches left by older builds.
+// Runs at most once per tab session so it can never reload-loop or
+// interrupt an in-flight login: after the first pass a session flag
+// short-circuits every later page load.
 if ("serviceWorker" in navigator) {
   (async function () {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    let hadSW = false;
-    for (const reg of regs) {
-      hadSW = true;
-      await reg.unregister();
-    }
-    if (hadSW && "caches" in window) {
-      const keys = await caches.keys();
-      for (const key of keys) {
-        await caches.delete(key);
+    try {
+      if (sessionStorage.getItem("erp:sw-purge-done")) return;
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (!regs.length) return;
+      sessionStorage.setItem("erp:sw-purge-done", "1");
+      for (const reg of regs) {
+        try { await reg.unregister(); } catch { /* ignore */ }
       }
-      // Force hard reload bypassing SW
-      window.location.href = window.location.href + "?v=" + Date.now();
-    }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        for (const key of keys) {
+          try { await caches.delete(key); } catch { /* ignore */ }
+        }
+      }
+      // Force one hard reload bypassing SW (clean ?v= param, no history spam)
+      const url = new URL(window.location.href);
+      url.searchParams.set("v", String(Date.now()));
+      window.location.replace(url.toString());
+    } catch { /* ignore */ }
   })();
 }

@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import './i18n';
 import { Routes, Route, Navigate, useLocation } from "react-router";
 import AppLayout from "./components/AppLayout";
+import BusinessHomeRedirect from "./components/BusinessHomeRedirect";
 
 const oldPrefixes = [
   "accounting", "inventory", "sales", "purchase", "crm", "hrm",
@@ -541,7 +542,9 @@ export default function App() {
       <Route path="/admin/invoice-settings" element={<SuperAdminLayout><InvoiceSettingsPage /></SuperAdminLayout>} />
 
       {/* App routes (all ERP pages under /app) */}
-      <Route path="/app" element={<LayoutWrapper><Dashboard /></LayoutWrapper>} />
+      {/* Business home: construction tenants go straight to their
+          Sahl-style dashboard, everyone else keeps the launcher. */}
+      <Route path="/app" element={<BusinessHomeRedirect />} />
 
       {/* Accounting Routes */}
       <Route path="/app/accounting" element={<LayoutWrapper><AccountingPage /></LayoutWrapper>} />
@@ -903,10 +906,16 @@ export default function App() {
         <Route path="costs" element={<ContractCostList />} />
       </Route>
 
-      {/* Construction Module Routes (wrapped in AppLayout so the selected
-          layout theme + header/sidebar stay consistent on every sub-page) */}
-      <Route path="/app/construction" element={<LayoutWrapper><ConstructionLayout /></LayoutWrapper>}>
+      {/* Construction Module Routes (standalone Sahl shell — NO AppLayout
+          wrapper, so the whole tree stays Sahl-styled: dashboard, header,
+          sidebar and every sub-page). */}
+      <Route path="/app/construction" element={<ConstructionLayout />}>
         <Route index element={<ConstructionDashboard />} />
+        <Route path="warehouses" element={<WarehousesPage />} />
+        <Route path="stock" element={<StockLevelsPage />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="transfers" element={<StockTransfersPage />} />
+        <Route path="progress-billing" element={<ConstructionProgressBilling />} />
         <Route path="invoices" element={<ConstructionInvoicePage />} />
         <Route path="sales-invoices" element={<InvoicesPage />} />
         <Route path="wbs" element={<WBSList />} />

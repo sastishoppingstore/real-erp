@@ -9,11 +9,25 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import {
   Building2, HardHat, FileText, Receipt, Users, Wrench, CalendarCheck,
   FileSpreadsheet, ClipboardList, ShieldCheck, Briefcase, FileBarChart,
-  Handshake, Plus, ArrowRight, Wallet, TrendingUp, Landmark, Eye,
-  Warehouse, Boxes, Package, ArrowLeftRight,
+  Handshake, Plus, ArrowRight, Wallet, Boxes, Package, ArrowLeftRight,
+  Truck, Calculator, ClipboardCheck, ListOrdered, FolderKanban,
 } from "lucide-react";
 
 const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+// Sahl palette (from the desktop app): one flat bright color per tile.
+const C = {
+  green: "bg-[#2fae4e]",
+  blue: "bg-[#1b9bd7]",
+  yellow: "bg-[#f5c518]",
+  navy: "bg-[#1b3a5f]",
+  red: "bg-[#e05242]",
+  salmon: "bg-[#ef6a5a]",
+  teal: "bg-[#1a9e8f]",
+  maroon: "bg-[#7b2d4e]",
+  emerald: "bg-[#0d8a5f]",
+  lime: "bg-[#65a30d]",
+};
 
 interface Tile {
   label: string;
@@ -21,6 +35,7 @@ interface Tile {
   icon: any;
   path: string;
   color: string;
+  dark?: boolean;
 }
 
 export default function ConstructionDashboard() {
@@ -53,50 +68,61 @@ export default function ConstructionDashboard() {
     return [...buckets.entries()].map(([m, v]) => ({ month: m.slice(5), total: Math.round(v) }));
   })();
 
-  // Sahl-style flat bright tiles — every tile opens a real module page.
-  const mainTiles: Tile[] = [
-    { label: "Contracts", labelAr: "العقود", icon: FileText, path: "/app/construction/contracts", color: "bg-green-500" },
-    { label: "BOQ", labelAr: "جداول الكميات", icon: FileSpreadsheet, path: "/app/construction/boq", color: "bg-emerald-600" },
-    { label: "Tax Invoices", labelAr: "الفواتير الضريبية", icon: Receipt, path: "/app/construction/invoices", color: "bg-lime-600" },
-    { label: "Sales", labelAr: "المبيعات", icon: TrendingUp, path: "/app/construction/sales-invoices", color: "bg-teal-500" },
-    { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/cvr", color: "bg-cyan-700" },
+  // Sahl row 1: hero + 5 green tiles (all open real pages).
+  const heroTiles: Tile[] = [
+    { label: "Goods", labelAr: "البضاعة", icon: Package, path: "/app/construction/products", color: C.green },
+    { label: "Accounts", labelAr: "الحسابات", icon: Users, path: "/app/construction/subcontractors", color: C.green },
+    { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/advance-payments", color: C.green },
+    { label: "Invoices", labelAr: "الفواتير", icon: FolderKanban, path: "/app/construction/invoices", color: C.green },
+    { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/cvr", color: C.green },
   ];
-  const warehouseTiles: Tile[] = [
-    { label: "Warehouses", labelAr: "المخازن", icon: Warehouse, path: "/app/inventory/warehouses", color: "bg-teal-600" },
-    { label: "Stock Levels", labelAr: "مستويات المخزون", icon: Boxes, path: "/app/inventory/stock", color: "bg-emerald-500" },
-    { label: "Products", labelAr: "الأصناف", icon: Package, path: "/app/inventory/products", color: "bg-green-600" },
-    { label: "Transfers", labelAr: "التحويلات المخزنية", icon: ArrowLeftRight, path: "/app/inventory/transfers", color: "bg-cyan-600" },
-    { label: "Materials", labelAr: "مواد الموقع", icon: Building2, path: "/app/construction/materials", color: "bg-lime-600" },
+  // Sahl row 2: quick tour (blue / yellow / navy).
+  const tourTiles: Tile[] = [
+    { label: "Enter Items", labelAr: "إدخال الأصناف", icon: ListOrdered, path: "/app/construction/products", color: C.blue },
+    { label: "New Contract", labelAr: "إعداد العقود", icon: FileText, path: "/app/construction/contracts/new", color: C.blue },
+    { label: "Projects", labelAr: "المشاريع", icon: Building2, path: "/app/construction/contracts", color: C.blue },
+    { label: "Enter Accounts", labelAr: "إدخال الحسابات", icon: ClipboardCheck, path: "/app/construction/subcontractors", color: C.yellow, dark: true },
+    { label: "Daily Movement", labelAr: "الحركة اليومية", icon: ClipboardList, path: "/app/construction/daily-reports", color: C.navy },
+    { label: "Sales Analysis", labelAr: "تحليل المبيعات", icon: FileBarChart, path: "/app/construction/cvr", color: C.navy },
   ];
-  const setupTiles: Tile[] = [
-    { label: "WBS", labelAr: "هيكل العمل", icon: ClipboardList, path: "/app/construction/wbs", color: "bg-sky-600" },
-    { label: "BOQ Import", labelAr: "استيراد الكميات", icon: FileSpreadsheet, path: "/app/construction/boq/import", color: "bg-blue-600" },
-    { label: "Subcontractors", labelAr: "المقاولون", icon: Users, path: "/app/construction/subcontractors", color: "bg-indigo-500" },
-    { label: "Equipment", labelAr: "المعدات", icon: Wrench, path: "/app/construction/equipment-schedule", color: "bg-slate-500" },
-    { label: "HSE & Safety", labelAr: "السلامة", icon: ShieldCheck, path: "/app/construction/hse", color: "bg-amber-500" },
-    { label: "Daily Reports", labelAr: "التقارير اليومية", icon: Eye, path: "/app/construction/daily-reports", color: "bg-cyan-500" },
-  ];
-  const actionTiles: Tile[] = [
-    { label: "New Tax Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/construction/invoices", color: "bg-green-500" },
-    { label: "New Contract", labelAr: "عقد جديد", icon: HardHat, path: "/app/construction/contracts/new", color: "bg-orange-600" },
-    { label: "Advance Payments", labelAr: "الدفعات المقدمة", icon: Handshake, path: "/app/construction/advance-payments", color: "bg-rose-500" },
-    { label: "Daily Report", labelAr: "التقرير اليومي", icon: CalendarCheck, path: "/app/construction/daily-reports/new", color: "bg-teal-500" },
+  // Sahl row 3: document types (4 big + warehouse ops).
+  const docTiles: Tile[] = [
+    { label: "New Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/construction/invoices", color: C.green },
+    { label: "New Contract", labelAr: "عقد جديد", icon: HardHat, path: "/app/construction/contracts/new", color: C.red },
+    { label: "Advance Payments", labelAr: "الدفعات المقدمة", icon: Handshake, path: "/app/construction/advance-payments", color: C.salmon },
+    { label: "Daily Report", labelAr: "التقرير اليومي", icon: CalendarCheck, path: "/app/construction/daily-reports/new", color: C.teal },
   ];
   const opsTiles: Tile[] = [
-    { label: "Variations", labelAr: "التغييرات", icon: FileText, path: "/app/construction/variations", color: "bg-emerald-600" },
-    { label: "Sub Payments", labelAr: "مدفوعات المقاولين", icon: Wallet, path: "/app/construction/sub-payments", color: "bg-teal-600" },
-    { label: "Compliance", labelAr: "المطابقة", icon: ShieldCheck, path: "/app/construction/compliance/sbc", color: "bg-green-600" },
-    { label: "Saudization", labelAr: "السعودة", icon: Briefcase, path: "/app/construction/saudization", color: "bg-lime-600" },
-    { label: "Decennial", labelAr: "الضمان العشري", icon: Landmark, path: "/app/construction/decennial", color: "bg-emerald-700" },
-    { label: "Progress Billing", labelAr: "فوترة المراحل", icon: FileBarChart, path: "/app/verticals/construction/progress-billing", color: "bg-cyan-700" },
+    { label: "Warehouses", labelAr: "المخازن", icon: Building2, path: "/app/construction/warehouses", color: C.green },
+    { label: "Materials", labelAr: "المواد", icon: Boxes, path: "/app/construction/materials", color: C.green },
+    { label: "Transfers", labelAr: "التحويلات المخزنية", icon: Truck, path: "/app/construction/transfers", color: C.teal },
+    { label: "Subcontractors", labelAr: "المقاولون", icon: Users, path: "/app/construction/subcontractors", color: C.maroon },
+    { label: "Payments", labelAr: "المدفوعات", icon: Wallet, path: "/app/construction/sub-payments", color: C.emerald },
+    { label: "Equipment", labelAr: "المعدات", icon: Wrench, path: "/app/construction/equipment-schedule", color: C.teal },
+  ];
+  // Warehouse section (dedicated strip).
+  const warehouseTiles: Tile[] = [
+    { label: "Warehouses", labelAr: "المخازن", icon: Building2, path: "/app/construction/warehouses", color: C.teal },
+    { label: "Stock Levels", labelAr: "مستويات المخزون", icon: Boxes, path: "/app/construction/stock", color: C.emerald },
+    { label: "Products", labelAr: "الأصناف", icon: Package, path: "/app/construction/products", color: C.green },
+    { label: "Transfers", labelAr: "التحويلات المخزنية", icon: ArrowLeftRight, path: "/app/construction/transfers", color: C.blue },
+    { label: "BOQ", labelAr: "جداول الكميات", icon: FileSpreadsheet, path: "/app/construction/boq", color: C.lime },
+  ];
+  // Setup / compliance strip.
+  const setupTiles: Tile[] = [
+    { label: "WBS", labelAr: "هيكل العمل", icon: ClipboardList, path: "/app/construction/wbs", color: C.blue },
+    { label: "Variations", labelAr: "التغييرات", icon: FileText, path: "/app/construction/variations", color: C.emerald },
+    { label: "Compliance", labelAr: "المطابقة", icon: ShieldCheck, path: "/app/construction/compliance/sbc", color: C.green },
+    { label: "Saudization", labelAr: "السعودة", icon: Briefcase, path: "/app/construction/saudization", color: C.lime },
+    { label: "HSE & Safety", labelAr: "السلامة", icon: HardHat, path: "/app/construction/hse", color: C.yellow, dark: true },
+    { label: "Decennial", labelAr: "الضمان العشري", icon: Calculator, path: "/app/construction/decennial", color: C.navy },
   ];
 
   if (statsLoading || projectsLoading || invLoading) {
     return (
-      <div className="space-y-6">
-        <div><Skeleton className="h-8 w-64" /><Skeleton className="h-4 w-96 mt-1" /></div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+      <div className="space-y-3">
+        <div className="grid gap-2 lg:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-32 rounded-md bg-white/10" />)}
         </div>
       </div>
     );
@@ -106,103 +132,102 @@ export default function ConstructionDashboard() {
     <button
       key={t.path + t.label}
       onClick={() => navigate(t.path)}
-      className={`group flex flex-col items-center justify-center gap-1.5 rounded-xl ${t.color} px-2 text-white shadow transition-all hover:shadow-xl hover:brightness-110 ${big ? "py-6 min-h-[128px]" : "py-4 min-h-[120px] w-full max-w-[180px] justify-self-center"}`}
+      className={`group flex flex-col items-center justify-center gap-1.5 px-2 text-center shadow transition-all hover:shadow-xl hover:brightness-110 ${t.color} ${t.dark ? "text-slate-800" : "text-white"} ${big ? "min-h-[150px] py-5" : "min-h-[128px] py-4"}`}
     >
-      <t.icon className={`${big ? "h-9 w-9" : "h-7 w-7"}`} strokeWidth={1.8} />
-      <span className={`font-bold leading-tight ${big ? "text-base" : "text-sm"}`}>{t.labelAr}</span>
-      <span className="text-[11px] leading-tight opacity-85">{t.label}</span>
+      <t.icon className={big ? "h-11 w-11" : "h-9 w-9"} strokeWidth={1.6} />
+      <span className={`font-bold leading-tight ${big ? "text-lg" : "text-[15px]"}`}>{t.labelAr}</span>
+      <span className={`text-[11px] leading-tight ${t.dark ? "opacity-70" : "opacity-85"}`}>{t.label}</span>
     </button>
   );
 
-  const Section = ({ title, titleAr, children }: { title: string; titleAr: string; children: React.ReactNode }) => (
-    <div>
-      <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-        {titleAr} <span className="opacity-60">· {title}</span>
-      </h3>
-      {children}
+  const SectionTitle = ({ ar, en }: { ar: string; en: string }) => (
+    <div className="flex items-baseline justify-between px-1 pt-1">
+      <h3 className="text-sm font-bold text-white/90">{ar} <span className="font-normal text-white/50">· {en}</span></h3>
     </div>
   );
 
   return (
-    <div className="space-y-6 rounded-2xl bg-gradient-to-br from-neutral-900 via-stone-900 to-neutral-900 p-4 lg:p-5" dir={rtl ? "rtl" : "ltr"}>
-      {/* ===== Hero totals strip ===== */}
-      <div className="overflow-hidden rounded-2xl bg-gradient-to-l from-emerald-950 via-green-900 to-emerald-900 p-5 text-white shadow-xl ring-1 ring-white/10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold">{rtl ? "لوحة تحكم المقاولات" : "Construction Dashboard"}</h2>
-            <p className="text-sm text-emerald-200">{rtl ? "نظرة شاملة على المشاريع والمبيعات" : "Projects, contracts & sales at a glance"}</p>
+    <div className="space-y-2.5">
+      {/* ===== Sahl row 1: hero + 5 green tiles ===== */}
+      <div className="grid gap-2 lg:grid-cols-6">
+        <div className={`flex flex-col justify-between gap-2 p-4 text-white shadow ${C.green}`}>
+          <div className="flex items-center gap-3">
+            <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/20">
+              <HardHat className="h-8 w-8" strokeWidth={1.6} />
+            </span>
+            <div>
+              <h2 className="text-xl font-bold leading-tight">{rtl ? "المقاولات" : "Construction"}</h2>
+              <p className="text-[11px] opacity-90">{rtl ? "لإدارة المشاريع والمخازن" : "Projects & warehouse management"}</p>
+            </div>
           </div>
-          <Button variant="secondary" onClick={() => navigate("/app/construction/invoices")}>
-            <Plus className="mr-1 size-4" />{rtl ? "فاتورة جديدة" : "New Tax Invoice"}
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { ar: "إجمالي المبيعات", en: "Sales", v: `${fmt(totalInvoiced)}` },
+              { ar: "قيمة العقود", en: "Contracts", v: `${fmt(totalContractValue)}` },
+              { ar: "المتبقي", en: "Outstanding", v: `${fmt(outstanding)}` },
+              { ar: "المشاريع النشطة", en: "Active", v: String(stats?.activeProjects ?? activeProjects.length) },
+            ].map((k) => (
+              <div key={k.en} className="rounded bg-black/20 px-2 py-1.5">
+                <p className="text-[10px] opacity-85">{k.ar}</p>
+                <p className="text-sm font-bold leading-tight tabular-nums">{k.v}</p>
+              </div>
+            ))}
+          </div>
+          <Button variant="secondary" size="sm" className="w-full font-bold" onClick={() => navigate("/app/construction/invoices")}>
+            <Plus className="size-4" />{rtl ? "فاتورة جديدة" : "New Invoice"}
           </Button>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[
-            { l: "Total Sales", ar: "إجمالي المبيعات", v: `${fmt(totalInvoiced)} SAR` },
-            { l: "Contracts Value", ar: "قيمة العقود", v: `${fmt(totalContractValue)} SAR` },
-            { l: "Outstanding", ar: "المتبقي", v: `${fmt(outstanding)} SAR` },
-            { l: "Active Projects", ar: "المشاريع النشطة", v: String(stats?.activeProjects ?? activeProjects.length) },
-          ].map((k) => (
-            <div key={k.l} className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur">
-              <p className="text-xs text-emerald-200">{k.ar}</p>
-              <p className="mt-1 text-xl font-bold">{k.v}</p>
-              <p className="text-[11px] text-emerald-200/70">{k.l}</p>
-            </div>
-          ))}
-        </div>
+        {heroTiles.map((t) => <Tile key={t.label} t={t} />)}
       </div>
 
-      <Section title="Main Modules" titleAr="الأقسام الرئيسية">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {mainTiles.map((t) => <Tile key={t.label} t={t} />)}
-        </div>
-      </Section>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {actionTiles.map((t) => <Tile key={t.label} t={t} big />)}
+      {/* ===== Sahl row 2: quick tour ===== */}
+      <SectionTitle ar="ابدا بمشاهدة الجولة السريعة" en="Quick tour" />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {tourTiles.map((t) => <Tile key={t.label} t={t} />)}
       </div>
 
-      <Section title="Warehouse" titleAr="المخزن">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {warehouseTiles.map((t) => <Tile key={t.label} t={t} />)}
-        </div>
-      </Section>
+      {/* ===== Sahl row 3: document types ===== */}
+      <SectionTitle ar="حدد نوع المستند" en="Documents" />
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {docTiles.map((t) => <Tile key={t.label} t={t} big />)}
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {opsTiles.map((t) => <Tile key={t.label} t={t} />)}
+      </div>
 
-      <Section title="Quick Setup Tour" titleAr="جولة سريعة للإعداد">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {setupTiles.map((t) => <Tile key={t.label} t={t} />)}
-        </div>
-      </Section>
+      {/* ===== Warehouse section ===== */}
+      <SectionTitle ar="المخازن" en="Warehouse" />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        {warehouseTiles.map((t) => <Tile key={t.label} t={t} />)}
+      </div>
 
-      <Section title="Operations" titleAr="العمليات">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {opsTiles.map((t) => <Tile key={t.label} t={t} />)}
-        </div>
-      </Section>
+      {/* ===== Setup & compliance ===== */}
+      <SectionTitle ar="الإعداد والمطابقة" en="Setup & compliance" />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {setupTiles.map((t) => <Tile key={t.label} t={t} />)}
+      </div>
 
-      {/* ===== Sales analysis ===== */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{rtl ? "تحليل المبيعات — آخر 6 أشهر" : "Sales Analysis — Last 6 Months"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={monthlySales}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(v: any) => [`${fmt(Number(v))} SAR`, rtl ? "المبيعات" : "Sales"]} />
-              <Bar dataKey="total" fill="#059669" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* ===== Recent invoices + active projects ===== */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>{rtl ? "أحدث الفواتير" : "Recent Invoices"}</CardTitle>
+      {/* ===== Sales analysis + follow-up (below the fold) ===== */}
+      <div className="grid gap-2 pt-1 lg:grid-cols-5">
+        <Card className="lg:col-span-3">
+          <CardHeader className="py-3">
+            <CardTitle className="text-base">{rtl ? "تحليل المبيعات — آخر 6 أشهر" : "Sales Analysis — Last 6 Months"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={monthlySales}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(v: any) => [`${fmt(Number(v))} SAR`, rtl ? "المبيعات" : "Sales"]} />
+                <Bar dataKey="total" fill="#2fae4e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between py-3">
+            <CardTitle className="text-base">{rtl ? "أحدث الفواتير" : "Recent Invoices"}</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate("/app/construction/invoices")}>
               {rtl ? "عرض الكل" : "View all"}<ArrowRight className="ml-1 size-3.5" />
             </Button>
@@ -228,9 +253,12 @@ export default function ConstructionDashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid gap-2 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>{rtl ? "المشاريع النشطة" : "Active Projects"}</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between py-3">
+            <CardTitle className="text-base">{rtl ? "المشاريع النشطة" : "Active Projects"}</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate("/app/construction/contracts")}>
               {rtl ? "عرض الكل" : "View all"}<ArrowRight className="ml-1 size-3.5" />
             </Button>
@@ -259,24 +287,22 @@ export default function ConstructionDashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* ===== Bottom counters strip ===== */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          { l: "Invoices", ar: "الفواتير", v: (invoices || []).length },
-          { l: "Subcontractors", ar: "المقاولون", v: stats?.totalSubcontractors ?? 0 },
-          { l: "Projects", ar: "المشاريع", v: projects?.length ?? 0 },
-          { l: "Contracts Value", ar: "قيمة العقود", v: `${fmt(totalContractValue)}` },
-        ].map((k) => (
-          <Card key={k.l}>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{k.ar}</p>
-              <p className="mt-1 text-2xl font-bold">{k.v}</p>
-              <p className="text-[11px] text-muted-foreground/70">{k.l}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="grid grid-cols-2 content-start gap-2">
+          {[
+            { l: "Invoices", ar: "الفواتير", v: (invoices || []).length },
+            { l: "Subcontractors", ar: "المقاولون", v: stats?.totalSubcontractors ?? 0 },
+            { l: "Projects", ar: "المشاريع", v: projects?.length ?? 0 },
+            { l: "Contracts Value", ar: "قيمة العقود", v: `${fmt(totalContractValue)}` },
+          ].map((k) => (
+            <Card key={k.l}>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground">{k.ar}</p>
+                <p className="mt-1 text-2xl font-bold">{k.v}</p>
+                <p className="text-[11px] text-muted-foreground/70">{k.l}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

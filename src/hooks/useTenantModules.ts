@@ -10,7 +10,7 @@ export const ALWAYS_ON_MODULE_IDS = ["dashboard", "reports", "settings"];
  * Returns null when the server has no module rows yet -> callers fall back to local profile.
  */
 export function useTenantModules() {
-  const { data } = trpc.settings.modulesGet.useQuery(undefined, { retry: false, staleTime: 60_000 });
+  const { data, isLoading } = trpc.settings.modulesGet.useQuery(undefined, { retry: false, staleTime: 60_000 });
 
   const serverModules: string[] | null = useMemo(() => {
     const mods = (data as any)?.modules as string[] | undefined;
@@ -23,7 +23,7 @@ export function useTenantModules() {
     return Array.from(new Set(serverModules.flatMap((m) => MODULE_PATH_PREFIXES[m] || [])));
   }, [serverModules]);
 
-  return { serverModules, serverPrefixes };
+  return { serverModules, serverPrefixes, isLoadingModules: isLoading };
 }
 
 /** Sidebar/launcher path matching (dashboard prefix "/app" matches only the home route). */

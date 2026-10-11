@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, Link, useSearchParams } from "react-router";
 import { Building2, Eye, EyeOff } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const utils = trpc.useUtils();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -41,6 +42,13 @@ export default function Login() {
       localStorage.setItem("erp_sid", data.token);
     }
     await utils.auth.me.invalidate();
+    // Guards bounce unauthenticated deep links to /login?redirect=<path> —
+    // honor it first so bookmarks (e.g. /app/construction) survive login.
+    const redirect = searchParams.get("redirect");
+    if (redirect && redirect.startsWith("/app")) {
+      navigate(redirect);
+      return;
+    }
     try {
       const res = await utils.settings.modulesGet.fetch(undefined);
       const mods = (res as any)?.modules as string[] | undefined;
