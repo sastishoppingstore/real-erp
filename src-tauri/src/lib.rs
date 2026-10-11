@@ -73,7 +73,10 @@ pub fn run() {
 
 fn start_local_backend(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
   let resource_dir = normalize_node_path(&app.path().resource_dir()?);
-  let boot_script = resource_dir.join("dist").join("boot.js");
+  // NOTE: the desktop ships the offline SQLite backend (dist/desktop-boot.js),
+  // NOT the MySQL web backend (dist/boot.js is neither bundled nor runnable
+  // without a database server).
+  let boot_script = resource_dir.join("dist").join("desktop-boot.js");
   let static_dir = resource_dir.join("dist").join("public");
   let backend_log = std::env::temp_dir().join("erp-system-backend.log");
   let backend_port = "32145";

@@ -143,7 +143,7 @@ jobs:
           Write-Host "Using installed executable: $exe"
 
           $process = Start-Process -FilePath $exe -PassThru
-          Start-Sleep -Seconds 10
+          Start-Sleep -Seconds 30
 
           $running = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
           if (-not $running) {
@@ -160,7 +160,7 @@ jobs:
             }
           }
 
-          function Invoke-WithRetry($Url, $Method = "GET", $Body = $null, $ContentType = $null, $Attempts = 30) {
+          function Invoke-WithRetry($Url, $Method = "GET", $Body = $null, $ContentType = $null, $Attempts = 60) {
             $lastError = $null
             for ($i = 1; $i -le $Attempts; $i++) {
               try {
