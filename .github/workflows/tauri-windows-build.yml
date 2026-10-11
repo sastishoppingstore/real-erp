@@ -63,6 +63,10 @@ jobs:
           }
 
           $installDirs = @(
+            (Join-Path $env:LOCALAPPDATA "Programs\YASCO ERP"),
+            (Join-Path $env:LOCALAPPDATA "YASCO ERP"),
+            (Join-Path $env:ProgramFiles "YASCO ERP"),
+            (Join-Path ${env:ProgramFiles(x86)} "YASCO ERP"),
             (Join-Path $env:LOCALAPPDATA "Programs\ERP System"),
             (Join-Path $env:LOCALAPPDATA "ERP System"),
             (Join-Path $env:ProgramFiles "ERP System"),
@@ -83,24 +87,58 @@ jobs:
             throw "NSIS setup failed with exit code $($install.ExitCode)."
           }
 
-          $candidatePaths = @(
-            (Join-Path $env:LOCALAPPDATA "Programs\ERP System\ERP System.exe"),
-            (Join-Path $env:LOCALAPPDATA "Programs\ERP System\app.exe"),
-            (Join-Path $env:LOCALAPPDATA "ERP System\ERP System.exe"),
-            (Join-Path $env:LOCALAPPDATA "ERP System\app.exe"),
-            (Join-Path $env:ProgramFiles "ERP System\ERP System.exe"),
-            (Join-Path $env:ProgramFiles "ERP System\app.exe"),
-            (Join-Path ${env:ProgramFiles(x86)} "ERP System\ERP System.exe"),
-            (Join-Path ${env:ProgramFiles(x86)} "ERP System\app.exe")
-          )
-
-          $exe = $candidatePaths |
-            Where-Object { $_ -and (Test-Path $_) } |
-            Select-Object -First 1
+          $exe = $null
+          try {
+            $regPaths = @(
+              "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+              "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+              "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+            )
+            $regApp = Get-ItemProperty $regPaths -ErrorAction SilentlyContinue |
+              Where-Object { $_.DisplayName -like "*YASCO*" -or $_.DisplayName -like "*ERP System*" } |
+              Select-Object -First 1
+            if ($regApp -and $regApp.DisplayIcon -and (Test-Path $regApp.DisplayIcon)) {
+              $exe = $regApp.DisplayIcon
+              Write-Host "Using executable from registry DisplayIcon: $exe"
+            } elseif ($regApp -and $regApp.InstallLocation) {
+              foreach ($name in @("YASCO ERP.exe", "app.exe", "ERP System.exe")) {
+                $cand = Join-Path $regApp.InstallLocation $name
+                if (Test-Path $cand) { $exe = $cand; break }
+              }
+              if ($exe) { Write-Host "Using executable from registry InstallLocation: $exe" }
+            }
+          } catch {
+            Write-Host "Registry lookup failed: $_"
+          }
 
           if (-not $exe) {
-            $candidatePaths | ForEach-Object { Write-Host "Checked: $_" }
-            throw "Installed ERP System executable was not found."
+            $candidatePaths = @(
+              (Join-Path $env:LOCALAPPDATA "Programs\YASCO ERP\YASCO ERP.exe"),
+              (Join-Path $env:LOCALAPPDATA "Programs\YASCO ERP\app.exe"),
+              (Join-Path $env:LOCALAPPDATA "YASCO ERP\YASCO ERP.exe"),
+              (Join-Path $env:LOCALAPPDATA "YASCO ERP\app.exe"),
+              (Join-Path $env:ProgramFiles "YASCO ERP\YASCO ERP.exe"),
+              (Join-Path $env:ProgramFiles "YASCO ERP\app.exe"),
+              (Join-Path ${env:ProgramFiles(x86)} "YASCO ERP\YASCO ERP.exe"),
+              (Join-Path ${env:ProgramFiles(x86)} "YASCO ERP\app.exe"),
+              (Join-Path $env:LOCALAPPDATA "Programs\ERP System\ERP System.exe"),
+              (Join-Path $env:LOCALAPPDATA "Programs\ERP System\app.exe"),
+              (Join-Path $env:LOCALAPPDATA "ERP System\ERP System.exe"),
+              (Join-Path $env:LOCALAPPDATA "ERP System\app.exe"),
+              (Join-Path $env:ProgramFiles "ERP System\ERP System.exe"),
+              (Join-Path $env:ProgramFiles "ERP System\app.exe"),
+              (Join-Path ${env:ProgramFiles(x86)} "ERP System\ERP System.exe"),
+              (Join-Path ${env:ProgramFiles(x86)} "ERP System\app.exe")
+            )
+
+            $exe = $candidatePaths |
+              Where-Object { $_ -and (Test-Path $_) } |
+              Select-Object -First 1
+          }
+
+          if (-not $exe) {
+            if ($candidatePaths) { $candidatePaths | ForEach-Object { Write-Host "Checked: $_" } }
+            throw "Installed ERP executable was not found (looked up uninstall registry and well-known install folders)."
           }
           Write-Host "Using installed executable: $exe"
 

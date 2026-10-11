@@ -220,6 +220,42 @@ function logout(_input: unknown, _req: { headers: Record<string, string | undefi
   return { success: true };
 }
 
+// Offline license activation: validates the YASCO key envelope
+// (YASCO-<base64 payload>.<signature>) and persists it locally so the
+// desktop app stays activated without a network round-trip.
+function licenseActivate(input: { key: string }) {
+  const key = String((input as any)?.key || "").trim();
+  const m = /^YASCO-([A-Za-z0-9+/=]+)\.([A-Za-z0-9+/_=-]+)$/.exec(key);
+  if (!m) throw new ApiError("Invalid license key format", { code: "BAD_REQUEST", httpStatus: 400 });
+  let payload: any = null;
+  try {
+    payload = JSON.parse(Buffer.from(m[1], "base64").toString("utf8"));
+  } catch {
+    throw new ApiError("Invalid license key payload", { code: "BAD_REQUEST", httpStatus: 400 });
+  }
+  if (!payload || typeof payload.tenantId === "undefined" || !payload.companyName) {
+    throw new ApiError("Invalid license key payload", { code: "BAD_REQUEST", httpStatus: 400 });
+  }
+  if (payload.expiresAt) {
+    const exp = new Date(payload.expiresAt).getTime();
+    if (Number.isFinite(exp) && exp < Date.now()) {
+      throw new ApiError("License key has expired", { code: "BAD_REQUEST", httpStatus: 400 });
+    }
+  }
+  const d = getDb();
+  d.prepare("INSERT OR REPLACE INTO sync_meta (key, value) VALUES ('license_key', ?)").run(key);
+  d.prepare("INSERT OR REPLACE INTO sync_meta (key, value) VALUES ('license_info', ?)").run(JSON.stringify(payload));
+  d.prepare("INSERT OR REPLACE INTO sync_meta (key, value) VALUES ('license_activated_at', ?)").run(now());
+  return {
+    activated: true,
+    tenantId: payload.tenantId,
+    companyName: payload.companyName,
+    plan: payload.plan || "desktop",
+    maxDevices: payload.maxDevices ?? 1,
+    expiresAt: payload.expiresAt || null,
+  };
+}
+
 // inventory
 function categoryList() {
   const d = getDb();
@@ -889,7 +925,7 @@ export interface RequestLike {
 export type Handler = (input: unknown, req: RequestLike, setCookie: (name: string, value: string, opts: Record<string, unknown>) => void) => unknown | Promise<unknown>;
 
 export const MUTATIONS = new Set<string>([
-  "auth.passwordLogin", "auth.logout",
+  "auth.passwordLogin", "auth.logout", "license.activate",
   "inventory.categoryCreate", "inventory.productCreate", "inventory.warehouseCreate",
   "sales.customerCreate", "sales.customerUpdate", "sales.invoiceCreate", "sales.invoiceUpdate",
   "sales.invoiceUpdateStatus", "sales.invoiceDelete",
@@ -916,6 +952,7 @@ export const handlers: Record<string, Handler> = {
   "auth.passwordLogin": passwordLogin,
   "auth.me": me,
   "auth.logout": logout,
+  "license.activate": licenseActivate,
   "inventory.categoryList": categoryList,
   "inventory.categoryCreate": categoryCreate,
   "inventory.productList": productList,
