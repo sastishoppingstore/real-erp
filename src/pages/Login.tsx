@@ -23,13 +23,16 @@ export default function Login() {
   const [message, setMessage] = useState("");
   const [devOtp, setDevOtp] = useState("");
 
-  const finishLogin = async () => {
+  const finishLogin = async (data?: { token?: string }) => {
+    if (data?.token) {
+      localStorage.setItem("erp_sid", data.token);
+    }
     await utils.auth.me.invalidate();
     navigate("/app");
   };
 
   const passwordLogin = trpc.auth.passwordLogin.useMutation({
-    onSuccess: finishLogin,
+    onSuccess: (data) => finishLogin(data),
     onError: (error) => setMessage(error.message),
   });
 

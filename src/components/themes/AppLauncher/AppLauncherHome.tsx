@@ -5,6 +5,7 @@ import { useLanguage } from "@/providers/language";
 import { useLayoutTheme } from "@/providers/layoutTheme";
 import { AppIcon } from "./AppIcon";
 import { MODULE_REGISTRY } from "@/config/moduleRegistry";
+import { useTenantModules, isPathAllowed } from "@/hooks/useTenantModules";
 import { Button } from "@/components/ui/button";
 import { PanelLeftOpen } from "lucide-react";
 
@@ -28,6 +29,7 @@ export default function AppLauncherHome() {
   const { data: tenantModules } = trpc.settings.themeGet.useQuery(undefined, {
     retry: false,
   });
+  const { serverPrefixes } = useTenantModules();
 
   const enabledModuleIds = useMemo(() => {
     if (!companySettings) return null;
@@ -40,13 +42,19 @@ export default function AppLauncherHome() {
     if (enabledModuleIds) {
       all = all.filter((m) => enabledModuleIds.includes(m.id));
     }
+    // Server tenant modules are authoritative: hide anything this tenant
+    // never enabled (e.g. Restaurant / Pharmacy tiles for a construction
+    // tenant that only has construction + sales).
+    if (serverPrefixes) {
+      all = all.filter((m) => isPathAllowed(m.path, serverPrefixes));
+    }
     const grouped: Record<string, typeof all> = {};
     for (const mod of all) {
       if (!grouped[mod.category]) grouped[mod.category] = [];
       grouped[mod.category].push(mod);
     }
     return grouped;
-  }, [enabledModuleIds]);
+  }, [enabledModuleIds, serverPrefixes]);
 
   const companyName = companySettings?.companyName || (rtl ? "شركتك" : "Your Company");
 

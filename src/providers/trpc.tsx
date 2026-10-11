@@ -25,6 +25,7 @@ function handleUnauthorized() {
   if (isRedirectingToLogin) return;
   const currentPath = window.location.pathname;
   if (isPublicAuthRoute(currentPath)) {
+    // Guest flows: silently swallow the 401 instead of bouncing pages.
     return;
   }
   isRedirectingToLogin = true;
@@ -39,9 +40,9 @@ function handleUnauthorized() {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: (failureCount, error) => {
+      retry: (failureCount, error: any) => {
         if (error instanceof TRPCClientError) {
-          const statusCode = error.data?.httpStatus ?? error.cause?.status;
+          const statusCode = error?.data?.httpStatus ?? error?.cause?.status;
           if (statusCode === 401) return false;
         }
         return failureCount < 2;
@@ -49,9 +50,9 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
     },
     mutations: {
-      onError: (error) => {
+      onError: (error: any) => {
         if (error instanceof TRPCClientError) {
-          const statusCode = error.data?.httpStatus ?? error.cause?.status;
+          const statusCode = error?.data?.httpStatus ?? error?.cause?.status;
           if (statusCode === 401) {
             handleUnauthorized();
           }
@@ -62,9 +63,9 @@ const queryClient = new QueryClient({
   queryCache: undefined,
 });
 
-queryClient.getQueryCache().config.onError = (error) => {
+queryClient.getQueryCache().config.onError = (error: any) => {
   if (error instanceof TRPCClientError) {
-    const statusCode = error.data?.httpStatus ?? error.cause?.status;
+    const statusCode = error?.data?.httpStatus ?? error?.cause?.status;
     if (statusCode === 401) {
       handleUnauthorized();
     }
@@ -76,10 +77,16 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      // Tauri/desktop: auth is cookie-based (HTTP-only session cookie set by backend).
+      // Do NOT send Bearer header from localStorage — it does not exist in desktop mode.
+      // credentials: "include" ensures cookies are sent with every request.
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+        }).catch((err: any) => {
+          const errorMsg = err?.message || err?.response?.data?.message || "Network or Server Error";
+          throw new Error(errorMsg);
         });
       },
     }),

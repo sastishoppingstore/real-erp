@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileText, DollarSign, Percent, Printer, Search, Trash2, UserPlus, X } from "lucide-react";
+import { Plus, FileText, DollarSign, Percent, Printer, Search, Trash2, UserPlus, X, FileDown, Pencil, Check } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import ActionButton3D from "@/components/ui/ActionButton3D";
 import ConstructionInvoicePrint, { type CInvPrintData } from "@/components/ConstructionInvoicePrint";
@@ -27,11 +28,17 @@ const statusColors: Record<string, string> = {
 
 const emptyItem: ItemRow = { descriptionEn: "", descriptionAr: "", unit: "Hour", totalHour: "", rate: "" };
 
+// Lump-sum lines have no hourly meaning: an empty/zero Hours with a Rate
+// counts as quantity 1 everywhere (list, live totals, saved invoice).
+const effHours = (it: ItemRow) =>
+  it.unit === "LS" && !(Number(it.totalHour) > 0) && Number(it.rate) > 0 ? 1 : Number(it.totalHour) || 0;
+
 export default function ConstructionInvoicePage() {
   const utils = trpc.useUtils();
   const [search, setSearch] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
   const [printData, setPrintData] = useState<CInvPrintData | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // ---- create form state ----
   const [custMode, setCustMode] = useState<"existing" | "new">("existing");
@@ -54,11 +61,24 @@ export default function ConstructionInvoicePage() {
     { q },
     { enabled: custMode === "existing" && q.trim().length >= 2 },
   );
+  const [editingIdx, setEditingIdx] = useState(0);
+  const [descQ, setDescQ] = useState("");
+  const [descOpenIdx, setDescOpenIdx] = useState<number | null>(null);
+  const itemQuery = trpc.constructionInvoices.itemSearch.useQuery(
+    { q: descQ },
+    { enabled: descOpenIdx !== null && descQ.trim().length >= 2 },
+  );
 
   const createMut = trpc.constructionInvoices.invoiceCreate.useMutation({
     onSuccess: async () => {
       await utils.constructionInvoices.invoiceList.invalidate();
       closeCreate();
+    },
+  });
+
+  const deleteMut = trpc.constructionInvoices.invoiceDelete.useMutation({
+    onSuccess: async () => {
+      await utils.constructionInvoices.invoiceList.invalidate();
     },
   });
 
@@ -79,7 +99,7 @@ export default function ConstructionInvoicePage() {
     grand: filtered.reduce((s: number, i: any) => s + Number(i.grandTotal || 0), 0),
   }), [filtered]);
 
-  const liveSubtotal = items.reduce((s, it) => s + (Number(it.totalHour) || 0) * (Number(it.rate) || 0), 0);
+  const liveSubtotal = items.reduce((s, it) => s + effHours(it) * (Number(it.rate) || 0), 0);
   const liveVat = liveSubtotal * 0.15;
   const liveGrand = liveSubtotal + liveVat;
 
@@ -88,6 +108,7 @@ export default function ConstructionInvoicePage() {
     setCust({ nameEn: "", nameAr: "", vatNo: "", crNo: "", address: "", phone: "" });
     setMeta({ invoiceNo: "", poNumber: "", workedMonth: defaultMonth, paymentType: "Credit", cashier: "مدير النظام", dueDate: "" });
     setItems([{ ...emptyItem }]);
+    setEditingIdx(0); setDescQ(""); setDescOpenIdx(null); setFormError(null);
   }
   function closeCreate() { setOpenCreate(false); resetForm(); }
 
@@ -102,15 +123,36 @@ export default function ConstructionInvoicePage() {
   }
 
   function save(printAfter?: boolean) {
-    const validItems = items.filter((it) => it.descriptionEn.trim() && (Number(it.totalHour) > 0));
+    // Rate-only lines (e.g. lump-sum / LS items with just a rate) count too —
+    // previously only hour-based lines were kept, so LS products silently vanished.
+    const validItems = items.filter(
+      (it) => it.descriptionEn.trim() && (Number(it.totalHour) > 0 || Number(it.rate) > 0),
+    );
+    // If the user typed a customer name but never picked from autocomplete,
+    // treat it as a new customer instead of failing with "customer required".
+    const typedName = q.trim();
+    const effCustomerId = custMode === "existing" ? customerId : null;
+    const effNewCustomer =
+      custMode === "new"
+        ? {
+            nameEn: cust.nameEn, nameAr: cust.nameAr || undefined,
+            vatNo: cust.vatNo || undefined, crNo: cust.crNo || undefined,
+            phone: cust.phone || undefined, address: cust.address || undefined,
+          }
+        : (!effCustomerId && typedName.length >= 2 ? { nameEn: typedName } : undefined);
+    if (!effCustomerId && !effNewCustomer) {
+      setFormError("Customer chunein (list se pick karein) ya naam likh kar New customer banayein.");
+      return;
+    }
+    if (validItems.length === 0) {
+      setFormError("Kam az kam 1 line me description + Hours ya Rate likhein — khaali/zero lines save nahi hongi.");
+      return;
+    }
+    setFormError(null);
     createMut.mutate(
       {
-        customerId: custMode === "existing" && customerId ? customerId : undefined,
-        newCustomer: custMode === "new" ? {
-          nameEn: cust.nameEn, nameAr: cust.nameAr || undefined,
-          vatNo: cust.vatNo || undefined, crNo: cust.crNo || undefined,
-          phone: cust.phone || undefined, address: cust.address || undefined,
-        } : undefined,
+        customerId: effCustomerId || undefined,
+        newCustomer: effNewCustomer,
         invoiceNo: meta.invoiceNo || undefined,
         poNumber: meta.poNumber || undefined,
         workedMonth: meta.workedMonth || undefined,
@@ -119,7 +161,7 @@ export default function ConstructionInvoicePage() {
         dueDate: meta.dueDate || undefined,
         items: validItems.map((it) => ({
           descriptionEn: it.descriptionEn, descriptionAr: it.descriptionAr || undefined,
-          unit: it.unit, totalHour: Number(it.totalHour), rate: Number(it.rate),
+          unit: it.unit, totalHour: effHours(it), rate: Number(it.rate),
         })),
       } as any,
       {
@@ -134,6 +176,7 @@ export default function ConstructionInvoicePage() {
 
   function openPrint(inv: any, its: any[]) {
     setPrintData({
+      ...(inv.id ? { _id: inv.id } : {}),
       invoiceNo: inv.invoiceNo, poNumber: inv.poNumber, workedMonth: inv.workedMonth,
       paymentType: inv.paymentType, cashier: inv.cashier, dueDate: inv.dueDate, createdAt: inv.createdAt,
       customer: {
@@ -146,6 +189,7 @@ export default function ConstructionInvoicePage() {
         vatNo: (companySettings as any)?.vatNo || "", crNo: (companySettings as any)?.crNo || "",
         address: (companySettings as any)?.address || "", email: (companySettings as any)?.email || "",
         stampUrl: (companySettings as any)?.stampUrl || "", unifiedNationalNo: (companySettings as any)?.unifiedNationalNo || "",
+        currency: (companySettings as any)?.currency || "SAR",
       },
       items: (its || []).map((r: any) => ({
         sr: r.sr, descriptionEn: r.descriptionEn, descriptionAr: r.descriptionAr,
@@ -158,6 +202,14 @@ export default function ConstructionInvoicePage() {
 
   function updateItem(idx: number, patch: Partial<ItemRow>) {
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  }
+
+  function removeItem(idx: number) {
+    setItems((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      return next.length ? next : [{ ...emptyItem }];
+    });
+    setEditingIdx((e) => (e === idx ? 0 : e !== null && e > idx ? e - 1 : e));
   }
 
   return (
@@ -246,6 +298,12 @@ export default function ConstructionInvoicePage() {
                     }}>
                       <Printer className="mr-1 size-3.5" /> Print
                     </Button>
+                    <Button size="sm" variant="outline" className="ml-2 text-red-600 hover:text-red-700" disabled={deleteMut.isPending} onClick={async () => {
+                      if (!window.confirm(`Invoice ${inv.invoiceNo} delete karni hai? Ye action wapas nahi hoga.`)) return;
+                      await deleteMut.mutateAsync({ id: inv.id }).catch((e: any) => alert("Delete failed: " + (e?.message || e)));
+                    }}>
+                      <Trash2 className="mr-1 size-3.5" /> Delete
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -256,7 +314,7 @@ export default function ConstructionInvoicePage() {
 
       {/* ===== Create dialog ===== */}
       <Dialog open={openCreate} onOpenChange={(v) => !v && closeCreate()}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto" dir="ltr">
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto pb-8" dir="ltr">
           <DialogHeader><DialogTitle>New Tax Invoice — فاتورة ضريبية</DialogTitle></DialogHeader>
 
           {/* --- Customer block --- */}
@@ -359,18 +417,57 @@ export default function ConstructionInvoicePage() {
           <div className="rounded-lg border">
             <div className="border-b px-3 py-2 flex items-center justify-between">
               <Label className="font-semibold">Line Items / بنود</Label>
-              <Button type="button" size="sm" variant="outline" onClick={() => setItems([...items, { ...emptyItem }])}>
+              <Button type="button" size="sm" variant="outline" onClick={() => { setItems([...items, { ...emptyItem }]); setEditingIdx(items.length); }}>
                 <Plus className="mr-1 size-3" /> Add Item
               </Button>
             </div>
             <div className="space-y-2 p-3">
               {items.map((it, idx) => {
-                const lt = (Number(it.totalHour) || 0) * (Number(it.rate) || 0);
+                const lt = effHours(it) * (Number(it.rate) || 0);
+                if (editingIdx !== idx) {
+                  return (
+                    <div key={idx} className="flex items-center gap-3 rounded-md border p-2">
+                      <span className="w-6 text-xs font-semibold text-slate-400">#{idx + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{it.descriptionEn || "—"}{it.descriptionAr && <span dir="rtl" className="ml-2 text-slate-500">({it.descriptionAr})</span>}</p>
+                        <p className="text-xs text-slate-500">{it.unit} · {effHours(it) || 0} × {formatMoney(Number(it.rate) || 0)} = <span className="font-mono">{formatMoney(lt)}</span></p>
+                      </div>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setEditingIdx(idx)}>
+                        <Pencil className="mr-1 size-3" /> Edit
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="text-red-600" onClick={() => removeItem(idx)}>
+                        <Trash2 className="mr-1 size-3" /> Delete
+                      </Button>
+                    </div>
+                  );
+                }
                 return (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-end rounded-md border p-2">
-                    <div className="col-span-4">
+                    <div className="col-span-4 relative">
                       <Label className="text-[10px]">Job Description (EN)</Label>
-                      <Input value={it.descriptionEn} onChange={(e) => updateItem(idx, { descriptionEn: e.target.value })} placeholder="Multi Welder Firdaws" />
+                      <Input value={it.descriptionEn} placeholder="Multi Welder Firdaws"
+                        onFocus={() => { setDescOpenIdx(idx); setDescQ(it.descriptionEn); }}
+                        onChange={(e) => { updateItem(idx, { descriptionEn: e.target.value }); setDescQ(e.target.value); setDescOpenIdx(idx); }} />
+                      {descOpenIdx === idx && descQ.trim().length >= 2 && (itemQuery.data || []).length > 0 && (
+                        <div className="absolute z-20 mt-1 w-full rounded-md border bg-white shadow-lg">
+                          {(itemQuery.data || []).map((p: any, i: number) => (
+                            <button key={i} type="button" className="block w-full border-b px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                              onClick={() => {
+                                updateItem(idx, {
+                                  descriptionEn: p.descriptionEn || "",
+                                  descriptionAr: p.descriptionAr || it.descriptionAr,
+                                  unit: p.unit || it.unit,
+                                  rate: p.rate != null && p.rate !== "" ? String(p.rate) : it.rate,
+                                });
+                                setDescOpenIdx(null); setDescQ("");
+                              }}>
+                              <span className="text-sm font-medium">{p.descriptionEn}</span>
+                              {p.descriptionAr && <span dir="rtl" className="ml-2 text-sm text-slate-600">({p.descriptionAr})</span>}
+                              <span className="ml-2 text-[11px] text-slate-400">{p.unit} · {formatMoney(Number(p.rate) || 0)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="col-span-3">
                       <Label className="text-[10px]" dir="rtl">وصف العمل (AR)</Label>
@@ -378,7 +475,7 @@ export default function ConstructionInvoicePage() {
                     </div>
                     <div className="col-span-2">
                       <Label className="text-[10px]">Unit</Label>
-                      <Select value={it.unit} onValueChange={(v) => updateItem(idx, { unit: v })}>
+                      <Select value={it.unit} onValueChange={(v) => { if (v === "LS" && !(Number(it.totalHour) > 0)) updateItem(idx, { unit: v, totalHour: "1" }); else updateItem(idx, { unit: v }); }}>
                         <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                         <SelectContent>{["Hour", "Day", "Month", "LS", "M²"].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
                       </Select>
@@ -395,11 +492,9 @@ export default function ConstructionInvoicePage() {
                       <Label className="text-[10px]">Total</Label>
                       <div className="flex h-9 items-center gap-1">
                         <span className="font-mono text-xs">{formatMoney(lt)}</span>
-                        {items.length > 1 && (
-                          <button type="button" className="text-red-500" onClick={() => setItems(items.filter((_, i) => i !== idx))}>
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        )}
+                        <button type="button" className="text-emerald-600" title="Done" onClick={() => setEditingIdx(null)}>
+                          <Check className="size-3.5" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -426,6 +521,7 @@ export default function ConstructionInvoicePage() {
               </Button>
             </div>
           </div>
+          {formError && <p className="text-sm font-medium text-red-600">Save blocked: {formError}</p>}
           {createMut.error && <p className="text-sm text-red-600">Error: {String((createMut.error as any)?.message || createMut.error)}</p>}
         </DialogContent>
       </Dialog>
@@ -435,11 +531,53 @@ export default function ConstructionInvoicePage() {
         <DialogContent className="max-w-[230mm] max-h-[95vh] overflow-auto bg-white">
           <div className="no-print mb-3 flex items-center justify-between">
             <DialogTitle className="text-black">TAX INVOICE — {printData?.invoiceNo}</DialogTitle>
-            <Button onClick={() => window.print()}><Printer className="mr-1 size-4" /> Print / PDF (A4)</Button>
+            <div className="flex gap-2">
+              <Button onClick={() => window.print()}><Printer className="mr-1 size-4" /> Print / PDF (A4)</Button>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  if (!printData) return;
+                  try {
+                    const res = await fetch("/api/trpc/word.generateWord", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "include",
+                      body: JSON.stringify({ json: { invoiceId: (printData as any)._id || 0 } }),
+                    });
+                    if (!res.ok) throw new Error("Failed to generate Word document");
+                    const data = await res.json();
+                    const html = data?.result?.data?.json?.html;
+                    if (!html) throw new Error("No HTML content returned");
+                    const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>@page{size:Letter;margin:10mm}body{font-family:Calibri,Arial,sans-serif;font-size:11pt}table{border-collapse:collapse;width:100%}td,th{border:0.5pt solid #000;padding:4pt 6pt;vertical-align:top}</style></head><body>${html}</body></html>`;
+                    const blob = new Blob(['\ufeff', wordHtml], { type: "application/msword;charset=utf-8;" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Invoice-${printData.invoiceNo}.doc`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                  } catch (e: any) {
+                    alert("Word export failed: " + e.message);
+                  }
+                }}
+              >
+                <FileDown className="mr-1 size-4" /> Export Word
+              </Button>
+            </div>
           </div>
           {printData && <ConstructionInvoicePrint data={printData} />}
         </DialogContent>
       </Dialog>
+      {/* Print-only portal clone straight under <body>: window.print() then
+          prints exactly one A4 page (app chrome is display:none'd in print CSS). */}
+      {printData && typeof document !== "undefined" && createPortal(
+        <div id="invoice-print-root" className="hidden print:block">
+          <ConstructionInvoicePrint data={printData} />
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

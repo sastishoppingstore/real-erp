@@ -3,6 +3,9 @@ import { Link } from "react-router";
 import { Store, UtensilsCrossed, Pill, Warehouse, Clock, BarChart3, ArrowLeftRight, RotateCcw } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
+import { useAuth } from "@/hooks/useAuth";
+import { useTenantModules, isPathAllowed } from "@/hooks/useTenantModules";
+import { getStoredCategory, getEnabledSidebarPathPrefixes } from "@/config/businessCatalog";
 
 function formatCurrency(v: number) {
   return v.toLocaleString(undefined, { minimumFractionDigits: 2 }) + " SAR";
@@ -12,6 +15,16 @@ export default function PosDashboard() {
   const { language } = useLanguage();
   const isAr = language === "ar";
   const { data: todaySales } = trpc.pos.todaySalesSummary.useQuery(undefined);
+  const { user } = useAuth();
+  const { serverPrefixes } = useTenantModules();
+
+  // Tenant modules decide which POS modes exist. A generic sales/retail
+  // tenant sees Retail/Wholesale/Shift/Returns — Restaurant & Pharmacy POS
+  // stay hidden unless their vertical module is enabled.
+  const isSuperAdmin = user?.role === "super_admin";
+  const prefixes = isSuperAdmin
+    ? null
+    : (serverPrefixes ?? getEnabledSidebarPathPrefixes(getStoredCategory()));
 
   const posTypes = [
     { title: isAr ? "بيع تجزئة" : "Retail POS", desc: isAr ? "نقطة بيع تجزئة سريعة" : "Fast retail point of sale", icon: Store, path: "/app/pos", color: "bg-blue-600" },
@@ -59,7 +72,7 @@ export default function PosDashboard() {
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {posTypes.map((mod) => (
+        {posTypes.filter((mod) => isPathAllowed(mod.path, prefixes)).map((mod) => (
           <Link key={mod.path} to={mod.path} className="block">
             <Card className="hover:shadow-lg transition-all cursor-pointer group h-full">
               <CardContent className="p-6">

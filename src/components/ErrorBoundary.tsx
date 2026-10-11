@@ -21,7 +21,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("[ErrorBoundary] Caught error:", error, errorInfo);
+    // eslint-disable-next-line no-console
+    (window as any).__EB = { name: error?.name, message: error?.message, stack: String(error?.stack), componentStack: String(errorInfo?.componentStack) };
+    console.error("[EB] captured");
   }
 
   render() {
@@ -40,7 +42,48 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
               {this.state.error?.message || "An unexpected error occurred"}
             </p>
-            <button
+            {/Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(
+              this.state.error?.message || ""
+            ) && (
+              <p className="mb-4 text-xs text-slate-400 dark:text-slate-500">
+                A new version was just published. Load it fresh below.
+              </p>
+            )}
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  try {
+                    if ("serviceWorker" in navigator) {
+                      navigator.serviceWorker
+                        .getRegistrations()
+                        .then((regs) => regs.forEach((r) => r.unregister()))
+                        .catch(() => {});
+                    }
+                    if ("caches" in window) {
+                      caches
+                        .keys()
+                        .then((keys) => keys.forEach((k) => caches.delete(k)))
+                        .catch(() => {});
+                    }
+                  } catch {
+                    /* ignore */
+                  }
+                  try {
+                    sessionStorage.removeItem("erp:chunk-reload");
+                    localStorage.removeItem("erp:sw-migrated-v2");
+                  } catch {
+                    /* ignore */
+                  }
+                  setTimeout(() => {
+                    window.location.href =
+                      window.location.pathname + "?v=" + Date.now();
+                  }, 300);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+              >
+                Load latest version
+              </button>
+              <button
               onClick={() => {
                 this.setState({ hasError: false, error: null });
                 window.location.href = "/login";
@@ -49,6 +92,7 @@ export class ErrorBoundary extends Component<Props, State> {
             >
               Go to Login
             </button>
+            </div>
           </div>
         </div>
       );

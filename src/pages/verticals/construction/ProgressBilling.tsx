@@ -43,7 +43,6 @@ export default function ProgressBillingPage() {
         </div>
         <div className="flex gap-2">
           <Input type="number" placeholder="Filter by Project ID" className="w-44" value={projectFilter} onChange={e => setProjectFilter(e.target.value)} />
-          <Button variant="outline" onClick={() => { window.location.href = "/app/verticals/construction/invoices"; }}>Tax Invoices</Button>
           <ActionButton3D icon={<Plus className="size-4" />} label="New Invoice" color="blue" onClick={() => setOpen(true)} />
         </div>
       </div>

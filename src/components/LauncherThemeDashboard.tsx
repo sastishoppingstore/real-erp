@@ -12,6 +12,7 @@ import {
   getStoredCategory,
   getVisibleGroupTitles,
 } from "@/config/businessCatalog";
+import { useTenantModules, isPathAllowed } from "@/hooks/useTenantModules";
 import {
   LAUNCHER_BACKGROUND,
   LAUNCHER_GROUPS,
@@ -120,15 +121,16 @@ export default function LauncherThemeDashboard() {
   const visibleGroupKeys = isSuperAdmin
     ? categoryGroupVisibility.all
     : (getVisibleGroupTitles(storedCategory) || categoryGroupVisibility.all);
-  const enabledPathPrefixes = isSuperAdmin ? null : getEnabledSidebarPathPrefixes(storedCategory);
-  const isPathEnabled = (path: string) => {
-    if (!enabledPathPrefixes) return true;
-    return enabledPathPrefixes.some((p) => path === p || (p !== "/app" && path.startsWith(`${p}/`)));
-  };
+  const { serverPrefixes } = useTenantModules();
+  const localPrefixes = isSuperAdmin ? null : getEnabledSidebarPathPrefixes(storedCategory);
+  const enabledPathPrefixes = isSuperAdmin ? null : serverPrefixes ?? localPrefixes;
+  const isPathEnabled = (path: string) => isPathAllowed(path, enabledPathPrefixes);
 
-  const filteredGroups = LAUNCHER_GROUPS.filter(
-    (g) => visibleGroupKeys.includes(g.key)
-  );
+  /* Server modules decide visibility; hide groups that have no enabled tile. */
+  const filteredGroups = LAUNCHER_GROUPS
+    .filter((g) => (serverPrefixes ? true : visibleGroupKeys.includes(g.key)))
+    .map((g) => ({ ...g, children: g.children.filter((c) => isPathEnabled(c.path)) }))
+    .filter((g) => g.children.length > 0);
 
   const topGroups = filteredGroups.slice(0, Math.min(filteredGroups.length, 12));
   const bottomGroups = filteredGroups;

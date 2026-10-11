@@ -89,7 +89,7 @@ export const registrationRouter = createRouter({
         status: "trial",
         plan: "free",
         trialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        layoutTheme: input.layoutTheme || "sidebar",
+        layoutTheme: input.layoutTheme || "launcher_theme",
       }).$returningId();
       await db.insert(schema.companies).values({
         tenantId: tenant.id,

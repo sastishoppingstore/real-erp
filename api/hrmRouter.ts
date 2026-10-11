@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cleanInput } from "./cleanInput";
 import { createRouter, authedQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import {
@@ -151,7 +152,7 @@ export const hrmRouter = createRouter({
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const [{ id }] = await db.insert(attendance).values({
-        ...input,
+        ...cleanInput(input),
         tenantId: ctx.user.tenantId!,
         checkIn: combineDateTime(input.date, input.checkIn),
         checkOut: combineDateTime(input.date, input.checkOut),

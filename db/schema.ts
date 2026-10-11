@@ -406,6 +406,8 @@ export const users = mysqlTable("users", {
   unionId: varchar("unionId", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 320 }),
+  username: varchar("username", { length: 255 }).unique(),
+  passwordEncrypted: text("password_encrypted").default(""),
   avatar: text("avatar"),
   role: mysqlEnum("role", ["super_admin", "admin", "reseller", "user_admin", "manager", "accountant", "salesman", "cashier", "hr", "store_keeper", "user"]).default("user").notNull(),
   phone: varchar("phone", { length: 50 }),
@@ -7399,3 +7401,225 @@ export const constructionInvoiceItems = mysqlTable("construction_invoice_items",
   rate: decimal("rate", { precision: 18, scale: 4 }).default("0").notNull(),
   lineTotal: decimal("line_total", { precision: 18, scale: 4 }).default("0").notNull(),
 }, (table) => [index("construction_invoice_items_invoice_idx").on(table.invoiceId)]);
+
+/* ───────────────────── Construction module tables (schema-sync) ───────────────────── */
+
+export const paymentCertificates = mysqlTable("payment_certificates", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  progressBillingId: bigint("progress_billing_id", { mode: "number", unsigned: true }).notNull(),
+  certificateNumber: varchar("certificate_number", { length: 255 }).notNull(),
+  certificateAmount: varchar("certificate_amount", { length: 255 }).notNull(),
+  retentionPercent: varchar("retention_percent", { length: 255 }).default("5"),
+  retentionAmount: varchar("retention_amount", { length: 255 }).notNull(),
+  paymentAmount: varchar("payment_amount", { length: 255 }).notNull(),
+  status: varchar("status", { length: 255 }).default("draft"),
+  issuedDate: date("issued_date").notNull(),
+  dueDate: date("due_date").notNull(),
+  paidDate: date("paid_date"),
+  zatcaInvoiceId: varchar("zatca_invoice_id", { length: 255 }),
+  zatcaQrCode: varchar("zatca_qr_code", { length: 255 }),
+  zatcaSignature: varchar("zatca_signature", { length: 255 }),
+  zatcaCertificationStatus: varchar("zatca_certification_status", { length: 255 }).default("pending"),
+  createdBy: bigint("created_by", { mode: "number", unsigned: true }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+  notes: text("notes"),
+}, (table) => [
+  index("idx_pc_tenant").on(table.tenantId),
+  index("idx_pc_billing").on(table.progressBillingId),
+]);
+
+export const certificateApprovals = mysqlTable("certificate_approvals", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  certificateId: bigint("certificate_id", { mode: "number", unsigned: true }).notNull(),
+  approverRole: varchar("approver_role", { length: 255 }).notNull(),
+  approverUserId: bigint("approver_user_id", { mode: "number", unsigned: true }).notNull(),
+  approvalOrder: int("approval_order").notNull(),
+  approvalStatus: varchar("approval_status", { length: 255 }).default("pending"),
+  comments: text("comments"),
+  signatureBlob: text("signature_blob"),
+  signatureDate: timestamp("signature_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  approvedAt: timestamp("approved_at"),
+}, (table) => [
+  index("idx_ca_cert").on(table.certificateId),
+]);
+
+export const jobCostingCategories = mysqlTable("job_costing_categories", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  categoryName: text("category_name").notNull(),
+  categoryCode: varchar("category_code", { length: 255 }).notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const jobCostingDetails = mysqlTable("job_costing_details", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  wbsItemId: bigint("wbs_item_id", { mode: "number", unsigned: true }),
+  costCategoryId: bigint("cost_category_id", { mode: "number", unsigned: true }).notNull(),
+  budgetAmount: varchar("budget_amount", { length: 255 }).notNull(),
+  actualAmount: varchar("actual_amount", { length: 255 }).default("0"),
+  forecastAmount: varchar("forecast_amount", { length: 255 }).default("0"),
+  varianceAmount: varchar("variance_amount", { length: 255 }).default("0"),
+  variancePercent: varchar("variance_percent", { length: 255 }).default("0"),
+  varianceType: varchar("variance_type", { length: 255 }),
+  status: varchar("status", { length: 255 }).default("on_track"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => [
+  index("idx_jcd_tenant").on(table.tenantId),
+  index("idx_jcd_project").on(table.projectId),
+]);
+
+export const costVarianceAlerts = mysqlTable("cost_variance_alerts", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  jobCostingDetailId: bigint("job_costing_detail_id", { mode: "number", unsigned: true }).notNull(),
+  thresholdPercent: int("threshold_percent"),
+  alertSeverity: varchar("alert_severity", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  varianceDetails: varchar("variance_details", { length: 255 }),
+  isResolved: boolean("is_resolved").default(false),
+  resolvedBy: bigint("resolved_by", { mode: "number", unsigned: true }),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: varchar("resolution_notes", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+});
+
+export const hseSafetyIncidents = mysqlTable("hse_safety_incidents", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  reportedBy: bigint("reported_by", { mode: "number", unsigned: true }).notNull(),
+  incidentType: varchar("incident_type", { length: 255 }).notNull(),
+  incidentDate: date("incident_date").notNull(),
+  incidentDescription: varchar("incident_description", { length: 255 }).notNull(),
+  location: varchar("location", { length: 255 }).notNull(),
+  severity: varchar("severity", { length: 255 }).notNull(),
+  investigationStatus: varchar("investigation_status", { length: 255 }),
+  rootCauseAnalysis: varchar("root_cause_analysis", { length: 255 }),
+  correctiveActions: varchar("corrective_actions", { length: 255 }),
+  preventiveMeasures: varchar("preventive_measures", { length: 255 }),
+  investigatedBy: int("investigated_by"),
+  assignedTo: int("assigned_to"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  investigationStartedAt: timestamp("investigation_started_at"),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("idx_hse_tenant").on(table.tenantId),
+  index("idx_hse_project").on(table.projectId),
+]);
+
+export const hseKpiMetrics = mysqlTable("hse_kpi_metrics", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  reportingPeriod: date("reporting_period").notNull(),
+  totalIncidents: int("total_incidents"),
+  lostTimeIncidents: int("lost_time_incidents"),
+  restrictedWorkIncidents: int("restricted_work_incidents"),
+  nearMisses: int("near_misses"),
+  totalHoursWorked: varchar("total_hours_worked", { length: 255 }),
+  trifr: varchar("trifr", { length: 255 }),
+  ltifr: varchar("ltifr", { length: 255 }),
+  sfr: varchar("sfr", { length: 255 }),
+  trainingCompletionPercent: varchar("training_completion_percent", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  calculatedAt: timestamp("calculated_at"),
+});
+
+export const nitaqatTracking = mysqlTable("nitaqat_tracking", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  reportingPeriod: date("reporting_period").notNull(),
+  totalWorkforce: int("total_workforce").notNull(),
+  saudiCount: int("saudi_count").notNull(),
+  nonSaudiCount: int("non_saudi_count").notNull(),
+  nitaqatPercentage: varchar("nitaqat_percentage", { length: 255 }).notNull(),
+  category: varchar("category", { length: 255 }).notNull(),
+  salaryCeilingViolations: int("salary_ceiling_violations"),
+  complianceStatus: varchar("compliance_status", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  calculatedAt: timestamp("calculated_at"),
+});
+
+export const nitaqatComplianceAlerts = mysqlTable("nitaqat_compliance_alerts", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  alertType: text("alert_type").notNull(),
+  severity: varchar("severity", { length: 100 }).notNull(),
+  message: text("message").notNull(),
+  details: text("details"),
+  isAcknowledged: boolean("is_acknowledged"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgedBy: int("acknowledged_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const qiwaIntegration = mysqlTable("qiwa_integration", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  qiwaOrgId: text("qiwa_org_id").notNull(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  tokenExpiresAt: timestamp("token_expires_at").notNull(),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncStatus: varchar("sync_status", { length: 100 }),
+  syncError: text("sync_error"),
+  autoSyncEnabled: boolean("auto_sync_enabled"),
+  syncIntervalMinutes: int("sync_interval_minutes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const visaQuotaTracking = mysqlTable("visa_quota_tracking", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  skillCategory: text("skill_category").notNull(),
+  totalQuota: int("total_quota").notNull(),
+  usedQuota: int("used_quota"),
+  availableQuota: int("available_quota").notNull(),
+  qiwaLastUpdatedAt: timestamp("qiwa_last_updated_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const workerVisaStatus = mysqlTable("worker_visa_status", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  employeeId: bigint("employee_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  visaNumber: varchar("visa_number", { length: 255 }).notNull(),
+  visaExpiryDate: date("visa_expiry_date").notNull(),
+  sponsorshipStatus: varchar("sponsorship_status", { length: 255 }),
+  qiwaVerified: boolean("qiwa_verified"),
+  lastVerifiedAt: timestamp("last_verified_at"),
+  expiryAlertSent: boolean("expiry_alert_sent"),
+  expiryAlertDate: timestamp("expiry_alert_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const visaExpiryAlerts = mysqlTable("visa_expiry_alerts", {
+  id: bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  workerVisaStatusId: bigint("worker_visa_status_id", { mode: "number", unsigned: true }).notNull(),
+  employeeId: bigint("employee_id", { mode: "number", unsigned: true }).notNull(),
+  projectId: bigint("project_id", { mode: "number", unsigned: true }).notNull(),
+  daysUntilExpiry: int("days_until_expiry").notNull(),
+  alertType: varchar("alert_type", { length: 255 }).notNull(),
+  isAcknowledged: boolean("is_acknowledged"),
+  acknowledgedBy: int("acknowledged_by"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

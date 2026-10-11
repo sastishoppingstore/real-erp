@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { NavLink, Outlet } from "react-router";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ArrowLeft } from "lucide-react";
+import { useLayoutTheme } from "@/providers/layoutTheme";
 import {
   LayoutDashboard, Menu, Building2, FileText, ClipboardList, FileSpreadsheet,
   FileEdit, Handshake, FileBarChart, ScrollText, FileClock, CalendarCheck,
   Users, ShieldCheck, HardHat, Thermometer, GraduationCap, Eye,
   Wrench, Package, ChevronDown, ChevronRight, Briefcase, Landmark,
-  AlertTriangle, Receipt, Activity,
+  AlertTriangle, Receipt, Activity, ShoppingCart,
 } from "lucide-react";
 
 const navSections = [
@@ -35,6 +35,8 @@ const navSections = [
       { label: "CVR Reports", path: "/app/construction/cvr", icon: FileBarChart },
       { label: "Subcontractors", path: "/app/construction/subcontractors", icon: Users },
       { label: "Sub Payments", path: "/app/construction/sub-payments", icon: Users },
+      { label: "Tax Invoices", path: "/app/construction/invoices", icon: Receipt },
+      { label: "Sales Invoices", path: "/app/construction/sales-invoices", icon: ShoppingCart },
     ],
   },
   {
@@ -136,11 +138,20 @@ function Sidebar() {
 
 export default function ConstructionLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navigate = useNavigate();
+  const { layoutTheme } = useLayoutTheme();
+  const isLauncher = layoutTheme === "launcher_theme";
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      <aside className="hidden w-64 shrink-0 border-r bg-card lg:block">
+    <div className={cn(
+      "flex rounded-xl overflow-hidden border",
+      isLauncher
+        ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-emerald-400/20"
+        : "bg-background border-border",
+    )}>
+      <aside className={cn(
+        "hidden w-64 shrink-0 border-r lg:block",
+        isLauncher ? "border-emerald-400/20 bg-emerald-950/60" : "bg-card",
+      )}>
         <Sidebar />
       </aside>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -153,14 +164,7 @@ export default function ConstructionLayout() {
           <Sidebar />
         </SheetContent>
       </Sheet>
-      <main className="flex-1 overflow-auto p-6">
-        <div className="mb-3">
-          <Button variant="outline" size="sm" className="gap-1.5"
-            onClick={() => { window.history.length > 1 ? navigate(-1) : navigate("/app/construction"); }}>
-            <ArrowLeft className="h-4 w-4" />
-            Back <span dir="rtl" className="text-xs">/ رجوع</span>
-          </Button>
-        </div>
+      <main className="flex-1 min-w-0 p-4 lg:p-6">
         <Outlet />
       </main>
     </div>

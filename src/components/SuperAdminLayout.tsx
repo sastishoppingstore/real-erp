@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 
 import {
   LayoutDashboard, Building2, CreditCard, FileWarning, Users,
-  ArrowLeft,
   Settings, FileText, Key, LogOut, Menu, ShieldCheck,
   BarChart3, Mail, UserCheck, Headphones, Grid, PanelLeftOpen,
 } from "lucide-react";
@@ -136,15 +135,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             <button onClick={() => setMobileOpen(true)} className="lg:hidden p-1 hover:bg-slate-800 rounded">
               <Menu className="w-5 h-5" />
             </button>
-            <button
-              onClick={() => { window.history.length > 1 ? navigate(-1) : navigate("/admin"); }}
-              className="flex items-center gap-1.5 text-xs font-medium text-slate-200 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-colors"
-              title={rtl ? "رجوع" : "Back"}
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              {rtl ? "رجوع" : "Back"}
-            </button>
-                        <a href="https://yasco.tech" className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors hidden sm:inline-flex items-center gap-1">
+            <a href="https://yasco.tech" className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors hidden sm:inline-flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>

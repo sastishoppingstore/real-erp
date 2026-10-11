@@ -403,8 +403,7 @@ const ConstructionProjects = lazy(() => import("./pages/verticals/construction/P
 const ConstructionSubcontractors = lazy(() => import("./pages/verticals/construction/Subcontractors"));
 const ConstructionEquipment = lazy(() => import("./pages/verticals/construction/Equipment"));
 const ConstructionProgressBilling = lazy(() => import("./pages/verticals/construction/ProgressBilling"));
-const ConstructionTaxInvoices = lazy(() => import("./pages/verticals/construction/ConstructionInvoice"));
-const CompanySettingsPage = lazy(() => import("./pages/settings/CompanySettings"));
+const ConstructionInvoicePage = lazy(() => import("./pages/verticals/construction/ConstructionInvoice"));
 const ConstructionQuality = lazy(() => import("./pages/verticals/construction/Quality"));
 const TransportFleet = lazy(() => import("./pages/verticals/transport/Fleet"));
 const TransportRoutes = lazy(() => import("./pages/verticals/transport/Routes"));
@@ -790,8 +789,7 @@ export default function App() {
       <Route path="/app/verticals/construction/subcontractors" element={<LayoutWrapper><ConstructionSubcontractors /></LayoutWrapper>} />
       <Route path="/app/verticals/construction/equipment" element={<LayoutWrapper><ConstructionEquipment /></LayoutWrapper>} />
       <Route path="/app/verticals/construction/progress-billing" element={<LayoutWrapper><ConstructionProgressBilling /></LayoutWrapper>} />
-      <Route path="/app/verticals/construction/invoices" element={<LayoutWrapper><ConstructionTaxInvoices /></LayoutWrapper>} />
-      <Route path="/app/settings/company-settings" element={<LayoutWrapper><CompanySettingsPage /></LayoutWrapper>} />
+      <Route path="/app/verticals/construction/invoices" element={<LayoutWrapper><ConstructionInvoicePage /></LayoutWrapper>} />
       <Route path="/app/verticals/construction/quality" element={<LayoutWrapper><ConstructionQuality /></LayoutWrapper>} />
 
       {/* Transport Verticals */}
@@ -905,9 +903,12 @@ export default function App() {
         <Route path="costs" element={<ContractCostList />} />
       </Route>
 
-      {/* Construction Module Routes */}
-      <Route path="/app/construction" element={<ConstructionLayout />}>
+      {/* Construction Module Routes (wrapped in AppLayout so the selected
+          layout theme + header/sidebar stay consistent on every sub-page) */}
+      <Route path="/app/construction" element={<LayoutWrapper><ConstructionLayout /></LayoutWrapper>}>
         <Route index element={<ConstructionDashboard />} />
+        <Route path="invoices" element={<ConstructionInvoicePage />} />
+        <Route path="sales-invoices" element={<InvoicesPage />} />
         <Route path="wbs" element={<WBSList />} />
         <Route path="wbs/new" element={<WBSCreate />} />
         <Route path="wbs/:id" element={<WBSDetail />} />

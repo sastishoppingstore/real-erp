@@ -34,29 +34,13 @@ export const purchaseRouter = createRouter({
       code: z.string().optional(),
       name: z.string(),
       nameAr: z.string().optional(),
-      legalNameEn: z.string().optional(),
-      legalNameAr: z.string().optional(),
-      crNumber: z.string().optional(),
-      vatNumber: z.string().optional(),
       email: z.string().optional(),
       phone: z.string().optional(),
       mobile: z.string().optional(),
-      whatsapp: z.string().optional(),
-      buildingNumber: z.string().optional(),
-      streetName: z.string().optional(),
-      district: z.string().optional(),
       address: z.string().optional(),
       city: z.string().optional(),
-      postalCode: z.string().optional(),
-      additionalNumber: z.string().optional(),
       taxNumber: z.string().optional(),
-      contactPerson: z.string().optional(),
-      contactTitle: z.string().optional(),
-      bankName: z.string().optional(),
-      bankIban: z.string().optional(),
-      bankAccountNumber: z.string().optional(),
       creditLimit: z.string().optional(),
-      openingBalance: z.string().optional(),
       paymentTerms: z.number().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -69,37 +53,21 @@ export const purchaseRouter = createRouter({
     .input(z.object({
       id: z.number(),
       code: z.string().optional(),
-      name: z.string().optional(),
+      name: z.string(),
       nameAr: z.string().optional(),
-      legalNameEn: z.string().optional(),
-      legalNameAr: z.string().optional(),
-      crNumber: z.string().optional(),
-      vatNumber: z.string().optional(),
       email: z.string().optional(),
       phone: z.string().optional(),
       mobile: z.string().optional(),
-      whatsapp: z.string().optional(),
-      buildingNumber: z.string().optional(),
-      streetName: z.string().optional(),
-      district: z.string().optional(),
       address: z.string().optional(),
       city: z.string().optional(),
-      postalCode: z.string().optional(),
-      additionalNumber: z.string().optional(),
       taxNumber: z.string().optional(),
-      contactPerson: z.string().optional(),
-      contactTitle: z.string().optional(),
-      bankName: z.string().optional(),
-      bankIban: z.string().optional(),
-      bankAccountNumber: z.string().optional(),
       creditLimit: z.string().optional(),
-      openingBalance: z.string().optional(),
       paymentTerms: z.number().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const { id, ...data } = input;
-      await db.update(suppliers).set(data).where(eq(suppliers.id, id));
+      await db.update(suppliers).set(data).where(and(eq(suppliers.id, id), eq(suppliers.tenantId, ctx.user.tenantId!)));
       return { success: true };
     }),
 

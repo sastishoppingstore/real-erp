@@ -67,8 +67,10 @@ class SyncEngine {
   }
 
   async sync() {
-    if (!this.hasSession()) return;
     if (this.syncing) return;
+    // Skip the whole offline-sync cycle when there is no authenticated session,
+    // preventing repeated sync.pull 401 storms on login/register pages.
+    if (!this.hasSession()) return;
     if (!connectionDetector.isOnline()) {
       console.log("[Sync] Offline, skipping sync");
       return;

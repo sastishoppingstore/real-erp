@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { createRouter, publicMutation, authedQuery, authedMutation } from "./middleware";
 import { getDb } from "./queries/connection";
-import { users, tenants, eq, and, sql } from "@db/schema";
+import { users, tenants } from "@db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import crypto from "crypto";
 

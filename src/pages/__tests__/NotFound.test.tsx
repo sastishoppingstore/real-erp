@@ -12,11 +12,8 @@ describe("NotFound", () => {
 
   it("has a link back to home", () => {
     renderWithProviders(<NotFound />);
-    // Redesigned 404: a "Go Back" (browser-history) button + a navigational link to /app (home).
-    expect(screen.getByRole("button", { name: /go back/i })).toBeDefined();
-    const homeLinks = screen
-      .getAllByRole("link")
-      .filter((a) => a.getAttribute("href") === "/app");
-    expect(homeLinks.length).toBeGreaterThan(0);
+    const link = screen.getByRole("link", { name: /back to home/i });
+    expect(link).toBeDefined();
+    expect(link.getAttribute("href")).toBe("/");
   });
 });

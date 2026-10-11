@@ -16,7 +16,6 @@ import {
   Stamp, PenTool, Upload, Save, Loader2, Hash, Globe, Shield,
   FileText, Printer, CheckCircle2, Image, Eye, Copy, Info,
 } from "lucide-react";
-import { toast } from "sonner";
 
 // Helper: convert File to base64
 function fileToBase64(file: File): Promise<string> {
@@ -165,42 +164,35 @@ export default function CompanyProfilePage() {
       }
     }
 
-    console.log("[companyProfile] save payload:", { ...form, hasLogo: !!logoBase64, hasStamp: !!stampBase64, bankName, smtpServer });
-    try {
-      await updateSettings.mutateAsync({
-        ...form,
-        logo: logoBase64,
-        signature: signatureBase64,
-        stamp: stampBase64,
-        primaryColor: invoiceHeaderColor,
-        bankName,
-        bankAccountName,
-        bankIban,
-        bankAccountNumber,
-        paperSize,
-        printerName,
-        copiesCount: parseInt(copiesCount) || 1,
-        printLogo,
-        printQr,
-        printStamp,
-        printSignature,
-        smtpServer,
-        smtpPort: parseInt(smtpPort) || 587,
-        smtpEmail,
-        smtpPassword,
-        smsProvider,
-        smsApiKey,
-        whatsappApiKey,
-        invoiceFooterText: form.invoiceFooterText,
-        invoiceFooterTextAr: form.invoiceFooterTextAr,
-      } as any);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-      toast.success(isAr ? "تم الحفظ بنجاح" : "Settings saved");
-    } catch (e: any) {
-      console.error("[companyProfile] save failed:", e?.message || e);
-      toast.error(isAr ? "فشل الحفظ" : "Failed to save settings");
-    }
+    await updateSettings.mutateAsync({
+      ...form,
+      logo: logoBase64,
+      signature: signatureBase64,
+      stamp: stampBase64,
+      primaryColor: invoiceHeaderColor,
+      bankName,
+      bankAccountName,
+      bankIban,
+      bankAccountNumber,
+      paperSize,
+      printerName,
+      copiesCount: parseInt(copiesCount) || 1,
+      printLogo,
+      printQr,
+      printStamp,
+      printSignature,
+      smtpServer,
+      smtpPort: parseInt(smtpPort) || 587,
+      smtpEmail,
+      smtpPassword,
+      smsProvider,
+      smsApiKey,
+      whatsappApiKey,
+      invoiceFooterText: form.invoiceFooterText,
+      invoiceFooterTextAr: form.invoiceFooterTextAr,
+    } as any);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   return (

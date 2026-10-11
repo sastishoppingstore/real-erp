@@ -257,3 +257,46 @@ bootstrap().catch((err) => {
 process.on("unhandledRejection", (err) => {
   console.warn("[unhandledRejection]", err);
 });
+
+// ── Word Export ──────────────────────────────────────────────────────
+import { wordRouter } from "./wordRouter";
+import { createFactory } from "hono/factory";
+
+const factory = createFactory();
+
+// Custom route for Word export (bypasses tRPC for simplicity)
+app.get("/api/word-export/:invoiceId", factory.createHandlers(async (c) => {
+  try {
+    const authHeader = c.req.header("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const cookies = c.req.header("cookie") || "";
+    const cookieMatch = cookies.match(/erp_sid=([^;]+)/);
+    const sessionToken = token || cookieMatch?.[1];
+
+    if (!sessionToken) return c.json({ error: "Unauthorized" }, 401);
+
+    // Verify session and get userId/tenantId
+    const { verifySessionToken } = await import("./lib/session");
+    const session = await verifySessionToken(sessionToken);
+    if (!session) return c.json({ error: "Invalid session" }, 401);
+
+    const invoiceId = Number(c.req.param("invoiceId"));
+    const ctx = { user: { id: session.userId, tenantId: session.tenantId } };
+
+    // Call the wordRouter procedure
+    const result = await wordRouter.generateWord(
+      { invoiceId },
+      { ctx, req: c.req.raw }
+    );
+
+    return new Response(result.html, {
+      headers: {
+        "Content-Type": "application/vnd.ms-word;charset=utf-8",
+        "Content-Disposition": `attachment; filename="Invoice-${result.invoiceNo}.doc"`,
+      },
+    });
+  } catch (e: any) {
+    return c.json({ error: e.message || "Word export failed" }, 500);
+  }
+}));
+

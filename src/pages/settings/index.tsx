@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/providers/trpc";
-import { Building2, Receipt, Palette, Shield, Bot, Eye, EyeOff, LayoutDashboard, Grid, Check, Rocket } from "lucide-react";
+import { Building2, Receipt, Palette, Shield, Bot, Eye, EyeOff, LayoutDashboard, Grid, Check, Rocket, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { TaxComplianceSettings } from "./TaxComplianceSettings";
 import ThemeSelector from "@/components/ThemeSelector";
@@ -15,9 +16,18 @@ import { ImageUpload } from "@/components/ui/ImageUpload";
 
 export default function SettingsPage() {
   const { data: settings, refetch } = trpc.settings.companySettingsGet.useQuery();
-  const updateSettings = trpc.settings.companySettingsUpdate.useMutation({ onSuccess: () => refetch() });
+  const updateSettings = trpc.settings.companySettingsUpdate.useMutation({
+    onSuccess: () => {
+      refetch();
+      setSaved(true);
+      toast.success("Settings saved");
+      setTimeout(() => setSaved(false), 3000);
+    },
+    onError: (e: any) => toast.error(e?.message || "Failed to save settings"),
+  });
   const { data: taxRates } = trpc.settings.taxRateList.useQuery();
   const { data: currencies } = trpc.settings.currencyList.useQuery();
+  const [saved, setSaved] = useState(false);
 
   const [form, setForm] = useState({
     companyName: "", companyNameAr: "", tradeName: "", email: "", phone: "", mobile: "", website: "",
@@ -185,7 +195,10 @@ export default function SettingsPage() {
 
       <div className="flex justify-end gap-3">
         <Button variant="outline">Reset</Button>
-        <Button onClick={handleSave}>Save Changes</Button>
+        <Button onClick={handleSave} disabled={updateSettings.isPending}>
+          {updateSettings.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+          {saved ? "Saved ✓" : "Save Changes"}
+        </Button>
       </div>
     </div>
   );

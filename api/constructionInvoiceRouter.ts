@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createRouter, authedQuery } from "./middleware";
+import { createRouter, authedQuery, authedMutation } from "./middleware";
 import { getDb } from "./queries/connection";
 import { customers, constructionInvoices, constructionInvoiceItems } from "@db/schema";
 import { eq, and, desc, sql, or, like } from "drizzle-orm";
@@ -178,5 +178,47 @@ export const constructionInvoiceRouter = {
     const items = await db.select().from(constructionInvoiceItems)
       .where(eq(constructionInvoiceItems.invoiceId, input.id));
     return { invoice: rows[0], items };
+  }),
+
+  itemSearch: authedQuery.input(z.object({ q: z.string().min(2).max(80) })).query(async ({ ctx, input }) => {
+    const db = getDb();
+    const pat = `%${input.q}%`;
+    const rows = await db.select({
+      descriptionEn: constructionInvoiceItems.descriptionEn,
+      descriptionAr: constructionInvoiceItems.descriptionAr,
+      unit: constructionInvoiceItems.unit,
+      rate: constructionInvoiceItems.rate,
+    })
+      .from(constructionInvoiceItems)
+      .innerJoin(constructionInvoices, eq(constructionInvoiceItems.invoiceId, constructionInvoices.id))
+      .where(and(
+        eq(constructionInvoices.tenantId, ctx.user.tenantId!),
+        or(
+          like(constructionInvoiceItems.descriptionEn, pat),
+          like(constructionInvoiceItems.descriptionAr, pat),
+        ),
+      ))
+      .orderBy(desc(constructionInvoiceItems.id))
+      .limit(100);
+    const seen = new Set<string>();
+    const out: any[] = [];
+    for (const r of rows) {
+      const key = String(r.descriptionEn || "").toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(r);
+      if (out.length >= 20) break;
+    }
+    return out;
+  }),
+
+  invoiceDelete: authedMutation.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    const db = getDb();
+    const rows = await db.select({ id: constructionInvoices.id }).from(constructionInvoices)
+      .where(and(eq(constructionInvoices.id, input.id), eq(constructionInvoices.tenantId, ctx.user.tenantId!))).limit(1);
+    if (!rows[0]) throw new Error("Invoice not found");
+    await db.delete(constructionInvoiceItems).where(eq(constructionInvoiceItems.invoiceId, rows[0].id));
+    await db.delete(constructionInvoices).where(eq(constructionInvoices.id, rows[0].id));
+    return { success: true };
   }),
 };

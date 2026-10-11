@@ -92,6 +92,7 @@ import {
   getStoredCategory,
   getVisibleGroupTitles,
 } from "@/config/businessCatalog";
+import { useTenantModules, isPathAllowed } from "@/hooks/useTenantModules";
 
 const categoryGroupVisibility: Record<string, string[]> = {
   hospital: ['MAIN', 'FINANCE', 'INVENTORY', 'SALES', 'PURCHASE', 'CRM', 'HRM', 'HEALTHCARE', 'OPERATIONS', 'PLATFORM', 'SYSTEM'],
@@ -273,6 +274,7 @@ const menuGroups = [
     titleAr: "المقاولات",
     items: [
       { label: "Construction Panel", labelAr: "لوحة المقاولات", icon: HardHat, path: "/app/construction" },
+      { label: "Construction Invoices", labelAr: "فواتير المقاولات", icon: FileText, path: "/app/verticals/construction/invoices" },
       { label: "WBS Structure", labelAr: "هيكل العمل WBS", icon: GitBranch, path: "/app/construction/wbs" },
       { label: "BOQ / Quantities", labelAr: "جدول الكميات BOQ", icon: ClipboardList, path: "/app/construction/boq" },
       { label: "Contracts", labelAr: "العقود والمشاريع", icon: FileText, path: "/app/construction/contracts" },
@@ -491,14 +493,13 @@ const SidebarContent = memo(function SidebarContent({ collapsed, onNavigate }: {
 
   const isSuperAdmin = user?.role === "super_admin";
   const storedCategory = getStoredCategory();
+  const { serverPrefixes } = useTenantModules();
   const visibleGroups = isSuperAdmin
     ? categoryGroupVisibility.all
     : (getVisibleGroupTitles(storedCategory) || categoryGroupVisibility[storedCategory] || categoryGroupVisibility.all);
-  const enabledPathPrefixes = isSuperAdmin ? null : getEnabledSidebarPathPrefixes(storedCategory);
-  const isItemEnabled = (path: string) => {
-    if (!enabledPathPrefixes) return true;
-    return enabledPathPrefixes.some((prefix) => path === prefix || (prefix !== "/app" && path.startsWith(`${prefix}/`)));
-  };
+  const localPrefixes = isSuperAdmin ? null : getEnabledSidebarPathPrefixes(storedCategory);
+  const enabledPathPrefixes = isSuperAdmin ? null : serverPrefixes ?? localPrefixes;
+  const isItemEnabled = (path: string) => isPathAllowed(path, enabledPathPrefixes);
 
   const displayName = companySettings?.companyName || "YASCO ERP";
   const displayAr = companySettings?.companyNameAr;
@@ -507,7 +508,7 @@ const SidebarContent = memo(function SidebarContent({ collapsed, onNavigate }: {
 
   // Filter menu items by search query
   const filteredGroups = menuGroups
-    .filter(g => visibleGroups.includes(g.title))
+    .filter(g => visibleGroups.includes(g.title) || g.items.some((it) => isItemEnabled(it.path)))
     .map((group) => ({ ...group, items: group.items.filter((item) => isItemEnabled(item.path)) }))
     .filter((group) => group.items.length > 0);
   const allItems = filteredGroups.flatMap(g => g.items.map(item => ({ ...item, group: rtl ? g.titleAr : g.title })));
@@ -786,7 +787,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const countryDetection = useCountryDetection();
   const rtl = language === "ar";
   const theme = countryThemes[countryDetection.selectedCountry] ?? countryThemes.US;
-  const isLauncherFullscreen = layoutTheme === "launcher_theme";
+  // Launcher theme renders fullscreen grid ONLY on the home route; every other page
+  // keeps the normal themed sidebar so navigation is always available.
+  const isLauncherFullscreen = layoutTheme === "launcher_theme" && (location.pathname === "/app" || location.pathname === "/app/");
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -802,6 +805,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Breadcrumb: find active item label
   const allNavItems = menuGroups.flatMap(g => g.items);
   const activeItem = allNavItems.find(i => location.pathname === i.path || location.pathname.startsWith(i.path + "/"));
+
+  // Command-palette search respects tenant modules too (same matcher as sidebar).
+  const { serverPrefixes: cmdServerPrefixes } = useTenantModules();
+  const cmdPrefixes = user?.role === "super_admin"
+    ? null
+    : (cmdServerPrefixes ?? getEnabledSidebarPathPrefixes(getStoredCategory()));
 
   if (isLoading && !user) {
     return (
@@ -855,9 +864,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </Button>
             <Button
               variant="ghost"
-              size="sm"
-              className="hover:bg-white/10 text-white gap-1.5 px-2.5 h-9 border border-white/20"
-              aria-label={rtl ? "رجوع" : "Back"}
+              size="icon"
+              className="hover:bg-white/10 text-white"
+              aria-label={rtl ? "Back" : "Back"}
               title={rtl ? "رجوع" : "Back"}
               onClick={() => {
                 if (window.history.length > 1) {
@@ -868,7 +877,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               }}
             >
               {rtl ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-              <span className="hidden sm:inline text-xs font-semibold">{rtl ? "رجوع" : "Back"}</span>
             </Button>
             <div className="min-w-0">
               <h1 className="text-sm font-semibold text-white">
@@ -936,15 +944,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           {children}
         </main>
-      </div>
+       </div>
+
+      {/* AI chat agent (ChatBubble) intentionally removed per requirements. */}
+
 
       <CommandDialog open={searchOpen} onOpenChange={setSearchOpen} title={rtl ? "بحث" : "Search"}>
         <CommandInput placeholder={rtl ? "ابحث في القوائم والصفحات..." : "Search menus and pages..."} />
         <CommandList>
           <CommandEmpty>{rtl ? "لا توجد نتائج" : "No results found."}</CommandEmpty>
-          {menuGroups.map((group) => (
+          {menuGroups.map((group) => {
+            const visibleItems = group.items.filter((item) => isPathAllowed(item.path, cmdPrefixes));
+            if (visibleItems.length === 0) return null;
+            return (
             <CommandGroup key={group.title} heading={group.label}>
-              {group.items.map((item) => (
+              {visibleItems.map((item) => (
                 <CommandItem
                   key={item.path}
                   value={`${item.label} ${item.labelAr}`}
@@ -958,7 +972,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </CommandItem>
               ))}
             </CommandGroup>
-          ))}
+            );
+          })}
         </CommandList>
       </CommandDialog>
     </div>

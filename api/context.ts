@@ -10,7 +10,9 @@ import * as cookie from "cookie";
 async function authenticateRequest(headers: Headers) {
   requireDesktopLicense(headers);
   const cookies = cookie.parse(headers.get("cookie") || "");
-  const token = cookies[Session.cookieName];
+  const authHeader = headers.get("authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const token = bearerToken || cookies[Session.cookieName];
   if (!token) {
     console.warn("[auth] No session cookie found in request.");
     throw Errors.forbidden("Invalid authentication token.");

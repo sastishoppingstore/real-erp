@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createRouter, authedQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { auditLogs, companySettings, taxRates, currencies, notifications, tenants } from "@db/schema";
+import { auditLogs, companySettings, taxRates, currencies, notifications, tenants, tenantModules } from "@db/schema";
 import { eq, sql, and, desc } from "drizzle-orm";
 
 export const settingsRouter = createRouter({
@@ -45,26 +45,6 @@ export const settingsRouter = createRouter({
       zatcaSandbox: z.boolean().optional(),
       aiApiKey: z.string().optional(),
       aiModel: z.string().optional(),
-      bankName: z.string().optional(),
-      bankAccountName: z.string().optional(),
-      bankIban: z.string().optional(),
-      bankAccountNumber: z.string().optional(),
-      paperSize: z.string().optional(),
-      printerName: z.string().optional(),
-      copiesCount: z.coerce.number().optional(),
-      printLogo: z.boolean().optional(),
-      printQr: z.boolean().optional(),
-      printStamp: z.boolean().optional(),
-      printSignature: z.boolean().optional(),
-      smtpServer: z.string().optional(),
-      smtpPort: z.coerce.number().optional(),
-      smtpEmail: z.string().optional(),
-      smtpPassword: z.string().optional(),
-      smsProvider: z.string().optional(),
-      smsApiKey: z.string().optional(),
-      whatsappApiKey: z.string().optional(),
-      invoiceFooterText: z.string().optional(),
-      invoiceFooterTextAr: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
@@ -81,6 +61,56 @@ export const settingsRouter = createRouter({
         tenantId: ctx.user.tenantId!,
         userId: ctx.user.id,
         action: "company_settings_update",
+        entityType: "company_settings",
+        entityId: existing?.id,
+        oldValues: existing ?? null,
+        newValues: data,
+        createdAt: new Date(),
+      });
+      return { success: true };
+    }),
+
+  // AI Settings
+  aiSettingsGet: authedQuery
+    .query(async ({ ctx }) => {
+      const db = getDb();
+      const settings = await db.query.companySettings.findFirst({
+        where: eq(companySettings.tenantId, ctx.user.tenantId!),
+        columns: {
+          aiApiKey: true,
+          aiModel: true,
+        },
+      });
+      if (!settings) return { aiApiKey: "", aiModel: "gemini-2.0-flash" };
+      return {
+        aiApiKey: settings.aiApiKey ? settings.aiApiKey.slice(0, 8) + "..." : "",
+        aiApiKeySet: !!settings.aiApiKey,
+        aiModel: settings.aiModel || "gemini-2.0-flash",
+      };
+    }),
+
+  aiSettingsUpdate: adminQuery
+    .input(z.object({
+      aiApiKey: z.string().optional(),
+      aiModel: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const data: Record<string, any> = {};
+      if (input.aiApiKey !== undefined) data.aiApiKey = input.aiApiKey;
+      if (input.aiModel !== undefined) data.aiModel = input.aiModel;
+      const existing = await db.query.companySettings.findFirst({
+        where: eq(companySettings.tenantId, ctx.user.tenantId!),
+      });
+      if (existing) {
+        await db.update(companySettings).set(data).where(eq(companySettings.tenantId, ctx.user.tenantId!));
+      } else {
+        await db.insert(companySettings).values({ tenantId: ctx.user.tenantId!, ...data });
+      }
+      await db.insert(auditLogs).values({
+        tenantId: ctx.user.tenantId!,
+        userId: ctx.user.id,
+        action: "ai_settings_update",
         entityType: "company_settings",
         entityId: existing?.id,
         oldValues: existing ?? null,
@@ -179,6 +209,14 @@ export const settingsRouter = createRouter({
       });
       return { layoutTheme: tenant?.layoutTheme ?? "launcher_theme" };
     }),
+
+  modulesGet: authedQuery.query(async ({ ctx }) => {
+    const db = getDb();
+    const rows = await db.select({ moduleName: tenantModules.moduleName })
+      .from(tenantModules)
+      .where(and(eq(tenantModules.tenantId, ctx.user.tenantId!), eq(tenantModules.isEnabled, true)));
+    return { modules: rows.map((r: any) => r.moduleName) };
+  }),
 
   themeUpdate: authedQuery
     .input(z.object({ layoutTheme: z.enum(["sidebar", "app_launcher", "launcher_theme"]) }))

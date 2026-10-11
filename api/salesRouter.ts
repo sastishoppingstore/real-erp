@@ -4,7 +4,7 @@ import { getDb } from "./queries/connection";
 import {
   customers, salesQuotations, salesQuotationItems,
   salesOrders, salesOrderItems, invoices, invoiceItems,
-  creditNotes, customerPayments, companySettings, auditLogs, companies
+  creditNotes, customerPayments, companySettings, auditLogs, companies, products
 } from "@db/schema";
 import { eq, sql, and, like, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -132,6 +132,7 @@ export const salesRouter = createRouter({
       mobile: z.string().optional(),
       whatsapp: z.string().optional(),
       address: z.string().optional(),
+      addressAr: z.string().optional(),
       buildingNumber: z.string().optional(),
       streetName: z.string().optional(),
       district: z.string().optional(),
@@ -162,6 +163,7 @@ export const salesRouter = createRouter({
         mobile: input.mobile,
         whatsapp: input.whatsapp,
         address: input.address,
+        addressAr: input.addressAr,
         buildingNumber: input.buildingNumber,
         streetName: input.streetName,
         district: input.district,
@@ -194,6 +196,7 @@ export const salesRouter = createRouter({
       mobile: z.string().optional(),
       whatsapp: z.string().optional(),
       address: z.string().optional(),
+      addressAr: z.string().optional(),
       buildingNumber: z.string().optional(),
       streetName: z.string().optional(),
       district: z.string().optional(),
@@ -366,20 +369,26 @@ export const salesRouter = createRouter({
       taxableAmount: z.string().optional(),
       discountAmount: z.string().optional(),
       totalAmount: z.string(),
-      notes: z.string().optional(),      customerName: z.string().optional(),
+      notes: z.string().optional(),
+      notesAr: z.string().optional(),
+      customerName: z.string().optional(),
+      customerNameAr: z.string().optional(),
       customerPhone: z.string().optional(),
       customerAddress: z.string().optional(),
+      customerAddressAr: z.string().optional(),
       customerVat: z.string().optional(),
-      customerEmail: z.string().optional(),
       customerCr: z.string().optional(),
-      poNumber: z.string().optional(),
+      customerEmail: z.string().optional(),
       workedMonth: z.string().optional(),
-      paymentMethod: z.string().optional(),
+      time: z.string().optional(),
+      paymentType: z.string().optional(),
       cashier: z.string().optional(),
+      poNumber: z.string().optional(),
 
       items: z.array(z.object({
         productId: z.number().optional(),
         description: z.string(),
+        descriptionAr: z.string().optional(),
         quantity: z.number(),
         unitPrice: z.string(),
         unit: z.string().optional(),
@@ -502,15 +511,17 @@ export const salesRouter = createRouter({
         : null;
       if (!resolvedCustomerId) {
         if (invoiceData.customerName) {
-          // Persist the customer details the user typed so the printed
-          // invoice shows their Name / Phone / Address / VAT (not walk-in).
+          // Auto-save the customer (bilingual) so they can be searched and auto-filled next time
           const [{ id: wid }] = await db.insert(customers).values({
             tenantId,
-            code: `WALK-${Date.now().toString().slice(-6)}`,
+            code: `CUST-${Date.now().toString().slice(-6)}`,
             name: invoiceData.customerName,
-            nameAr: invoiceData.customerName,
+            nameAr: invoiceData.customerNameAr || null,
             phone: invoiceData.customerPhone || null,
             address: invoiceData.customerAddress || null,
+            addressAr: invoiceData.customerAddressAr || null,
+            vatNumber: invoiceData.customerVat || null,
+            crNumber: invoiceData.customerCr || null,
             taxNumber: invoiceData.customerVat || null,
             country: settings?.country || "Saudi Arabia",
             isActive: true,
@@ -547,16 +558,20 @@ export const salesRouter = createRouter({
         taxPercent,
         totalAmount: invoiceData.totalAmount,
         notes: invoiceData.notes,
+        notesAr: invoiceData.notesAr,
         customerName: invoiceData.customerName || null,
+        customerNameAr: invoiceData.customerNameAr || null,
         customerPhone: invoiceData.customerPhone || null,
         customerAddress: invoiceData.customerAddress || null,
+        customerAddressAr: invoiceData.customerAddressAr || null,
         customerVat: invoiceData.customerVat || null,
-        customerEmail: invoiceData.customerEmail || null,
         customerCr: invoiceData.customerCr || null,
-        poNumber: invoiceData.poNumber || null,
+        customerEmail: invoiceData.customerEmail || null,
         workedMonth: invoiceData.workedMonth || null,
-        paymentMethod: invoiceData.paymentMethod || null,
+        time: invoiceData.time || null,
+        paymentType: invoiceData.paymentType || null,
         cashier: invoiceData.cashier || null,
+        poNumber: invoiceData.poNumber || null,
         tenantId,
         zatcaQrCode: isAboveThreshold ? zatcaQrCode : undefined,
         zatcaXml: isAboveThreshold ? zatcaXml : undefined,
@@ -569,12 +584,29 @@ export const salesRouter = createRouter({
         await db.insert(invoiceItems).values({
           invoiceId: id,
           description: item.description,
+          descriptionAr: item.descriptionAr,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           taxPercent: item.taxPercent,
           totalAmount: item.totalAmount,
           productId: item.productId,
         });
+        // Auto-save new products to database for future use
+        if (!item.productId && item.description) {
+          try {
+            await db.insert(products).values({
+              tenantId,
+              sku: item.sku || `PRD-${Date.now().toString().slice(-6)}`,
+              name: item.description,
+              nameAr: item.descriptionAr || null,
+              salePrice: item.unitPrice || "0",
+              unitName: item.unit || "Piece",
+              isActive: true,
+            });
+          } catch (e) {
+            console.warn("Product auto-save failed:", e);
+          }
+        }
       }
       await db.insert(auditLogs).values({
         tenantId,
@@ -623,16 +655,6 @@ export const salesRouter = createRouter({
       taxPercent: z.string().optional(),
       totalAmount: z.string().optional(),
       notes: z.string().optional(),
-      customerName: z.string().optional(),
-      customerPhone: z.string().optional(),
-      customerAddress: z.string().optional(),
-      customerVat: z.string().optional(),
-      customerEmail: z.string().optional(),
-      customerCr: z.string().optional(),
-      poNumber: z.string().optional(),
-      workedMonth: z.string().optional(),
-      paymentMethod: z.string().optional(),
-      cashier: z.string().optional(),
       status: z.enum(["draft", "sent", "paid", "partial", "overdue", "cancelled", "credit_note"]).optional(),
       items: z.array(z.object({
         id: z.number().optional(),

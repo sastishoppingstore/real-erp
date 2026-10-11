@@ -96,10 +96,13 @@ export const mrpRouter = createRouter({
     horizonStart: z.string(), horizonEnd: z.string(),
   })).mutation(async ({ input, ctx }) => {
     const db = getDb();
+    const today = new Date().toISOString().slice(0, 10);
+    const horizonStart = input.horizonStart || today;
+    const horizonEnd = input.horizonEnd || today;
     const startTime = Date.now();
-    const [{ runId }] = await db.insert(mrpRuns).values({
-      tenantId: ctx.user.tenantId!, horizonStart: input.horizonStart,
-      horizonEnd: input.horizonEnd, status: "running", createdBy: ctx.user.id,
+    const [{ id: runId }] = await db.insert(mrpRuns).values({
+      tenantId: ctx.user.tenantId!, horizonStart,
+      horizonEnd, status: "running", createdBy: ctx.user.id,
     }).$returningId();
     try {
       const tenantId = ctx.user.tenantId!;

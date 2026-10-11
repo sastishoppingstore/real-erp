@@ -91,6 +91,7 @@ import {
   getStoredCategory,
   getVisibleGroupTitles,
 } from "@/config/businessCatalog";
+import { useTenantModules } from "@/hooks/useTenantModules";
 
 const categoryGroupVisibility: Record<string, string[]> = {
   hospital: ['MAIN', 'FINANCE', 'INVENTORY', 'SALES', 'PURCHASE', 'CRM', 'HRM', 'HEALTHCARE', 'OPERATIONS', 'PLATFORM', 'SYSTEM'],
@@ -272,6 +273,7 @@ const menuGroups = [
     titleAr: "المقاولات",
     items: [
       { label: "Construction Panel", labelAr: "لوحة المقاولات", icon: HardHat, path: "/app/construction" },
+      { label: "Construction Invoices", labelAr: "فواتير المقاولات", icon: FileText, path: "/app/verticals/construction/invoices" },
       { label: "WBS Structure", labelAr: "هيكل العمل WBS", icon: GitBranch, path: "/app/construction/wbs" },
       { label: "BOQ / Quantities", labelAr: "جدول الكميات BOQ", icon: ClipboardList, path: "/app/construction/boq" },
       { label: "Contracts", labelAr: "العقود والمشاريع", icon: FileText, path: "/app/construction/contracts" },
@@ -490,10 +492,12 @@ const SidebarContent = memo(function SidebarContent({ collapsed, onNavigate }: {
 
   const isSuperAdmin = user?.role === "super_admin";
   const storedCategory = getStoredCategory();
+  const { serverPrefixes } = useTenantModules();
   const visibleGroups = isSuperAdmin
     ? categoryGroupVisibility.all
     : (getVisibleGroupTitles(storedCategory) || categoryGroupVisibility[storedCategory] || categoryGroupVisibility.all);
-  const enabledPathPrefixes = isSuperAdmin ? null : getEnabledSidebarPathPrefixes(storedCategory);
+  const localPrefixes = isSuperAdmin ? null : getEnabledSidebarPathPrefixes(storedCategory);
+  const enabledPathPrefixes = isSuperAdmin ? null : serverPrefixes ?? localPrefixes;
   const isItemEnabled = (path: string) => {
     if (!enabledPathPrefixes) return true;
     return enabledPathPrefixes.some((prefix) => path === prefix || (prefix !== "/app" && path.startsWith(`${prefix}/`)));
@@ -506,7 +510,7 @@ const SidebarContent = memo(function SidebarContent({ collapsed, onNavigate }: {
 
   // Filter menu items by search query
   const filteredGroups = menuGroups
-    .filter(g => visibleGroups.includes(g.title))
+    .filter(g => visibleGroups.includes(g.title) || g.items.some((it) => isItemEnabled(it.path)))
     .map((group) => ({ ...group, items: group.items.filter((item) => isItemEnabled(item.path)) }))
     .filter((group) => group.items.length > 0);
   const allItems = filteredGroups.flatMap(g => g.items.map(item => ({ ...item, group: rtl ? g.titleAr : g.title })));
@@ -785,7 +789,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const countryDetection = useCountryDetection();
   const rtl = language === "ar";
   const theme = countryThemes[countryDetection.selectedCountry] ?? countryThemes.US;
-  const isLauncherFullscreen = layoutTheme === "launcher_theme";
+  // Launcher theme renders fullscreen grid ONLY on the home route; every other page
+  // keeps the normal themed sidebar so navigation is always available.
+  const isLauncherFullscreen = layoutTheme === "launcher_theme" && (location.pathname === "/app" || location.pathname === "/app/");
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

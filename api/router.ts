@@ -32,6 +32,8 @@ import { meetingRouter } from "./meetingRouter";
 import { taskRouter } from "./taskRouter";
 import { notificationRouter } from "./notificationRouter";
 import { emailRouter } from "./emailRouter";
+import { wordRouter } from "./wordRouter";
+import { excelRouter } from "./excelRouter";
 import { syncRouter } from "./syncRouter";
 import { syncEnhancedRouter } from "./syncEnhancedRouter";
 import { licenseRouter } from "./licenseRouter";
@@ -62,7 +64,13 @@ import { thermalPrintRouter } from "./thermalPrintRouter";
 import { hotelRouter } from "./hotelRouter";
 import { constructionRouter } from "./constructionRouter";
 import { constructionInvoiceRouter } from "./constructionInvoiceRouter";
+import { constructionPaymentRouter } from "./constructionPaymentRouter";
+import { jobCostingRouter } from "./jobCostingRouter";
+import { hseSafetyRouter } from "./hseSafetyRouter";
+import { qiwaRouter } from "./qiwaRouter";
 import { companyRouter } from "./companyRouter";
+import { invoiceRouter as completeInvoiceRouter } from "./completeAuthInvoiceRouter";
+import { aiRouter } from "./aiConstructionRouter";
 import { transportRouter } from "./transportRouter";
 import { realEstateRouter } from "./realEstateRouter";
 import { travelRouter } from "./travelRouter";
@@ -122,6 +130,8 @@ export const appRouter = createRouter({
   tasks: taskRouter,
   notifications2: notificationRouter,
   emails: emailRouter,
+word: wordRouter,
+  excel: excelRouter,
   sync: syncRouter,
   syncEnhanced: syncEnhancedRouter,
   license: licenseRouter,
@@ -150,7 +160,13 @@ export const appRouter = createRouter({
   hotel: hotelRouter,
   construction: constructionRouter,
   constructionInvoices: constructionInvoiceRouter,
+  constructionPayment: constructionPaymentRouter,
+  jobCosting: jobCostingRouter,
+  hseSafety: hseSafetyRouter,
+  qiwa: qiwaRouter,
   company: companyRouter,
+  invoice: completeInvoiceRouter,
+  ai: aiRouter,
   transport: transportRouter,
   realEstate: realEstateRouter,
   travel: travelRouter,

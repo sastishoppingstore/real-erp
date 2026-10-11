@@ -9,13 +9,12 @@ import { toast } from "sonner";
 import { Eye, Printer, Send, Trash2, Pencil, MessageCircle, Plus, Minus, Search, FileCode2, FileSignature, RefreshCw, QrCode, Package } from "lucide-react";
 import QRCode from "qrcode";
 import ActionButton3D from "@/components/ui/ActionButton3D";
-import SaudiInvoicePrint from "./SaudiInvoicePrint";
 import { generateInvoiceHtml } from "@/lib/invoiceHtml";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
-type CartItem = { id: string; name: string; price: number; qty: number; sku?: string; discountPercent?: number; unit?: string };
+type CartItem = { id: string; name: string; nameAr?: string; price: number; qty: number; sku?: string; discountPercent?: number; unit?: string };
 type InvoiceMode = "product" | "service" | "construction";
 
 // Sub-component to render invoice preview (WYSIWYG - same HTML as print)
@@ -32,39 +31,46 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
   const pVat = Number(dInv.taxAmount || 0);
   const pTotal = Number(dInv.totalAmount || 0);
   const pCustName = dCust?.name || dCust?.nameAr || "Walk-in Customer";
+  const pCustNameAr = dCust?.nameAr || "";
   const pCustPhone = dCust?.phone || "";
   const pCustAddr = dCust?.address || "";
+  const pCustAddrAr = dCust?.addressAr || "";
   const pCustVat = dCust?.vatNumber || dCust?.taxNumber || "";
+  const pCustCr = dCust?.crNumber || "";
   const pType = dInv.invoiceType === "zatca" ? "zatca" : "standard";
+  const printItemsWithAr = (detail.items || []).map((it: any, i: number) => ({
+    no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
+    nameAr: it.descriptionAr || "",
+    qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
+  }));
   const html = generateInvoiceHtml({
-    companyName: companyData.companyName || "Company Name",
-    companyNameAr: companyData.companyNameAr || "",
+    companyName: companyData.companyName || "YAFCO AL ARABIAH EST.",
+    companyNameAr: companyData.companyNameAr || "مؤسسة يافكو العربية",
     companyLogo: companyData.companyLogo || "",
     companyStamp: companyData.companyStamp || "",
-    companySignature: companyData.companySignature || "",
-    companyAddress: companyData.companyAddress || "",
-    companyEmail: companyData.companyEmail || "",
-    companyWebsite: companyData.companyWebsite || "",
-    companyUnifiedNatlNo: companyData.companyUnifiedNatlNo || "",
-    companyCrNumber: companyData.companyCrNumber || "",
-    companyTaxNumber: companyData.companyVat || "",
+    companyAddress: companyData.companyAddress || "Saudi Arabia - Yanbu Al Bahr - P.O.Box: 2326",
+    companyAddressAr: companyData.companyAddressAr || "المملكة العربية السعودية - ينبع البحر - ص . ب : 2326",
+    companyPhone: companyData.companyPhone || "",
+    companyVat: companyData.companyVat || "300995897900003",
+    companyCr: companyData.companyCr || "4700012896",
+    companyEmail: companyData.companyEmail || "info@yafco.com.sa",
+    companyWebsite: companyData.companyWebsite || "www.yafco.com.sa",
     currency: companyData.currency || "SAR",
     taxPercent: dInv.taxPercent || "15",
     note: dInv.notes || "",
-    invoiceNumber: dInv.invoiceNumber || "",
-    invDate: dInv.date || "",
-    dueDate: dInv.dueDate || "",
-    invTime: dInv.time || "",
-    paymentMethod: dInv.paymentMethod || "",
-    cashier: dInv.cashier || "",
-    poNumber: dInv.poNumber || "",
-    workedMonth: dInv.workedMonth || "",
+    noteAr: dInv.notesAr || "",
     pSub, pDisc, pVat, pTotal,
-    pCustName, pCustPhone, pCustAddr, pCustVat,
-    pCustEmail: dCust?.email || "",
-    pCustCr: dCust?.crNumber || "",
-    pCustWebsite: dCust?.website || "",
-    pType, printItems: dItems
+    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType,
+    workedMonth: dInv.workedMonth,
+    invoiceNo: dInv.invoiceNumber,
+    paymentType: dInv.paymentType,
+    cashier: dInv.cashier,
+    date: dInv.date,
+    time: dInv.time,
+    dueDate: dInv.dueDate,
+    poNumber: dInv.poNumber,
+    dueInWords: dInv.dueInWords,
+    printItems: printItemsWithAr.map((i: any) => ({ ...i, totalHour: i.qty, vat: i.total * 0.15, grandTotal: i.total * 1.15 }))
   });
   return (
     <div
@@ -81,25 +87,27 @@ export default function InvoicesPage() {
   const { data: customers } = trpc.sales.customerList.useQuery(undefined);
   const { data: products, refetch: refetchProducts } = trpc.inventory.productList.useQuery(undefined);
   const { data: categories, refetch: refetchCategories } = trpc.inventory.categoryList.useQuery(undefined);
-  const { data: settings } = trpc.settings.companySettingsGet.useQuery();
+  const { data: settings } = trpc.settings.companySettingsGet.useQuery(undefined);
+  // Force company settings to load on mount (fixes Tauri desktop not loading settings)
+  const { data: freshSettings } = trpc.settings.companySettingsGet.useQuery(undefined, { staleTime: 0, refetchOnMount: true });
 
   const createInvoice = trpc.sales.invoiceCreate.useMutation({
     onSuccess: (data) => {
-      // Invalidate all sales queries to refresh list
       queryClient.invalidateQueries();
       toast.success("Bill created");
       clearCart();
-      // Auto-send invoice via email if customer email provided
       const newId = data?.id;
       if (newId && customerEmail.trim()) {
         emailSend.mutate({ invoiceId: newId, to: customerEmail.trim() });
       }
-      // Auto-open the newly created invoice for viewing/printing
       if (newId) {
         setTimeout(() => openViewInvoice(newId), 400);
       }
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error: any) => {
+      const errorMsg = error?.response?.data?.message || error?.message || "Network or Server Error";
+      toast.error(errorMsg);
+    },
   });
   const updateInvoice = trpc.sales.invoiceUpdate.useMutation({
     onSuccess: () => {
@@ -107,7 +115,10 @@ export default function InvoicesPage() {
       queryClient.invalidateQueries({ queryKey: [['sales', 'invoiceGet']] });
       toast.success("Invoice updated");
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error: any) => {
+      const errorMsg = error?.response?.data?.message || error?.message || "Network or Server Error";
+      toast.error(errorMsg);
+    },
   });
   const deleteInvoiceMut = trpc.sales.invoiceDelete.useMutation({
     onSuccess: () => {
@@ -126,7 +137,7 @@ export default function InvoicesPage() {
   const reportInvoice = trpc.zatca.reportInvoice.useMutation({ onSuccess: () => toast.success("ZATCA reporting logged"), onError: (e) => toast.error(e.message) });
   const syncZatcaStatus = trpc.zatca.syncStatus.useMutation({ onSuccess: () => toast.success("ZATCA status synced"), onError: (e) => toast.error(e.message) });
   const sendWhatsAppInvoice = trpc.whatsapp.sendInvoiceCreated.useMutation({ onSuccess: () => toast.success("Invoice sent on WhatsApp"), onError: (e) => toast.error(e.message) });
-  const emailSend = trpc.email.sendInvoice.useMutation({ onSuccess: () => toast.success("Invoice sent via email"), onError: (e) => toast.error("Email failed: " + e.message) });
+  const emailSend = trpc.emails.sendInvoice.useMutation({ onSuccess: () => toast.success("Invoice sent via email"), onError: (e) => toast.error("Email failed: " + e.message) });
   const createQuickProduct = trpc.inventory.productCreate.useMutation({
     onSuccess: () => { refetchProducts(); toast.success("Product added"); },
     onError: (e) => toast.error(e.message),
@@ -160,14 +171,21 @@ export default function InvoicesPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<number>(0);
   const [customerName, setCustomerName] = useState("");
+  const [customerNameAr, setCustomerNameAr] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
+  const [customerAddressAr, setCustomerAddressAr] = useState("");
   const [customerVat, setCustomerVat] = useState("");
+  const [customerCr, setCustomerCr] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [discount, setDiscount] = useState(0);
-  const [note, setNote] = useState("");
-  const [poNumber, setPoNumber] = useState("");
+  const [workedMonth, setWorkedMonth] = useState("");
+  const [paymentType, setPaymentType] = useState("Credit");
+  const [cashier, setCashier] = useState("مدير النظام");
   const [dueDate, setDueDate] = useState("");
+  const [poNo, setPoNo] = useState("");
+  const [note, setNote] = useState("");
+  const [noteAr, setNoteAr] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [custDropdownOpen, setCustDropdownOpen] = useState(false);
   const [custFocus, setCustFocus] = useState(-1);
@@ -198,16 +216,15 @@ export default function InvoicesPage() {
   const companyAddress = settings?.address || "";
   const companyPhone = settings?.phone || "";
   const companyVat = settings?.taxNumber || settings?.vatNumber || "";
-  const companyLogo = settings?.logo || "";
-  const companyStamp = settings?.stamp || "";
-  const companySignature = settings?.signature || "";
+  const companyCr = settings?.crNumber || "";
   const companyEmail = settings?.email || "";
   const companyWebsite = settings?.website || "";
-  const companyUnifiedNatlNo = settings?.unifiedNationalNo || "";
-  const companyCrNumber = settings?.crNumber || "";
+  const companyLogo = settings?.logo || "";
+  const companyStamp = settings?.stamp || "";
   const companyCountry = settings?.country || "";
 
-  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const safePrice = (p: number) => Number.isNaN(p) ? 0 : p;
+  const subtotal = cart.reduce((s, i) => s + safePrice(i.price) * i.qty, 0);
   const taxable = Math.max(0, subtotal - discount);
   const vat = taxable * taxPercent / 100;
   const total = taxable + vat;
@@ -215,9 +232,13 @@ export default function InvoicesPage() {
   const filteredProducts = (products || []).filter(p =>
     !searchQuery || (p.name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const filteredCustomers = (customers || []).filter(c =>
-    !customerName || (c.name || "").toLowerCase().includes(customerName.toLowerCase())
-  ).slice(0, 10);
+  const filteredCustomers = (customers || []).filter(c => {
+    if (!customerName && !customerNameAr) return false;
+    const q = (customerName || "").toLowerCase();
+    const qAr = (customerNameAr || "").toLowerCase();
+    return (!q || (c.name || "").toLowerCase().includes(q) || (c.nameAr || "").toLowerCase().includes(q))
+      && (!qAr || (c.nameAr || "").toLowerCase().includes(qAr));
+  }).slice(0, 10);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -259,7 +280,7 @@ export default function InvoicesPage() {
     setCart(prev => {
       const ex = prev.find(i => i.id === product.id);
       if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { id: product.id, name: product.name || "Item", price: Number((product as any).salePrice || product.price || 0), qty: 1, sku: product.sku }];
+      return [...prev, { id: product.id, name: product.name || "Item", price: Number(product.price || 0), qty: 1, sku: product.sku }];
     });
   };
 
@@ -267,7 +288,14 @@ export default function InvoicesPage() {
     setCart(prev => prev.map((item, i) => i === index ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
   };
   const updatePrice = (index: number, value: string) => {
-    setCart(prev => prev.map((item, i) => i === index ? { ...item, price: Math.max(0, parseFloat(value) || 0) } : item));
+    // Allow empty while typing; strip leading zeros (fixes "0500" bug)
+    if (value === "" || value === "0" || value === "0.00") {
+      setCart(prev => prev.map((item, i) => i === index ? { ...item, price: value === "" ? NaN : 0 } : item));
+      return;
+    }
+    const cleaned = value.replace(/^0+(?=\d)/, "");
+    const num = parseFloat(cleaned);
+    setCart(prev => prev.map((item, i) => i === index ? { ...item, price: isNaN(num) ? 0 : Math.max(0, num) } : item));
   };
   const updateItemName = (index: number, value: string) => {
     setCart(prev => prev.map((item, i) => i === index ? { ...item, name: value } : item));
@@ -276,12 +304,13 @@ export default function InvoicesPage() {
     setCart(prev => prev.filter((_, i) => i !== index));
   };
   const clearCart = () => {
-    setCart([]); setCustomerId(0); setCustomerName(""); setCustomerPhone("");
-    setCustomerAddress(""); setCustomerVat(""); setDiscount(0); setNote("");
+    setCart([]); setCustomerId(0); setCustomerName(""); setCustomerNameAr(""); setCustomerPhone("");
+    setCustomerAddress(""); setCustomerAddressAr(""); setCustomerVat(""); setCustomerCr(""); setDiscount(0); setNote(""); setNoteAr("");
   };
-  const selectCustomer = (c: { id: number; name: string; address?: string; vatNumber?: string; phone?: string }) => {
-    setCustomerId(c.id); setCustomerName(c.name || ""); setCustomerAddress(c.address || "");
-    setCustomerVat(c.vatNumber || ""); setCustomerPhone(c.phone || ""); setCustDropdownOpen(false);
+  const selectCustomer = (c: { id: number; name: string; nameAr?: string; address?: string; addressAr?: string; vatNumber?: string; crNumber?: string; phone?: string }) => {
+    setCustomerId(c.id); setCustomerName(c.name || ""); setCustomerNameAr(c.nameAr || "");
+    setCustomerAddress(c.address || ""); setCustomerAddressAr(c.addressAr || "");
+    setCustomerVat(c.vatNumber || ""); setCustomerCr(c.crNumber || ""); setCustomerPhone(c.phone || ""); setCustDropdownOpen(false);
   };
 
   const handleAddQuickCategory = () => {
@@ -336,34 +365,45 @@ export default function InvoicesPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!cart.length) { toast.error("Add at least one item to the cart"); return; }
-    // customerName is optional - walk-in customer is used if not provided
-    const effectiveCustomerName = customerName.trim() || "Walk-in Customer";
-    const items = cart.map(item => ({
-      description: `[${item.id}] ${item.name}`,
-      quantity: item.qty,
-      unitPrice: item.price.toString(),
-      taxPercent: taxPercent.toString(),
-      totalAmount: (item.price * item.qty).toFixed(2),
-      unit: item.unit || "pcs", sku: item.sku,
-    }));
-    const payload = {
-      invoiceNumber: `BILL-${Date.now().toString().slice(-6)}`,
-      customerId: customerId || 0,
-      customerName: customerName.trim() || undefined,
-      customerPhone: customerPhone.trim() || undefined,
-      customerAddress: customerAddress.trim() || undefined,
-      customerVat: customerVat.trim() || undefined,
-      date: new Date().toISOString().slice(0, 10), dueDate: dueDate || "", poNumber: poNumber || "",
-      invoiceType: invoiceTypeMode, invoiceMode: "product" as InvoiceMode,
-      subTotal: subtotal.toFixed(2), taxAmount: vat.toFixed(2),
-      taxPercent: taxPercent.toString(), totalAmount: total.toFixed(2),
-      discountAmount: discount.toString(), taxableAmount: taxable.toFixed(2),
-      notes: note, items,
-    };
-    if (editingInvoiceId) {
-      updateInvoice.mutate({ id: editingInvoiceId, ...payload });
-    } else {
-      createInvoice.mutate(payload);
+    try {
+      const items = cart.map(item => ({
+        description: `[${item.id}] ${item.name}`,
+        quantity: item.qty,
+        unitPrice: item.price.toString(),
+        taxPercent: taxPercent.toString(),
+        totalAmount: (item.price * item.qty).toFixed(2),
+        unit: item.unit || "pcs", sku: item.sku,
+      }));
+      const payload = {
+        invoiceNumber: `BILL-${Date.now().toString().slice(-6)}`,
+        customerId: customerId || 0,
+        customerName: customerName.trim() || undefined,
+        customerNameAr: customerNameAr.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        customerAddress: customerAddress.trim() || undefined,
+        customerAddressAr: customerAddressAr.trim() || undefined,
+        customerVat: customerVat.trim() || undefined,
+        customerCr: customerCr.trim() || undefined,
+        customerEmail: customerEmail.trim() || undefined,
+        date: new Date().toISOString().slice(0, 10),
+        dueDate: dueDate || undefined,
+        paymentType: paymentType || undefined,
+        cashier: cashier || undefined,
+        poNumber: poNo || undefined,
+        invoiceType: invoiceTypeMode, invoiceMode: "product" as InvoiceMode,
+        subTotal: subtotal.toFixed(2), taxAmount: vat.toFixed(2),
+        taxPercent: taxPercent.toString(), totalAmount: total.toFixed(2),
+        discountAmount: discount.toString(), taxableAmount: taxable.toFixed(2),
+        notes: note, notesAr: noteAr, items,
+      };
+      if (editingInvoiceId) {
+        updateInvoice.mutate({ id: editingInvoiceId, ...payload });
+      } else {
+        createInvoice.mutate(payload);
+      }
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.message || error?.message || "Network or Server Error";
+      toast.error(errorMsg);
     }
   };
 
@@ -377,9 +417,10 @@ export default function InvoicesPage() {
     const printItems = useDetail
       ? detailItems.map((it: any, i: number) => ({
           no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
+          nameAr: it.descriptionAr || "",
           qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
         }))
-      : cart.map((item, i) => ({ no: i + 1, name: item.name, qty: item.qty, rate: item.price, total: item.price * item.qty }));
+      : cart.map((item, i) => ({ no: i + 1, name: item.name, nameAr: item.nameAr, qty: item.qty, rate: item.price, total: item.price * item.qty }));
     if (printItems.length === 0) { toast.error("Add items to cart before printing"); return; }
 
     const pSub = useDetail ? Number(detailInvoice?.subTotal || 0) : subtotal;
@@ -387,61 +428,136 @@ export default function InvoicesPage() {
     const pVat = useDetail ? Number(detailInvoice?.taxAmount || 0) : vat;
     const pTotal = useDetail ? Number(detailInvoice?.totalAmount || 0) : total;
     const pCustName = useDetail ? (detailCustomer?.name || detailCustomer?.nameAr || "Walk-in Customer") : (customerName || "Walk-in Customer");
+    const pCustNameAr = useDetail ? (detailCustomer?.nameAr || "") : customerNameAr;
     const pCustPhone = useDetail ? detailCustomer?.phone : customerPhone;
     const pCustAddr = useDetail ? detailCustomer?.address : customerAddress;
+    const pCustAddrAr = useDetail ? detailCustomer?.addressAr : customerAddressAr;
     const pCustVat = useDetail ? (detailCustomer?.vatNumber || detailCustomer?.taxNumber) : customerVat;
+    const pCustCr = useDetail ? detailCustomer?.crNumber : customerCr;
+    const pCustEmail = useDetail ? (detailCustomer?.email || "") : customerEmail;
+    const pCustPo = useDetail ? detailInvoice?.poNumber : poNo;
     const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
 
     const html = generateInvoiceHtml({
-      companyName, companyNameAr, companyLogo, companyStamp, companySignature,
-      companyAddress, companyAddressAr: "", companyPhone,
-      companyEmail, companyWebsite, companyUnifiedNatlNo, companyCrNumber,
-      companyTaxNumber: companyVat,
-      currency, taxPercent, note, pSub, pDisc, pVat, pTotal,
-      invoiceNumber: detailInvoice?.invoiceNumber || "",
-      invDate: detailInvoice?.date || "",
-      dueDate: detailInvoice?.dueDate || "",
-      invTime: detailInvoice?.time || "",
-      paymentMethod: detailInvoice?.paymentMethod || "",
-      cashier: detailInvoice?.cashier || "",
-      poNumber: detailInvoice?.poNumber || "",
-      workedMonth: detailInvoice?.workedMonth || "",
-      pCustName, pCustPhone, pCustAddr, pCustVat,
-      pCustEmail: detailCustomer?.email || "",
-      pCustCr: detailCustomer?.crNumber || "",
-      pCustWebsite: detailCustomer?.website || "",
-      pType, printItems
+      companyName: companyName || "YAFCO AL ARABIAH EST.",
+      companyNameAr: companyNameAr || "مؤسسة يافكو العربية",
+      companyLogo: companyLogo,
+      companyStamp: companyStamp,
+      companyAddress: companyAddress || "Saudi Arabia - Yanbu Al Bahr - P.O.Box: 2326",
+      companyAddressAr: "المملكة العربية السعودية - ينبع البحر - ص . ب : 2326",
+      companyPhone: "",
+      companyVat: companyVat || "300995897900003",
+      companyCr: companyCr || "4700012896",
+      companyEmail: companyEmail || "info@yafco.com.sa",
+      companyWebsite: companyWebsite || "www.yafco.com.sa",
+      currency: currency || "SAR",
+      taxPercent: String(taxPercent || "15"),
+      note: note || "",
+      noteAr: noteAr || "",
+      pSub, pDisc, pVat, pTotal,
+    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pCustEmail, pCustPo, pType,
+      workedMonth: useDetail ? detailInvoice?.workedMonth : undefined,
+      invoiceNo: useDetail ? detailInvoice?.invoiceNumber : undefined,
+      paymentType: useDetail ? detailInvoice?.paymentType : "Credit",
+      cashier: useDetail ? detailInvoice?.cashier : "مدير النظام",
+      date: useDetail ? detailInvoice?.date : undefined,
+      time: useDetail ? detailInvoice?.time : undefined,
+      dueDate: useDetail ? detailInvoice?.dueDate : undefined,
+      poNumber: useDetail ? detailInvoice?.poNumber : undefined,
+      dueInWords: undefined,
+      printItems: printItems.map((i: any) => ({ ...i, totalHour: i.qty, vat: (i.total || 0) * 0.15, grandTotal: (i.total || 0) * 1.15 }))
     });
 
-    // Open print window via Blob URL (most reliable cross-browser)
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, "_blank");
-    if (!win) {
-      // Fallback
+    // Print via hidden iframe sized at real A4 width (NOT 0px — a zero-size
+    // iframe lays content out super-narrow and explodes page count).
+    // The document prints itself once images/fonts are ready.
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-10000px";
+    iframe.style.top = "0";
+    iframe.style.width = "210mm";
+    iframe.style.height = "120px";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      const cleanup = () => { try { document.body.removeChild(iframe); } catch { /* already gone */ } };
+      window.addEventListener("focus", cleanup, { once: true });
+      setTimeout(cleanup, 30000);
+    } else {
+      // Fallback for Tauri: create blob and write to temp file
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.target = "_blank";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     }
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
-  // WhatsApp handler for view dialog
+  // Excel (.xlsx) export function - calls backend tRPC endpoint
+  const handleExcelExport = async (inv: any) => {
+    if (!inv || !inv.id) {
+      toast.error("No invoice selected for export");
+      return;
+    }
+    try {
+      const res = await fetch("/api/trpc/excel.generateExcel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ json: { invoiceId: inv.id } }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("[ExcelExport] HTTP error:", res.status, errText);
+        throw new Error(`Server returned ${res.status}`);
+      }
+      const data = await res.json();
+      // tRPC response format: { result: { data: { json: { buffer_base64, invoiceNo } } } }
+      const bufferBase64 = data?.result?.data?.json?.buffer_base64;
+      if (!bufferBase64) throw new Error("No file content in response");
+      // Convert base64 to blob
+      const binaryStr = atob(bufferBase64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Invoice-${inv.invoiceNumber || inv.id}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e: any) {
+      console.error("[ExcelExport] Error:", e);
+      toast.error("Excel export failed: " + (e?.message || "Unknown error"));
+    }
+  };
+
   const handleWhatsAppFromView = () => {
     if (!detail?.invoice) return;
     const inv = detail.invoice;
     const custName = detail.customer?.name || "Walk-in Customer";
     const total = Number(inv.totalAmount || 0).toFixed(2);
     const msg = `*${companyName}*\n*Invoice: ${inv.invoiceNumber}*\nCustomer: ${custName}\nTotal: ${currency} ${total}\nDate: ${inv.date}`;
-    const phone = detail.customer?.phone || companyPhone;
-    if (phone) {
-      window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
-    } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-    }
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    // Anchor click works in both web and Tauri webview
+    const a = document.createElement("a");
+    a.href = waUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     sendWhatsAppInvoice.mutate({ invoiceId: inv.id });
   };
 
@@ -456,6 +572,20 @@ export default function InvoicesPage() {
     emailSend.mutate({ invoiceId: inv.id, to });
   };
 
+  // Delete from list (card button)
+  const handleDeleteInvoice = (id: number) => {
+    if (confirm("Are you sure you want to delete this invoice?")) {
+      deleteInvoiceMut.mutate({ id });
+    }
+  };
+
+  // Delete from view dialog
+  const handleDeleteFromView = (id: number) => {
+    if (confirm("Are you sure you want to delete this invoice?")) {
+      deleteInvoiceMut.mutate({ id });
+    }
+  };
+
   // View invoice handler
   const openViewInvoice = (id: number) => {
     setViewInvoiceId(id);
@@ -463,12 +593,16 @@ export default function InvoicesPage() {
     setCart([]);
     setCustomerId(0);
     setCustomerName("");
+    setCustomerNameAr("");
     setCustomerPhone("");
     setCustomerAddress("");
+    setCustomerAddressAr("");
     setCustomerVat("");
+    setCustomerCr("");
     setCustomerEmail("");
     setDiscount(0);
     setNote("");
+    setNoteAr("");
   };
 
   // Load invoice for editing
@@ -496,8 +630,8 @@ export default function InvoicesPage() {
   const selectedInvoiceId = detail?.invoice?.id;
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="p-4 border-b bg-white">
+    <div className="h-screen w-full flex flex-col overflow-hidden">
+      <div className="p-4 border-b bg-white flex-none">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-2xl font-bold">Invoices / فواتير</h2>
@@ -519,78 +653,102 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {viewTab === "create" && (
-        <div className="flex-1 flex">
-          {/* Left: Cart & Customer */}
-          <div className="w-80 border-r bg-white p-4 space-y-4 overflow-y-auto">
-             <div className="relative">
-               <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer / العميل</Label>
-               <Input
-                 ref={custRef as any}
-                 value={customerName}
-                 onFocus={() => setCustDropdownOpen(true)}
-                 onChange={e => { setCustomerName(e.target.value); setCustDropdownOpen(true); }}
-                 placeholder="Type customer name..." className="h-8 text-xs"
-               />
-               {custDropdownOpen && customerName.length >= 1 && filteredCustomers.length > 0 && (
-                 <ul className="absolute z-20 mt-1 w-full max-h-52 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg text-xs">
-                   {filteredCustomers.map((c, i) => (
-                     <li
-                       key={c.id}
-                       className={`px-2 py-1.5 cursor-pointer ${custFocus === i ? "bg-blue-50" : ""}`}
-                       onMouseEnter={() => setCustFocus(i)}
-                       onMouseDown={(e) => { e.preventDefault(); selectCustomer(c as any); }}
-                     >
-                       <div className="font-medium">{c.name || (c as any).nameAr}</div>
-                       {c.phone ? <div className="text-slate-500">{c.phone}</div> : null}
-                     </li>
-                   ))}
-                 </ul>
-               )}
-             </div>
-            <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Phone (optional)</Label>
-              <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Optional" className="h-8 text-xs" />
+        <div className="flex-1 flex min-h-0 w-full">
+          {/* Left: Customer Details */}
+          <div className="w-72 border-r bg-white p-3 space-y-2 overflow-y-auto flex-none">
+            <div className="relative" ref={custRef}>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Customer / العميل</Label>
+              <Input value={customerName} onChange={e => { setCustomerName(e.target.value); setCustDropdownOpen(true); }} onFocus={() => setCustDropdownOpen(true)} placeholder="Type customer name..." className="h-7 text-xs" />
+              {custDropdownOpen && filteredCustomers.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredCustomers.map(c => (
+                    <button key={c.id} type="button" onClick={() => selectCustomer(c)} className="w-full text-left px-2 py-1.5 hover:bg-blue-50 border-b border-gray-100 last:border-0">
+                      <div className="text-xs font-semibold text-slate-700">{c.name}{c.nameAr ? ` / ${c.nameAr}` : ''}</div>
+                      <div className="text-[10px] text-slate-500">{c.phone || ''} {c.vatNumber ? `• VAT: ${c.vatNumber}` : ''}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Address (optional)</Label>
-              <Input value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Optional" className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Customer Name (Arabic) / اسم العميل</Label>
+              <Input dir="rtl" value={customerNameAr} onChange={e => setCustomerNameAr(e.target.value)} placeholder="اسم العميل..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer VAT (optional)</Label>
-              <Input value={customerVat} onChange={e => setCustomerVat(e.target.value)} placeholder="e.g. 311777758600003" className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Phone</Label>
+              <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="+966..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Customer Email (for auto-send bill)</Label>
-              <Input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@email.com" className="h-8 text-xs" />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Address</Label>
+              <Input value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Address..." className="h-7 text-xs" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-600 block mb-2">Discount</Label>
-               <Input type="number" className="w-20 h-7 text-xs text-right" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} />
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Address (Arabic) / العنوان بالعربي</Label>
+              <Input dir="rtl" value={customerAddressAr} onChange={e => setCustomerAddressAr(e.target.value)} placeholder="العنوان بالعربي..." className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">VAT No</Label>
+              <Input value={customerVat} onChange={e => setCustomerVat(e.target.value)} placeholder="300000000000003" className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">CR No</Label>
+              <Input value={customerCr} onChange={e => setCustomerCr(e.target.value)} placeholder="CR number" className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Email (auto-send bill)</Label>
+              <Input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@email.com" className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Notes / ملاحظات</Label>
+              <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Additional notes..." className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Notes (Arabic) / ملاحظات إضافية</Label>
+              <Input dir="rtl" value={noteAr} onChange={e => setNoteAr(e.target.value)} placeholder="ملاحظات إضافية..." className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Discount</Label>
+              <Input type="number" className="w-20 h-7 text-xs text-right" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Worked Month / الشهر</Label>
+              <Input type="month" value={workedMonth} onChange={e => setWorkedMonth(e.target.value)} className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Payment / الدفع</Label>
+              <select value={paymentType} onChange={e => setPaymentType(e.target.value)} className="h-7 text-xs border rounded w-full px-2">
+                <option value="Credit">Credit</option>
+                <option value="Cash">Cash</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Cashier / الكاشير</Label>
+              <Input value={cashier} onChange={e => setCashier(e.target.value)} className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">Due Date / تاريخ الاستحقاق</Label>
+              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="h-7 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 block mb-1">PO No / رقم طلب الشراء</Label>
+              <Input value={poNo} onChange={e => setPoNo(e.target.value)} placeholder="PO Number" className="h-7 text-xs" />
             </div>
           </div>
 
           {/* Center: Products */}
-          <div className="flex-1 p-4 overflow-y-auto">
-             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-1.5 h-3.5 w-3.5 text-slate-400" />
-                <Input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search products / ابحث عن منتج..."
-                  className="h-7 text-xs pl-7"
-                />
-              </div>
+          <div className="flex-1 p-3 overflow-y-auto min-h-0">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase">Products / المنتجات</h3>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setAddItemDialogOpen(true); }}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Add Item / اضافة بند
               </Button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filteredProducts.map(p => (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {products?.map(p => (
                 <button key={p.id} onClick={() => addToCart(p as any)}
-                  className="border-2 border-slate-200 rounded-lg p-3 text-left hover:border-blue-400 hover:shadow-md transition-all">
+                  className="border-2 border-slate-200 rounded-lg p-2 text-left hover:border-blue-400 hover:shadow-md transition-all">
                   <div className="text-xs font-bold text-slate-700 truncate">{p.name}</div>
                   <div className="text-xs text-slate-500">{p.sku}</div>
                   <div className="text-sm font-bold text-blue-600">{currency} {Number(p.salePrice).toFixed(2)}</div>
@@ -599,31 +757,41 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Right: Cart Summary */}
-          <div className="w-80 border-l bg-white p-4 flex flex-col">
-            <h3 className="font-semibold text-slate-800 mb-3">Cart</h3>
-            <div className="flex-1 overflow-y-auto space-y-2">
+          {/* Right: Cart Summary with Sticky Footer */}
+          <div className="w-80 border-l bg-white flex flex-col flex-none">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+              <h3 className="font-semibold text-slate-800 text-sm">Cart</h3>
               {cart.length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-8">No items in cart</p>
               ) : cart.map((item, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs">
-                  <span className="flex-1 truncate">{item.name}</span>
-                  <span className="font-bold">{item.price.toFixed(2)}</span>
+                <div key={i} className="p-2 bg-slate-50 rounded text-xs space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input className="flex-1 border rounded px-1 py-0.5 text-xs" value={item.name}
+                      onChange={e => updateItemName(i, e.target.value)} title="Edit name" />
+                    <button onClick={() => removeItem(i)} className="text-red-500 hover:text-red-700" title="Remove">×</button>
+                  </div>
+                  {item.nameAr && <div dir="rtl" className="text-[11px] text-slate-500">{item.nameAr}</div>}
+                  <div className="flex items-center gap-1 text-[11px]">
+                    <span>Qty / الكمية:</span>
+                    <input type="number" min={1} value={String(item.qty)} onFocus={e => { if (e.target.value === "1") e.target.select(); }} onChange={e => { const raw = e.target.value.replace(/^0+(?=\d)/, ""); const v = Math.max(1, parseInt(raw) || 1); setCart(prev => prev.map((it, j) => j === i ? { ...it, qty: v } : it)); }} className="w-12 border rounded px-1 py-0.5 text-right" />
+                    <span>Rate/Hour / سعر الساعة:</span>
+                    <input type="number" min={0} placeholder="0" value={Number.isNaN(item.price) ? "" : item.price} onFocus={e => e.target.select()} onChange={e => updatePrice(i, e.target.value)} className="w-16 border rounded px-1 py-0.5 text-right" />
+                    <span className="ml-auto font-bold">{(safePrice(item.price) * item.qty).toFixed(2)}</span>
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="border-t pt-3 space-y-1 text-xs">
-              <div className="flex justify-between"><span>Subtotal:</span><span>{currency} {subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>VAT ({taxPercent}%):</span><span>{currency} {vat.toFixed(2)}</span></div>
-              <div className="flex justify-between font-bold text-sm"><span>TOTAL:</span><span>{currency} {total.toFixed(2)}</span></div>
+            {/* Sticky Footer - INSIDE the cart column */}
+            <div className="flex-none border-t bg-white p-3 shadow-md z-10">
+              <div className="space-y-1 text-xs mb-3">
+                <div className="flex justify-between"><span className="text-slate-500">Subtotal:</span><span className="font-semibold">{currency} {subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">VAT ({taxPercent}%):</span><span className="font-semibold">{currency} {vat.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-sm border-t pt-1"><span>TOTAL:</span><span>{currency} {total.toFixed(2)}</span></div>
+              </div>
+              <Button className="w-full" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0}>
+                <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
+              </Button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-              <Input placeholder="PO Number / رقم أمر الشراء" value={poNumber} onChange={e => setPoNumber(e.target.value)} className="h-7 text-xs" />
-              <Input type="date" placeholder="Due Date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="h-7 text-xs" />
-            </div>
-            <Button className="w-full mt-3" onClick={handleSubmit} disabled={createInvoice.isPending || updateInvoice.isPending || cart.length === 0}>
-              <Send className="h-4 w-4 mr-2" /> {editingInvoiceId ? "Update" : "Create Bill"}
-            </Button>
           </div>
         </div>
         )}
@@ -681,8 +849,8 @@ export default function InvoicesPage() {
               <Button size="sm" variant="default" onClick={handlePrint} disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} title="Print A4 PDF">
                 📄 A4 Print
               </Button>
-              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} onClick={() => detail?.invoice && thermalPrint.mutate({ invoiceId: detail.invoice.id, format: "80mm" })} title="Print 80mm Thermal Receipt">
-                🖨️ Thermal
+              <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice} onClick={() => detail?.invoice && handleExcelExport(detail.invoice)} title="Export to Excel">
+                📊 Excel
               </Button>
               <Button size="sm" variant="outline" onClick={() => detail?.invoice && loadInvoiceForEdit(detail.invoice.id)} disabled={invoiceDetail.isPending || !detail?.invoice}>
                 <Pencil className="h-4 w-4 mr-1" /> Edit
@@ -706,7 +874,7 @@ export default function InvoicesPage() {
           <DialogDescription id="invoice-view-desc" className="sr-only">Invoice preview - what you see is what you print</DialogDescription>
           <div className="flex-1 overflow-y-auto bg-slate-100 p-4">
             {detail?.invoice && !invoiceDetail.isPending && (
-              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, currency, companySignature, companyEmail, companyWebsite, companyUnifiedNatlNo, companyCrNumber }} />
+              <InvoicePreview detail={detail} companyData={{ companyName, companyNameAr, companyLogo, companyStamp, companyAddress, companyPhone, companyVat, currency }} />
             )}
             {!detail?.invoice && !invoiceDetail.isPending && (
               <div className="py-16 text-center text-slate-400">Loading invoice...</div>
