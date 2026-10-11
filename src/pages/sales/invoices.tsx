@@ -630,7 +630,7 @@ export default function InvoicesPage() {
   const selectedInvoiceId = detail?.invoice?.id;
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden">
+    <div className="h-full w-full flex flex-col overflow-hidden min-h-0">
       <div className="p-4 border-b bg-white flex-none">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -655,9 +655,9 @@ export default function InvoicesPage() {
 
       <div className="flex-1 flex overflow-hidden min-h-0">
         {viewTab === "create" && (
-        <div className="flex-1 flex min-h-0 w-full">
+        <div className="flex-1 flex min-h-0 w-full overflow-x-auto">
           {/* Left: Customer Details */}
-          <div className="w-72 border-r bg-white p-3 space-y-2 overflow-y-auto flex-none">
+          <div className="w-72 border-r bg-white p-3 pb-10 space-y-2 overflow-y-auto flex-none min-h-0">
             <div className="relative" ref={custRef}>
               <Label className="text-xs font-semibold text-slate-600 block mb-1">Customer / العميل</Label>
               <Input value={customerName} onChange={e => { setCustomerName(e.target.value); setCustDropdownOpen(true); }} onFocus={() => setCustDropdownOpen(true)} placeholder="Type customer name..." className="h-7 text-xs" />
@@ -738,7 +738,7 @@ export default function InvoicesPage() {
           </div>
 
           {/* Center: Products */}
-          <div className="flex-1 p-3 overflow-y-auto min-h-0">
+          <div className="flex-1 p-3 overflow-y-auto min-h-0 min-w-[220px]">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-slate-500 uppercase">Products / المنتجات</h3>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setAddItemDialogOpen(true); }}>
@@ -758,7 +758,7 @@ export default function InvoicesPage() {
           </div>
 
           {/* Right: Cart Summary with Sticky Footer */}
-          <div className="w-80 border-l bg-white flex flex-col flex-none">
+          <div className="w-80 border-l bg-white flex flex-col flex-none min-h-0">
             <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
               <h3 className="font-semibold text-slate-800 text-sm">Cart</h3>
               {cart.length === 0 ? (
@@ -782,7 +782,7 @@ export default function InvoicesPage() {
               ))}
             </div>
             {/* Sticky Footer - INSIDE the cart column */}
-            <div className="flex-none border-t bg-white p-3 shadow-md z-10">
+            <div className="flex-none border-t bg-white p-3 pb-5 shadow-md z-10">
               <div className="space-y-1 text-xs mb-3">
                 <div className="flex justify-between"><span className="text-slate-500">Subtotal:</span><span className="font-semibold">{currency} {subtotal.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">VAT ({taxPercent}%):</span><span className="font-semibold">{currency} {vat.toFixed(2)}</span></div>

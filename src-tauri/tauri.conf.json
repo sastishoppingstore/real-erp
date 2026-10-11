@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "YASCO ERP",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "identifier": "com.yasco.erp",
   "build": {
     "frontendDist": "../dist/public",
@@ -16,8 +16,8 @@
         "url": "https://yasco.tech/app",
         "width": 1440,
         "height": 900,
-        "minWidth": 1024,
-        "minHeight": 680,
+        "minWidth": 1100,
+        "minHeight": 720,
         "resizable": true,
         "fullscreen": false,
         "center": true,
