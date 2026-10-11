@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { createPortal } from "react-dom";
+import { useState, useMemo, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, FileText, DollarSign, Percent, Printer, Search, Trash2, UserPlus, X, FileDown, Pencil, Check } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import ActionButton3D from "@/components/ui/ActionButton3D";
-import ConstructionInvoicePrint, { type CInvPrintData } from "@/components/ConstructionInvoicePrint";
+import ConstructionInvoiceExcel, { type CInvPrintData, type ConstructionInvoiceExcelHandle } from "@/components/ConstructionInvoiceExcel";
 import { numberToEnglishWords, formatMoney } from "@/lib/numberToWords";
 
 interface ItemRow {
@@ -39,6 +38,8 @@ export default function ConstructionInvoicePage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [printData, setPrintData] = useState<CInvPrintData | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const excelRef = useRef<ConstructionInvoiceExcelHandle | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   // ---- create form state ----
   const [custMode, setCustMode] = useState<"existing" | "new">("existing");
@@ -165,8 +166,9 @@ export default function ConstructionInvoicePage() {
         })),
       } as any,
       {
+        // Always open the fitted invoice view right after create.
         onSuccess: (res: any) => {
-          if (printAfter && res?.invoice) {
+          if (res?.invoice) {
             openPrint(res.invoice, res.items);
           }
         },
@@ -517,7 +519,7 @@ export default function ConstructionInvoicePage() {
               <Button variant="outline" onClick={closeCreate}>Cancel</Button>
               <Button variant="secondary" disabled={createMut.isPending} onClick={() => save(false)}>Save</Button>
               <Button disabled={createMut.isPending} onClick={() => save(true)}>
-                <Printer className="mr-1 size-4" />{createMut.isPending ? "Saving…" : "Save & Print"}
+                <FileText className="mr-1 size-4" />{createMut.isPending ? "Saving…" : "Save & View"}
               </Button>
             </div>
           </div>
@@ -526,13 +528,28 @@ export default function ConstructionInvoicePage() {
         </DialogContent>
       </Dialog>
 
-      {/* ===== Print modal ===== */}
+      {/* ===== Invoice view (Excel design, fitted to screen) ===== */}
       <Dialog open={!!printData} onOpenChange={(v) => !v && setPrintData(null)}>
-        <DialogContent className="max-w-[230mm] max-h-[95vh] overflow-auto bg-white">
-          <div className="no-print mb-3 flex items-center justify-between">
+        <DialogContent className="max-w-[230mm] max-h-[95vh] overflow-hidden bg-white flex flex-col">
+          <div className="no-print mb-2 flex items-center justify-between flex-none">
             <DialogTitle className="text-black">TAX INVOICE — {printData?.invoiceNo}</DialogTitle>
             <div className="flex gap-2">
-              <Button onClick={() => window.print()}><Printer className="mr-1 size-4" /> Print / PDF (A4)</Button>
+              <Button
+                disabled={pdfBusy || !printData}
+                onClick={async () => {
+                  if (!printData) return;
+                  setPdfBusy(true);
+                  try {
+                    await excelRef.current?.downloadPdf();
+                  } catch (e: any) {
+                    alert("PDF failed: " + (e?.message || e));
+                  } finally {
+                    setPdfBusy(false);
+                  }
+                }}
+              >
+                <FileText className="mr-1 size-4" />{pdfBusy ? "Preparing…" : "PDF"}
+              </Button>
               <Button
                 variant="outline"
                 onClick={async () => {
@@ -565,19 +582,16 @@ export default function ConstructionInvoicePage() {
               >
                 <FileDown className="mr-1 size-4" /> Export Word
               </Button>
+              <Button variant="ghost" onClick={() => setPrintData(null)}>✕ Close</Button>
             </div>
           </div>
-          {printData && <ConstructionInvoicePrint data={printData} />}
+          {printData && (
+            <div className="flex-1 min-h-0">
+              <ConstructionInvoiceExcel ref={excelRef} data={printData} />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
-      {/* Print-only portal clone straight under <body>: window.print() then
-          prints exactly one A4 page (app chrome is display:none'd in print CSS). */}
-      {printData && typeof document !== "undefined" && createPortal(
-        <div id="invoice-print-root" className="hidden print:block">
-          <ConstructionInvoicePrint data={printData} />
-        </div>,
-        document.body,
-      )}
     </div>
   );
 }
