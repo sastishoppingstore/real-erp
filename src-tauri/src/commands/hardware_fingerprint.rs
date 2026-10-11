@@ -1,5 +1,5 @@
 use sha2::{Digest, Sha256};
-use sysinfo::{Disks, MacAddr, Networks, System};
+use sysinfo::{Disks, Networks, System};
 
 #[tauri::command]
 pub fn get_hardware_id() -> Result<String, String> {
