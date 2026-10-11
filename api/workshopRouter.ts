@@ -49,8 +49,11 @@ export const workshopRouter = createRouter({
 
   jobCardUpdate: authedQuery
     .input(z.object({ id: z.number(), status: z.string().optional(), technicianId: z.number().optional(), priority: z.string().optional(), actualCost: z.string().optional(), actualHours: z.number().optional(), notes: z.string().optional() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = getDb();
+      const [job] = await db.select({ id: workshopJobCards.id }).from(workshopJobCards)
+        .where(and(eq(workshopJobCards.id, input.id), eq(workshopJobCards.tenantId, ctx.user.tenantId!))).limit(1);
+      if (!job) throw new Error("Job card not found");
       const { id, ...data } = input;
       const updateData: any = { ...data };
       if (data.status === "in_progress") updateData.startDate = sql`(now())`;
@@ -61,8 +64,14 @@ export const workshopRouter = createRouter({
 
   jobCardDelete: authedQuery
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = getDb();
+      const [job] = await db.select({ id: workshopJobCards.id }).from(workshopJobCards)
+        .where(and(eq(workshopJobCards.id, input.id), eq(workshopJobCards.tenantId, ctx.user.tenantId!))).limit(1);
+      if (!job) throw new Error("Job card not found");
+      await db.delete(workshopJobParts).where(eq(workshopJobParts.jobCardId, input.id));
+      await db.delete(workshopJobLabor).where(eq(workshopJobLabor.jobCardId, input.id));
+      await db.delete(workshopPayments).where(eq(workshopPayments.jobCardId, input.id));
       await db.delete(workshopJobCards).where(eq(workshopJobCards.id, input.id));
       return { success: true };
     }),
@@ -82,6 +91,27 @@ export const workshopRouter = createRouter({
       const db = getDb();
       await db.delete(workshopJobParts).where(eq(workshopJobParts.id, input.id));
       return { success: true };
+    }),
+
+  jobPartsList: authedQuery
+    .input(z.object({ jobCardId: z.number().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const conditions = [eq(workshopJobCards.tenantId, ctx.user.tenantId!)];
+      if (input?.jobCardId) conditions.push(eq(workshopJobParts.jobCardId, input.jobCardId));
+      return db.select({
+        id: workshopJobParts.id,
+        jobCardId: workshopJobParts.jobCardId,
+        jobNumber: workshopJobCards.jobNumber,
+        partName: workshopJobParts.partName,
+        partNumber: workshopJobParts.partNumber,
+        quantity: workshopJobParts.quantity,
+        unitPrice: workshopJobParts.unitPrice,
+        totalPrice: workshopJobParts.totalPrice,
+      }).from(workshopJobParts)
+        .innerJoin(workshopJobCards, eq(workshopJobParts.jobCardId, workshopJobCards.id))
+        .where(and(...conditions))
+        .orderBy(desc(workshopJobParts.id)).limit(300);
     }),
 
   // ─── Job Labor ────────────────────────────────────────

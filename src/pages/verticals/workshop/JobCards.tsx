@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, Wrench, Car, Users, ClipboardList, FileText, Search,
-  Clock, CheckCircle, XCircle, ArrowLeft, Filter, AlertTriangle
+  Clock, CheckCircle, XCircle, ArrowLeft, Filter, AlertTriangle, Trash2
 } from "lucide-react";
 import ActionButton3D from "@/components/ui/ActionButton3D";
 
@@ -150,6 +150,11 @@ export default function JobCardsPage() {
                       <ActionButton3D icon={<XCircle className="size-3" />} label="Cancel" color="rose" size="xs" onClick={() => {
                         if (confirm("Cancel this job card?")) {
                           updateJobCard.mutate({ id: job.id, status: "cancelled" });
+                        }
+                      }} />
+                      <ActionButton3D icon={<Trash2 className="size-3" />} label="Delete" color="rose" size="xs" onClick={() => {
+                        if (confirm(`Delete job card ${job.jobNumber}? Its parts, labor and payments will also be removed.`)) {
+                          deleteJobCard.mutate({ id: job.id });
                         }
                       }} />
                     </div>
