@@ -109,10 +109,12 @@ pub fn get_mac_address() -> Result<String, String> {
       && !name.starts_with("br-")
     {
       let mac = data.mac_address();
-      let mac_bytes: [u8; 6] = mac.into();
-      if mac_bytes != [0u8; 6] {
-        let hex: Vec<String> = mac_bytes.iter().map(|b| format!("{b:02x}")).collect();
-        return Ok(hex.join(":"));
+      // to_string() yields colon-hex on every sysinfo version (Into<[u8; 6]>
+      // was removed in newer releases, so avoid it entirely).
+      let mac_str = mac.to_string();
+      let is_zero = mac_str.split(':').all(|g| g.trim_matches('0').is_empty());
+      if !is_zero {
+        return Ok(mac_str);
       }
     }
   }
@@ -120,10 +122,10 @@ pub fn get_mac_address() -> Result<String, String> {
   // Fallback to any interface
   for (_name, data) in &networks {
     let mac = data.mac_address();
-    let mac_bytes: [u8; 6] = mac.into();
-    if mac_bytes != [0u8; 6] {
-      let hex: Vec<String> = mac_bytes.iter().map(|b| format!("{b:02x}")).collect();
-      return Ok(hex.join(":"));
+    let mac_str = mac.to_string();
+    let is_zero = mac_str.split(':').all(|g| g.trim_matches('0').is_empty());
+    if !is_zero {
+      return Ok(mac_str);
     }
   }
 
