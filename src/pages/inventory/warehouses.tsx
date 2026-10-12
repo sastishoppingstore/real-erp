@@ -42,6 +42,11 @@ export default function WarehousesPage() {
         </Dialog>
       </div>
 
+      {(!warehouses || warehouses.length === 0) && (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-10 text-center text-sm text-slate-500">
+          No warehouses yet — click &quot;Add Warehouse&quot; to create your first one.
+        </div>
+      )}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {warehouses?.map(w => (
           <Card key={w.id} className="hover:shadow-md transition-shadow">
