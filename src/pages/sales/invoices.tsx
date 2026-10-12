@@ -175,6 +175,32 @@ export default function InvoicesPage() {
     onError: (e) => toast.error(e.message),
   });
 
+  // Excel (.xlsx) export via tRPC (correct batching + auth headers)
+  const excelExport = trpc.excel.generateExcel.useMutation({
+    onSuccess: (data: any) => {
+      try {
+        const bufferBase64 = data?.buffer_base64;
+        if (!bufferBase64) throw new Error("No file content in response");
+        const binaryStr = atob(bufferBase64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+        const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Invoice-${data?.invoiceNo || "export"}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        toast.success("Excel downloaded");
+      } catch (e: any) {
+        toast.error("Excel export failed: " + (e?.message || "Unknown error"));
+      }
+    },
+    onError: (e: any) => toast.error("Excel export failed: " + (e?.message || "Unknown error")),
+  });
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<number>(0);
   const [customerName, setCustomerName] = useState("");
@@ -199,6 +225,7 @@ export default function InvoicesPage() {
   const custRef = useRef<HTMLDivElement>(null);
 
   const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null);
+  const [autoPrintId, setAutoPrintId] = useState<number | null>(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
   const [editTargetId, setEditTargetId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
@@ -516,45 +543,13 @@ export default function InvoicesPage() {
     }
   };
 
-  // Excel (.xlsx) export function - calls backend tRPC endpoint
-  const handleExcelExport = async (inv: any) => {
+  // Excel (.xlsx) export function - via tRPC mutation above
+  const handleExcelExport = (inv: any) => {
     if (!inv || !inv.id) {
       toast.error("No invoice selected for export");
       return;
     }
-    try {
-      const res = await fetch("/api/trpc/excel.generateExcel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ json: { invoiceId: inv.id } }),
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("[ExcelExport] HTTP error:", res.status, errText);
-        throw new Error(`Server returned ${res.status}`);
-      }
-      const data = await res.json();
-      // tRPC response format: { result: { data: { json: { buffer_base64, invoiceNo } } } }
-      const bufferBase64 = data?.result?.data?.json?.buffer_base64;
-      if (!bufferBase64) throw new Error("No file content in response");
-      // Convert base64 to blob
-      const binaryStr = atob(bufferBase64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Invoice-${inv.invoiceNumber || inv.id}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
-    } catch (e: any) {
-      console.error("[ExcelExport] Error:", e);
-      toast.error("Excel export failed: " + (e?.message || "Unknown error"));
-    }
+    excelExport.mutate({ invoiceId: inv.id });
   };
 
   const handleWhatsAppFromView = () => {
@@ -625,14 +620,25 @@ export default function InvoicesPage() {
     setViewInvoiceId(null);
   };
 
-  // Print invoice handler
-  const handlePrintInvoice = (invId: number, printType: "thermal" | "a4" = "a4") => {
+  // Print invoice handler (thermal prints 80mm receipt; pdf opens the
+  // view dialog and auto-prints once details load)
+  const handlePrintInvoice = (invId: number, printType: "thermal" | "pdf" = "pdf") => {
     if (printType === "thermal") {
       thermalPrint.mutate({ invoiceId: invId, format: "80mm" });
     } else {
+      setAutoPrintId(invId);
       setViewInvoiceId(invId);
     }
   };
+
+  // Auto-print after the view dialog data arrives (card PDF button)
+  useEffect(() => {
+    if (autoPrintId != null && !invoiceDetail.isPending && invoiceDetail.data?.invoice?.id === autoPrintId) {
+      setAutoPrintId(null);
+      handlePrint();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPrintId, invoiceDetail.data, invoiceDetail.isPending]);
 
   const statusColors: Record<string, string> = {
     draft: "bg-slate-100 text-slate-700", sent: "bg-blue-100 text-blue-700",
@@ -644,7 +650,7 @@ export default function InvoicesPage() {
   const selectedInvoiceId = detail?.invoice?.id;
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden min-h-0">
+    <div className="h-full w-full flex flex-col overflow-hidden min-h-0 text-slate-900">
       <div className="p-4 border-b bg-white flex-none">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -832,8 +838,11 @@ export default function InvoicesPage() {
                     <Button size="sm" variant="outline" className="flex-1" onClick={() => loadInvoiceForEdit(inv.id)}>
                       <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handlePrintInvoice(inv.id, "a4")} title="A4 PDF">
-                      📄 A4
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handleExcelExport(inv)} disabled={excelExport.isPending} title="Download Excel (.xlsx)">
+                      📊 Excel
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handlePrintInvoice(inv.id, "pdf")} title="Print / Save PDF">
+                      🖨️ PDF
                     </Button>
                     <Button size="sm" variant="outline" className="flex-1" onClick={() => handlePrintInvoice(inv.id, "thermal")} disabled={thermalPrint.isPending} title="80mm Receipt">
                       🖨️ 80mm
@@ -860,8 +869,8 @@ export default function InvoicesPage() {
           <div className="flex items-center justify-between p-4 border-b bg-white shrink-0 shadow-sm">
             <h2 className="text-lg font-bold">Invoice {detail?.invoice?.invoiceNumber || "Loading..."}</h2>
             <div className="flex gap-2 flex-wrap">
-              <Button size="sm" variant="default" onClick={handlePrint} disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} title="Print A4 PDF">
-                📄 A4 Print
+              <Button size="sm" variant="default" onClick={handlePrint} disabled={invoiceDetail.isPending || !detail?.invoice || thermalPrint.isPending} title="Print / Save PDF">
+                🖨️ PDF Print
               </Button>
               <Button size="sm" variant="outline" disabled={invoiceDetail.isPending || !detail?.invoice} onClick={() => detail?.invoice && handleExcelExport(detail.invoice)} title="Export to Excel">
                 📊 Excel

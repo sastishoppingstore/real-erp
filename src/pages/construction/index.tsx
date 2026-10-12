@@ -133,11 +133,11 @@ export default function ConstructionDashboard() {
     <button
       key={t.path + t.label}
       onClick={() => navigate(t.path)}
-      className={`group flex flex-col items-center justify-center gap-1.5 px-2 text-center shadow transition-all hover:shadow-xl hover:brightness-110 ${t.color} ${t.dark ? "text-slate-800" : "text-white"} ${big ? "min-h-[150px] py-5" : "min-h-[128px] py-4"}`}
+      className={`group flex flex-col items-center justify-center gap-1 px-1.5 text-center shadow transition-all hover:shadow-xl hover:brightness-110 ${t.color} ${t.dark ? "text-slate-800" : "text-white"} ${big ? "min-h-[140px] py-4 lg:min-h-[150px] lg:py-5" : "min-h-[110px] py-3 lg:min-h-[128px] lg:py-4"}`}
     >
-      <t.icon className={big ? "h-11 w-11" : "h-9 w-9"} strokeWidth={1.6} />
-      <span className={`font-bold leading-tight ${big ? "text-lg" : "text-[15px]"}`}>{t.labelAr}</span>
-      <span className={`text-[11px] leading-tight ${t.dark ? "opacity-70" : "opacity-85"}`}>{t.label}</span>
+      <t.icon className={big ? "h-9 w-9 lg:h-11 lg:w-11" : "h-8 w-8 lg:h-9 lg:w-9"} strokeWidth={1.6} />
+      <span className={`font-bold leading-tight ${big ? "text-base lg:text-lg" : "text-[13px] lg:text-[15px]"}`}>{t.labelAr}</span>
+      <span className={`text-[10px] leading-tight lg:text-[11px] ${t.dark ? "opacity-70" : "opacity-85"}`}>{t.label}</span>
     </button>
   );
 
@@ -149,9 +149,9 @@ export default function ConstructionDashboard() {
 
   return (
     <div className="space-y-2.5">
-      {/* ===== Sahl row 1: hero + 5 green tiles ===== */}
-      <div className="grid gap-2 lg:grid-cols-6">
-        <div className={`flex flex-col justify-between gap-2 p-4 text-white shadow ${C.green}`}>
+      {/* ===== Sahl row 1: hero + 5 green tiles (side-by-side on every screen size) ===== */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className={`col-span-2 flex flex-col justify-between gap-2 p-3 text-white shadow sm:col-span-3 lg:col-span-1 lg:p-4 ${C.green}`}>
           <div className="flex items-center gap-3">
             <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/20">
               <HardHat className="h-8 w-8" strokeWidth={1.6} />
@@ -204,7 +204,7 @@ export default function ConstructionDashboard() {
 
       {/* ===== Setup & compliance ===== */}
       <SectionTitle ar="الإعداد والمطابقة" en="Setup & compliance" />
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
         {setupTiles.map((t) => <Tile key={t.label} t={t} />)}
       </div>
 

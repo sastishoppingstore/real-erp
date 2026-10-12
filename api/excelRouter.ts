@@ -74,7 +74,7 @@ export const excelRouter = createRouter({
       const custAddr = customer?.address || inv.customer_address || "";
 
       // Invoice details
-      const invoiceNo = inv.invoice_no || inv.invoiceNumber || "";
+      const invoiceNo = inv.invoice_no || inv.invoiceNumber || inv.invoice_number || "";
       const workedMonth = inv.worked_month || inv.workedMonth || "";
       const payType = inv.payment_type || inv.paymentType || "Credit";
       const cashier = inv.cashier || inv.cashier_name || "مدير النظام";

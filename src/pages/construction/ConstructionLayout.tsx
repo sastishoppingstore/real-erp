@@ -254,7 +254,7 @@ export default function ConstructionLayout() {
       </div>
 
       {/* ===== Full-screen content (no permanent sidebar — Sahl style) ===== */}
-      <main className="min-w-0 flex-1 p-2 pb-14 lg:p-3">
+      <main className="min-w-0 flex-1 p-2 pb-14 text-slate-900 lg:p-3">
         <Outlet />
       </main>
 
