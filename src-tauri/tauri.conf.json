@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "YASCO ERP",
-  "version": "2.1.0",
+  "version": "5.6.0",
   "identifier": "com.yasco.erp",
   "build": {
     "frontendDist": "../dist/public",
@@ -50,7 +50,7 @@
     "shortDescription": "YASCO Enterprise Resource Planning System",
     "longDescription": "World-class ERP with Saudi ZATCA compliance, multi-country support, and full offline desktop capabilities.",
     "category": "Business",
-    "copyright": "© 2025 YASCO. All rights reserved.",
+    "copyright": "\u00a9 2025 YASCO. All rights reserved.",
     "publisher": "YASCO Technologies"
   }
 }

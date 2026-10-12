@@ -24,6 +24,17 @@ export class ErrorBoundary extends Component<Props, State> {
     // eslint-disable-next-line no-console
     (window as any).__EB = { name: error?.name, message: error?.message, stack: String(error?.stack), componentStack: String(errorInfo?.componentStack) };
     console.error("[EB] captured");
+    // Self-heal stale-bundle chunk failures: after a deploy, old hashed chunks
+    // are gone from the server, so a lazy route import 404s once. Reload a
+    // single time (guarded) instead of sitting on a white screen.
+    try {
+      if (/Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(error?.message || "")) {
+        if (!sessionStorage.getItem("erp:chunk-reload")) {
+          sessionStorage.setItem("erp:chunk-reload", "1");
+          setTimeout(() => window.location.reload(), 400);
+        }
+      }
+    } catch { /* ignore */ }
   }
 
   render() {

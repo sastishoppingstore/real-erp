@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/providers/language";
@@ -109,15 +108,16 @@ function DrawerNav({ onNavigate }: { onNavigate: () => void }) {
   };
 
   return (
-    <div className="flex h-full flex-col gap-1 py-3 text-white">
-      <NavLink to="/app/construction" end onClick={onNavigate} className="mx-3 mb-2">
+    <div className="flex h-[100dvh] flex-col gap-1 py-3 text-white">
+      <NavLink to="/app/construction" end onClick={onNavigate} className="mx-3 mb-2 shrink-0">
         <div className="flex items-center gap-2 rounded-lg bg-[#2fae4e] px-3 py-2 text-sm font-bold text-white">
           <Building2 className="h-4 w-4" />
           Construction
         </div>
       </NavLink>
-      <ScrollArea className="flex-1 px-3">
-        <nav className="flex flex-col gap-1">
+      {/* Native scroll (min-h-0 + overflow-y-auto) — always scrolls, any screen height */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-3">
+        <nav className="flex flex-col gap-1 pb-4">
           <NavLink
             to="/app/construction"
             end
@@ -156,7 +156,7 @@ function DrawerNav({ onNavigate }: { onNavigate: () => void }) {
             </div>
           ))}
         </nav>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
