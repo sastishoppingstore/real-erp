@@ -506,9 +506,8 @@ export const salesRouter = createRouter({
           })
         : undefined;
       // Resolve customerId — 0 or undefined means walk-in/cash customer
-      let resolvedCustomerId = invoiceData.customerId && invoiceData.customerId > 0
-        ? invoiceData.customerId
-        : null;
+      const explicitBillCustomer = !!(invoiceData.customerId && invoiceData.customerId > 0);
+      let resolvedCustomerId = explicitBillCustomer ? invoiceData.customerId : null;
       if (!resolvedCustomerId) {
         if (invoiceData.customerName) {
           // Auto-save the customer (bilingual) so they can be searched and auto-filled next time
@@ -518,11 +517,12 @@ export const salesRouter = createRouter({
             name: invoiceData.customerName,
             nameAr: invoiceData.customerNameAr || null,
             phone: invoiceData.customerPhone || null,
+            email: invoiceData.customerEmail || null,
             address: invoiceData.customerAddress || null,
             addressAr: invoiceData.customerAddressAr || null,
             vatNumber: invoiceData.customerVat || null,
-            crNumber: invoiceData.customerCr || null,
             taxNumber: invoiceData.customerVat || null,
+            commercialRegistration: invoiceData.customerCr || null,
             country: settings?.country || "Saudi Arabia",
             isActive: true,
           }).$returningId();
@@ -547,6 +547,24 @@ export const salesRouter = createRouter({
         }
       }
 
+      // Refresh the saved customer record (non-empty typed values only) so the
+      // next bill auto-fills every detail after typing 2 letters of the name.
+      if (explicitBillCustomer && resolvedCustomerId) {
+        const refresh: Record<string, any> = {};
+        const setIf = (k: string, v: any) => { if (v !== undefined && v !== null && String(v).trim() !== "") refresh[k] = v; };
+        setIf("name", invoiceData.customerName);
+        setIf("nameAr", invoiceData.customerNameAr);
+        setIf("phone", invoiceData.customerPhone);
+        setIf("email", invoiceData.customerEmail);
+        setIf("address", invoiceData.customerAddress);
+        setIf("addressAr", invoiceData.customerAddressAr);
+        setIf("vatNumber", invoiceData.customerVat);
+        setIf("taxNumber", invoiceData.customerVat);
+        setIf("commercialRegistration", invoiceData.customerCr);
+        if (Object.keys(refresh).length) {
+          await db.update(customers).set(refresh).where(and(eq(customers.id, resolvedCustomerId), eq(customers.tenantId, tenantId)));
+        }
+      }
       const [{ id }] = await db.insert(invoices).values({
         invoiceNumber: invoiceData.invoiceNumber,
         invoiceType,
@@ -569,7 +587,7 @@ export const salesRouter = createRouter({
         customerEmail: invoiceData.customerEmail || null,
         workedMonth: invoiceData.workedMonth || null,
         time: invoiceData.time || null,
-        paymentType: invoiceData.paymentType || null,
+        paymentMethod: invoiceData.paymentType || null,
         cashier: invoiceData.cashier || null,
         poNumber: invoiceData.poNumber || null,
         tenantId,
@@ -648,6 +666,20 @@ export const salesRouter = createRouter({
       invoiceNumber: z.string().optional(),
       invoiceType: z.enum(["standard", "simplified", "zatca"]).optional(),
       customerId: z.number().optional(),
+      customerName: z.string().optional(),
+      customerNameAr: z.string().optional(),
+      customerPhone: z.string().optional(),
+      customerAddress: z.string().optional(),
+      customerAddressAr: z.string().optional(),
+      customerVat: z.string().optional(),
+      customerCr: z.string().optional(),
+      customerEmail: z.string().optional(),
+      notesAr: z.string().optional(),
+      time: z.string().optional(),
+      paymentType: z.string().optional(),
+      cashier: z.string().optional(),
+      poNumber: z.string().optional(),
+      workedMonth: z.string().optional(),
       date: z.string().optional(),
       dueDate: z.string().optional(),
       subTotal: z.string().optional(),
@@ -729,8 +761,29 @@ export const salesRouter = createRouter({
         zatcaStatus = "pending";
       }
 
-      const invoiceUpdateData = { ...invoiceData };
+      const invoiceUpdateData: Record<string, any> = { ...invoiceData };
       if (!invoiceUpdateData.dueDate) invoiceUpdateData.dueDate = null;
+      if (invoiceUpdateData.paymentType) invoiceUpdateData.paymentMethod = invoiceUpdateData.paymentType;
+      delete invoiceUpdateData.paymentType;
+      // Refresh the saved customer record (non-empty typed values only) so the
+      // next bill auto-fills every detail after typing 2 letters of the name.
+      const updCustId = invoiceData.customerId || existingInvoice.customerId;
+      if (updCustId) {
+        const refresh: Record<string, any> = {};
+        const setIf = (k: string, v: any) => { if (v !== undefined && v !== null && String(v).trim() !== "") refresh[k] = v; };
+        setIf("name", invoiceData.customerName);
+        setIf("nameAr", invoiceData.customerNameAr);
+        setIf("phone", invoiceData.customerPhone);
+        setIf("email", invoiceData.customerEmail);
+        setIf("address", invoiceData.customerAddress);
+        setIf("addressAr", invoiceData.customerAddressAr);
+        setIf("vatNumber", invoiceData.customerVat);
+        setIf("taxNumber", invoiceData.customerVat);
+        setIf("commercialRegistration", invoiceData.customerCr);
+        if (Object.keys(refresh).length) {
+          await db.update(customers).set(refresh).where(and(eq(customers.id, updCustId), eq(customers.tenantId, tenantId)));
+        }
+      }
       await db.update(invoices).set({
         ...invoiceUpdateData,
         invoiceType,

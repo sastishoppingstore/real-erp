@@ -302,9 +302,12 @@ export default function InvoicesPage() {
     })));
     setCustomerId(d.customer?.id || 0);
     setCustomerName(d.customer?.name || "");
+    setCustomerNameAr(d.customer?.nameAr || "");
     setCustomerPhone(d.customer?.phone || "");
     setCustomerAddress(d.customer?.address || "");
+    setCustomerAddressAr(d.customer?.addressAr || "");
     setCustomerVat(d.customer?.vatNumber || d.customer?.taxNumber || "");
+    setCustomerCr((d.customer as any)?.crNumber || (d.customer as any)?.commercialRegistration || "");
     setCustomerEmail(d.customer?.email || "");
     setDiscount(Number(inv.discountAmount || 0));
     setNote(inv.notes || "");
@@ -341,10 +344,10 @@ export default function InvoicesPage() {
     setCart([]); setCustomerId(0); setCustomerName(""); setCustomerNameAr(""); setCustomerPhone("");
     setCustomerAddress(""); setCustomerAddressAr(""); setCustomerVat(""); setCustomerCr(""); setDiscount(0); setNote(""); setNoteAr("");
   };
-  const selectCustomer = (c: { id: number; name: string; nameAr?: string; address?: string; addressAr?: string; vatNumber?: string; crNumber?: string; phone?: string }) => {
+  const selectCustomer = (c: { id: number; name: string; nameAr?: string; address?: string; addressAr?: string; vatNumber?: string; taxNumber?: string; crNumber?: string; commercialRegistration?: string; phone?: string; email?: string }) => {
     setCustomerId(c.id); setCustomerName(c.name || ""); setCustomerNameAr(c.nameAr || "");
     setCustomerAddress(c.address || ""); setCustomerAddressAr(c.addressAr || "");
-    setCustomerVat(c.vatNumber || ""); setCustomerCr(c.crNumber || ""); setCustomerPhone(c.phone || ""); setCustDropdownOpen(false);
+    setCustomerVat(c.vatNumber || (c as any).taxNumber || ""); setCustomerCr(c.crNumber || (c as any).commercialRegistration || ""); setCustomerPhone(c.phone || ""); setCustomerEmail((c as any).email || ""); setCustDropdownOpen(false);
   };
 
   const handleAddQuickCategory = () => {
@@ -420,6 +423,7 @@ export default function InvoicesPage() {
         customerCr: customerCr.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
         date: new Date().toISOString().slice(0, 10),
+        time: new Date().toTimeString().slice(0, 5),
         dueDate: dueDate || undefined,
         paymentType: paymentType || undefined,
         cashier: cashier || undefined,
@@ -501,8 +505,8 @@ export default function InvoicesPage() {
       invoiceNo: useDetail ? detailInvoice?.invoiceNumber : undefined,
       paymentType: useDetail ? detailInvoice?.paymentType : "Credit",
       cashier: useDetail ? detailInvoice?.cashier : "مدير النظام",
-      date: useDetail ? detailInvoice?.date : undefined,
-      time: useDetail ? detailInvoice?.time : undefined,
+      date: useDetail ? detailInvoice?.date : new Date().toISOString().slice(0, 10),
+      time: useDetail ? detailInvoice?.time : new Date().toTimeString().slice(0, 5),
       dueDate: useDetail ? detailInvoice?.dueDate : undefined,
       poNumber: useDetail ? detailInvoice?.poNumber : undefined,
       dueInWords: undefined,
@@ -686,7 +690,7 @@ export default function InvoicesPage() {
                   {filteredCustomers.map(c => (
                     <button key={c.id} type="button" onClick={() => selectCustomer(c)} className="w-full text-left px-2 py-1.5 hover:bg-blue-50 border-b border-gray-100 last:border-0">
                       <div className="text-xs font-semibold text-slate-700">{c.name}{c.nameAr ? ` / ${c.nameAr}` : ''}</div>
-                      <div className="text-[10px] text-slate-500">{c.phone || ''} {c.vatNumber ? `• VAT: ${c.vatNumber}` : ''}</div>
+                      <div className="text-[10px] text-slate-500">{c.phone || ''} {(c.vatNumber || (c as any).taxNumber) ? `• VAT: ${c.vatNumber || (c as any).taxNumber}` : ''}</div>
                     </button>
                   ))}
                 </div>
