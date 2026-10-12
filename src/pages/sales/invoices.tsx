@@ -36,7 +36,8 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
   const pCustAddr = dCust?.address || "";
   const pCustAddrAr = dCust?.addressAr || "";
   const pCustVat = dCust?.vatNumber || dCust?.taxNumber || "";
-  const pCustCr = dCust?.crNumber || "";
+  const pCustCr = dCust?.crNumber || (dCust as any)?.commercialRegistration || "";
+  const pCustEmail = dCust?.email || "";
   const pType = dInv.invoiceType === "zatca" ? "zatca" : "standard";
   const printItemsWithAr = (detail.items || []).map((it: any, i: number) => ({
     no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
@@ -62,7 +63,7 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
     note: dInv.notes || "",
     noteAr: dInv.notesAr || "",
     pSub, pDisc, pVat, pTotal,
-    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pType,
+    pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pCustEmail, pType,
     title: pType === "zatca" ? "TAX INVOICE" : "SALES INVOICE",
     titleAr: pType === "zatca" ? "فاتورة ضريبية" : "فاتورة مبيعات",
     paid: Number(dInv.paidAmount || 0),
@@ -70,7 +71,7 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
     balPrior: pBalPrior, balAfter: pBalAfter, hasAccount: !!dCust?.id,
     workedMonth: dInv.workedMonth,
     invoiceNo: dInv.invoiceNumber,
-    paymentType: dInv.paymentType,
+    paymentType: (dInv as any).paymentMethod || dInv.paymentType || "Credit",
     cashier: dInv.cashier,
     date: dInv.date,
     time: dInv.time,
@@ -311,6 +312,12 @@ export default function InvoicesPage() {
     setCustomerEmail(d.customer?.email || "");
     setDiscount(Number(inv.discountAmount || 0));
     setNote(inv.notes || "");
+    setNoteAr((inv as any).notesAr || "");
+    setPoNo((inv as any).poNumber || "");
+    setDueDate((inv as any).dueDate || "");
+    setPaymentType((inv as any).paymentMethod || (inv as any).paymentType || "Credit");
+    setCashier((inv as any).cashier || "مدير النظام");
+    setWorkedMonth((inv as any).workedMonth || "");
   }, [editTargetId, invoiceDetail.data]);
 
   const addToCart = (product: { id: string; name: string; price: number; sku?: string }) => {
@@ -342,7 +349,9 @@ export default function InvoicesPage() {
   };
   const clearCart = () => {
     setCart([]); setCustomerId(0); setCustomerName(""); setCustomerNameAr(""); setCustomerPhone("");
-    setCustomerAddress(""); setCustomerAddressAr(""); setCustomerVat(""); setCustomerCr(""); setDiscount(0); setNote(""); setNoteAr("");
+    setCustomerAddress(""); setCustomerAddressAr(""); setCustomerVat(""); setCustomerCr(""); setCustomerEmail("");
+    setDiscount(0); setNote(""); setNoteAr(""); setPoNo(""); setDueDate("");
+    setPaymentType("Credit"); setCashier("مدير النظام"); setWorkedMonth("");
   };
   const selectCustomer = (c: { id: number; name: string; nameAr?: string; address?: string; addressAr?: string; vatNumber?: string; taxNumber?: string; crNumber?: string; commercialRegistration?: string; phone?: string; email?: string }) => {
     setCustomerId(c.id); setCustomerName(c.name || ""); setCustomerNameAr(c.nameAr || "");
@@ -490,8 +499,8 @@ export default function InvoicesPage() {
       companyWebsite: companyWebsite || "www.yafco.com.sa",
       currency: currency || "SAR",
       taxPercent: String(taxPercent || "15"),
-      note: note || "",
-      noteAr: noteAr || "",
+      note: useDetail ? (detailInvoice?.notes || "") : (note || ""),
+      noteAr: useDetail ? ((detailInvoice as any)?.notesAr || "") : (noteAr || ""),
       pSub, pDisc, pVat, pTotal,
     pCustName, pCustNameAr, pCustPhone, pCustAddr, pCustAddrAr, pCustVat, pCustCr, pCustEmail, pCustPo, pType,
       title: pType === "zatca" ? "TAX INVOICE" : "SALES INVOICE",
@@ -501,14 +510,14 @@ export default function InvoicesPage() {
       balPrior: useDetail && detailCustomer?.currentBalance != null ? Number(detailCustomer.currentBalance) - pTotal : null,
       balAfter: useDetail && detailCustomer?.currentBalance != null ? Number(detailCustomer.currentBalance) : null,
       hasAccount: useDetail ? !!detailCustomer?.id : false,
-      workedMonth: useDetail ? detailInvoice?.workedMonth : undefined,
+      workedMonth: useDetail ? detailInvoice?.workedMonth : (workedMonth || undefined),
       invoiceNo: useDetail ? detailInvoice?.invoiceNumber : undefined,
-      paymentType: useDetail ? detailInvoice?.paymentType : "Credit",
-      cashier: useDetail ? detailInvoice?.cashier : "مدير النظام",
+      paymentType: useDetail ? ((detailInvoice as any)?.paymentMethod || (detailInvoice as any)?.paymentType || "Credit") : (paymentType || "Credit"),
+      cashier: useDetail ? (detailInvoice?.cashier || "مدير النظام") : (cashier || "مدير النظام"),
       date: useDetail ? detailInvoice?.date : new Date().toISOString().slice(0, 10),
       time: useDetail ? detailInvoice?.time : new Date().toTimeString().slice(0, 5),
-      dueDate: useDetail ? detailInvoice?.dueDate : undefined,
-      poNumber: useDetail ? detailInvoice?.poNumber : undefined,
+      dueDate: useDetail ? detailInvoice?.dueDate : (dueDate || undefined),
+      poNumber: useDetail ? detailInvoice?.poNumber : (poNo || undefined),
       dueInWords: undefined,
       printItems: printItems.map((i: any) => ({ ...i, totalHour: i.qty, vat: (i.total || 0) * 0.15, grandTotal: (i.total || 0) * 1.15 }))
     });
@@ -616,6 +625,11 @@ export default function InvoicesPage() {
     setDiscount(0);
     setNote("");
     setNoteAr("");
+    setPoNo("");
+    setDueDate("");
+    setPaymentType("Credit");
+    setCashier("مدير النظام");
+    setWorkedMonth("");
   };
 
   // Load invoice for editing
