@@ -15,6 +15,279 @@ const FONT_ARABIC = { name: "Calibri", size: 10 };
 const FONT_AR_BOLD = { name: "Calibri", size: 10, bold: true };
 const FONT_AR = { name: "Calibri", size: 10 };
 
+
+// ===== English amount-in-words (for the Due row of the sales form) =====
+function amountToWords(n: number): string {
+  const ONES = ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten",
+    "Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+  const TENS = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+  const two = (v: number): string => {
+    if (v < 20) return ONES[v];
+    const t = Math.floor(v / 10), o = v % 10;
+    return TENS[t] + (o ? "-" + ONES[o] : "");
+  };
+  const three = (v: number): string => {
+    const h = Math.floor(v / 100), r = v % 100;
+    return (h ? ONES[h] + " Hundred" + (r ? " " : "") : "") + (r ? two(r) : "");
+  };
+  const intWords = (v: number): string => {
+    if (v === 0) return "Zero";
+    const parts: string[] = [];
+    const units: Array<[number, string]> = [[1e9, "Billion"], [1e6, "Million"], [1e3, "Thousand"]];
+    let rest = v;
+    for (const [val, name] of units) {
+      const c = Math.floor(rest / val);
+      if (c > 0) { parts.push(three(c) + " " + name); rest = rest % val; }
+    }
+    if (rest > 0) parts.push(three(rest));
+    return parts.join(" ");
+  };
+  const neg = n < 0;
+  const abs = Math.abs(n);
+  const intPart = Math.floor(abs);
+  const decPart = Math.round((abs - intPart) * 100);
+  let out = intWords(intPart) + " Riyals";
+  if (decPart > 0) out += " and " + two(decPart) + " Halalas";
+  else out += " Only";
+  return (neg ? "Minus " : "") + out;
+}
+
+// ===== Official sales form replica (form-returnsale): A5 narrow receipt =====
+// Bilingual header, title band, Doc/Client meta card, 7-column items table
+// (SN/Item No./Job Description/Unit/Qty/Price/Total), conditional totals rows,
+// Thank-You band, contact footer, QR image. Mirrors the template 1:1.
+async function buildSalesReturnForm(data: {
+  inv: any; items: any[]; customer: any; co: any;
+}): Promise<{ buffer_base64: string; invoiceNo: string }> {
+  const { inv, items, customer, co } = data;
+  const F8 = { name: "Calibri", size: 8 };
+  const F8B = { name: "Calibri", size: 8, bold: true };
+  const F10B = { name: "Calibri", size: 10, bold: true };
+  const F16 = { name: "Calibri", size: 16 };
+  const CTR = { horizontal: "center", vertical: "middle" } as const;
+  const LFT = { horizontal: "left", vertical: "middle" } as const;
+  const RGT = { horizontal: "right", vertical: "middle" } as const;
+  const HAIR = { style: "hair" as const, color: { argb: "FF000000" } };
+  const HB = { top: HAIR, bottom: HAIR, left: HAIR, right: HAIR };
+  const BAND = { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFD9D9D9" } };
+  const MONEY = "#,##0.00";
+
+  const coNameEn = co?.companyName || "YAFCO AL ARABIAH EST.";
+  const coNameAr = co?.companyNameAr || "\u0645\u0624\u0633\u0633\u0629 \u064a\u0627\u0641\u0643\u0648 \u0627\u0644\u0639\u0631\u0628\u064a\u0629";
+  const coVat = co?.taxNumber || "300995897900003";
+  const coCr = co?.crNumber || "4700012896";
+  const coAddrEn = co?.address || "Saudi Arabia - Yanbu Al Bahr - P.O.Box : 2326";
+  const coPhone = co?.phone || "";
+  const coEmail = co?.email || "info@yafco.com.sa";
+  const coWeb = co?.website || "www.yafco.com.sa";
+
+  const custName = customer?.name || inv.customer_name || inv.customerName || "Walk-in Customer";
+  const custVat = customer?.vatNumber || customer?.taxNumber || inv.customer_vat || inv.customerVat || "";
+  const custAddr = customer?.address || inv.customer_address || inv.customerAddress || "";
+  const custPhone = customer?.phone || inv.customer_phone || inv.customerPhone || "";
+
+  const invoiceNo = inv.invoice_number || inv.invoiceNumber || inv.invoice_no || "";
+  const payType = inv.payment_method || inv.payment_type || inv.paymentType || "Credit";
+  const cashier = inv.cashier || inv.cashier_name || "\u0645\u062f\u064a\u0631 \u0627\u0644\u0646\u0638\u0627\u0645";
+  const poNum = inv.po_number || inv.poNumber || "";
+  const dueRaw = inv.due_date || inv.dueDate || "";
+  const notes = inv.notes || "";
+  const titleEn = (inv.invoice_type === "zatca" || inv.invoiceType === "zatca") ? "TAX INVOICE" : "SALES INVOICE";
+
+  const dt = inv.date ? new Date(inv.date) : (inv.created_at ? new Date(inv.created_at) : new Date());
+  const dateStr = isNaN(dt.getTime()) ? "" : `${dt.getFullYear()}/${String(dt.getMonth() + 1).padStart(2, "0")}/${String(dt.getDate()).padStart(2, "0")}`;
+  const tmRaw = inv.time || "";
+  let timeStr = "";
+  const tm = String(tmRaw).match(/^(\d{1,2}):(\d{2})/);
+  if (tm) {
+    let h = parseInt(tm[1], 10);
+    const ap = h >= 12 ? "PM" : "AM";
+    h = h % 12; if (h === 0) h = 12;
+    timeStr = `${h}:${tm[2]} ${ap}`;
+  }
+  const dd = dueRaw ? new Date(dueRaw) : null;
+  const dueStr = dd && !isNaN(dd.getTime()) ? `${dd.getFullYear()}/${String(dd.getMonth() + 1).padStart(2, "0")}/${String(dd.getDate()).padStart(2, "0")}` : "";
+
+  const subT = Number(inv.sub_total ?? inv.subtotal ?? 0);
+  const discT = Number(inv.discount_amount ?? inv.discountAmount ?? 0);
+  const vatT = Number(inv.vat_amount ?? inv.vatAmount ?? inv.tax_amount ?? inv.taxAmount ?? 0);
+  const grandT = Number(inv.grand_total ?? inv.grandTotal ?? inv.total_amount ?? inv.totalAmount ?? 0);
+  const vatPct = Number(inv.vat_percent ?? inv.taxPercent ?? 15);
+  const paidT = Number(inv.paid_amount ?? inv.paidAmount ?? 0);
+  const creditT = Number(inv.balance_due ?? inv.balanceDue ?? 0);
+  const totalQty = items.reduce((x: number, r: any) => x + Number(r.quantity ?? 0), 0);
+  const balAfter = customer?.currentBalance != null ? Number(customer.currentBalance) : null;
+  const balPrior = balAfter !== null ? balAfter - grandT : null;
+  const hasAccount = !!(customer && customer.id && customer.code !== "WALK-IN");
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "YASCO ERP";
+  const ws = wb.addWorksheet("Invoice", {
+    pageSetup: { paperSize: 11, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 1 },
+    views: [{ showGridLines: false }],
+  });
+  ws.columns = [
+    { width: 3 }, { width: 7.29 }, { width: 24 }, { width: 5.43 },
+    { width: 5.43 }, { width: 10.86 }, { width: 14.57 }, { width: 11.57 },
+  ];
+  for (let i = 1; i <= 6; i++) ws.getRow(i).height = 15;
+
+  const dataUriToBuffer = (dataUri: string): Buffer | null => {
+    try {
+      const m = dataUri.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (!m) return null;
+      return Buffer.from(m[2], "base64");
+    } catch { return null; }
+  };
+  const logoBuf = co?.logo ? dataUriToBuffer(co.logo) : null;
+  const QRCode = require("qrcode");
+  const qrPayload = JSON.stringify({ seller: coNameAr || coNameEn, vat: coVat, total: grandT.toFixed(2), tax: vatT.toFixed(2), date: dateStr });
+  const qrBuf: Buffer = await QRCode.toBuffer(qrPayload, { width: 200, margin: 1 });
+
+  // ===== Rows 1-6: EN block | logo | AR block =====
+  ws.mergeCells("A1:B6");
+  ws.getCell("A1").value = {
+    richText: [
+      { font: { name: "Calibri", size: 11, bold: true }, text: "Kingdom Saudi Arabia\n" },
+      { font: { name: "Calibri", size: 11, bold: true }, text: coNameEn + "\n" },
+      { font: { name: "Calibri", size: 10 }, text: `C.R. No: ${coCr}\nTax No:${coVat}` },
+    ],
+  };
+  ws.getCell("A1").alignment = { ...LFT, wrapText: true };
+  ws.mergeCells("C1:E6");
+  if (logoBuf) {
+    const logoId = wb.addImage({ buffer: logoBuf, extension: "png" });
+    ws.addImage(logoId, { tl: { col: 2.15, row: 1.15 }, ext: { width: 150, height: 95 } });
+  }
+  ws.mergeCells("F1:G6");
+  ws.getCell("F1").value = {
+    richText: [
+      { font: { name: "Calibri", size: 11, bold: true }, text: coNameAr + "\n" },
+      { font: { name: "Calibri", size: 10 }, text: `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0645\u0648\u062d\u062f : ${coCr}\n\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064a\u0628\u064a : ${coVat}` },
+    ],
+  };
+  ws.getCell("F1").alignment = { ...RGT, wrapText: true };
+
+  let row = 7;
+  // ===== Row 7: title band =====
+  ws.getCell(`B${row}`).value = titleEn;
+  ws.getCell(`B${row}`).font = { name: "Calibri", size: 10 };
+  ws.getCell(`B${row}`).fill = BAND;
+  ws.mergeCells(`C${row}:G${row}`);
+  ws.getCell(`C${row}`).value = `${coNameAr} / ${coNameEn}`;
+  ws.getCell(`C${row}`).font = F16;
+  ws.getCell(`C${row}`).alignment = CTR;
+  ws.getCell(`C${row}`).fill = BAND;
+  ws.getRow(row).height = 26.25;
+  row++;
+  // ===== Row 8: company tax =====
+  ws.getCell(`E${row}`).value = `Tax No. ${coVat}`;
+  ws.getCell(`E${row}`).font = F8;
+  row++;
+  // ===== Meta + client card =====
+  const lab = (c: string, v: string) => { ws.getCell(c).value = v; ws.getCell(c).font = F8B; };
+  const val = (c: string, v: string) => { ws.getCell(c).value = v; ws.getCell(c).font = F8; };
+  lab(`B${row}`, "Doc. No."); val(`C${row}`, invoiceNo); lab(`D${row}`, "Client"); row++;
+  lab(`B${row}`, "Payment"); val(`C${row}`, payType); val(`D${row}`, custName); row++;
+  lab(`B${row}`, "Date"); val(`C${row}`, dateStr);
+  if (custVat) val(`D${row}`, `Tax No. ${custVat}`); row++;
+  lab(`B${row}`, "Time"); val(`C${row}`, timeStr); val(`D${row}`, custAddr); row++;
+  lab(`B${row}`, "Due Date"); val(`C${row}`, dueStr); val(`D${row}`, custPhone); row++;
+  lab(`B${row}`, "Cashier"); val(`C${row}`, cashier);
+  if (poNum) { lab(`D${row}`, "PO No."); val(`E${row}`, poNum); }
+  row++;
+  if (notes) { lab(`B${row}`, "Remarks"); val(`C${row}`, notes); row++; }
+  // ===== Row 16-style header =====
+  const heads = ["", "Item No.", "Job Description", "Unit", "Qty", "Price", "Total"];
+  ["B", "C", "D", "E", "F", "G"].forEach((col, i) => {
+    ws.getCell(`${col}${row}`).value = heads[i + 1];
+    ws.getCell(`${col}${row}`).font = F8B;
+    ws.getCell(`${col}${row}`).alignment = CTR;
+    ws.getCell(`${col}${row}`).border = HB;
+  });
+  ws.getRow(row).height = 30;
+  row++;
+  // ===== Items =====
+  items.forEach((r: any, i: number) => {
+    const qty = Number(r.quantity ?? 0);
+    const rate = Number(r.unit_price ?? 0);
+    const tot = Number(r.total_amount ?? qty * rate);
+    const title = r.description || "";
+    const titleAr = r.description_ar || "";
+    ws.getCell(`A${row}`).value = i + 1;
+    ws.getCell(`A${row}`).font = F8B;
+    ws.getCell(`A${row}`).alignment = CTR;
+    ws.getCell(`B${row}`).value = r.sku || r.product_id || "";
+    ws.getCell(`B${row}`).font = F8;
+    ws.getCell(`B${row}`).alignment = CTR;
+    ws.getCell(`B${row}`).border = HB;
+    ws.getCell(`C${row}`).value = titleAr ? `${title} / ${titleAr}` : title;
+    ws.getCell(`C${row}`).font = F8;
+    ws.getCell(`C${row}`).alignment = LFT;
+    ws.getCell(`C${row}`).border = HB;
+    ws.getCell(`D${row}`).value = r.unit || "";
+    ws.getCell(`D${row}`).font = F8;
+    ws.getCell(`D${row}`).alignment = CTR;
+    ws.getCell(`D${row}`).border = HB;
+    ws.getCell(`E${row}`).value = qty;
+    ws.getCell(`E${row}`).font = F8;
+    ws.getCell(`E${row}`).alignment = CTR;
+    ws.getCell(`E${row}`).border = HB;
+    ws.getCell(`F${row}`).value = rate;
+    ws.getCell(`F${row}`).font = F8;
+    ws.getCell(`F${row}`).numFmt = MONEY;
+    ws.getCell(`F${row}`).alignment = CTR;
+    ws.getCell(`F${row}`).border = HB;
+    ws.getCell(`G${row}`).value = tot;
+    ws.getCell(`G${row}`).font = F8;
+    ws.getCell(`G${row}`).numFmt = MONEY;
+    ws.getCell(`G${row}`).alignment = CTR;
+    ws.getCell(`G${row}`).border = HB;
+    row++;
+  });
+  // ===== Totals =====
+  const gval = (c: string, v: number) => {
+    ws.getCell(c).value = v; ws.getCell(c).font = F8;
+    ws.getCell(c).numFmt = MONEY; ws.getCell(c).alignment = CTR; ws.getCell(c).border = HB;
+  };
+  ws.getCell(`E${row}`).value = totalQty;
+  ws.getCell(`E${row}`).font = F8B; ws.getCell(`E${row}`).alignment = CTR; ws.getCell(`E${row}`).border = HB;
+  lab(`F${row}`, "Total"); gval(`G${row}`, subT); row++;
+  if (discT > 0) { lab(`F${row}`, "Discount"); gval(`G${row}`, discT); row++; }
+  lab(`F${row}`, `VAT ${vatPct}%`); gval(`G${row}`, vatT); row++;
+  lab(`B${row}`, "Due"); val(`C${row}`, amountToWords(grandT));
+  ws.getCell(`F${row}`).value = "Due"; ws.getCell(`F${row}`).font = F10B;
+  ws.getCell(`G${row}`).value = grandT; ws.getCell(`G${row}`).font = F10B;
+  ws.getCell(`G${row}`).numFmt = MONEY; ws.getCell(`G${row}`).alignment = CTR; ws.getCell(`G${row}`).border = HB;
+  ws.getRow(row).height = 17.25;
+  row++;
+  lab(`F${row}`, "Paid"); gval(`G${row}`, paidT); row++;
+  if (creditT > 0) { lab(`F${row}`, "Credit"); gval(`G${row}`, creditT); row++; }
+  if (hasAccount && balAfter !== null) {
+    lab(`F${row}`, "Bal. Prior"); gval(`G${row}`, balPrior ?? 0); row++;
+    lab(`F${row}`, "Bal. After"); gval(`G${row}`, balAfter); row++;
+  }
+  // ===== Thank-You band + contacts =====
+  ws.mergeCells(`B${row}:G${row}`);
+  ws.getCell(`B${row}`).value = "Thank You";
+  ws.getCell(`B${row}`).font = F16;
+  ws.getCell(`B${row}`).alignment = CTR;
+  ws.getCell(`B${row}`).fill = BAND;
+  const thanksRow = row;
+  ws.getRow(row).height = 26.25;
+  row++;
+  ws.getCell(`B${row}`).value = coAddrEn; ws.getCell(`B${row}`).font = F8; row++;
+  ws.getCell(`B${row}`).value = `${coPhone ? "Phone: " + coPhone + "  " : ""}${coEmail}`;
+  ws.getCell(`B${row}`).font = F8; row++;
+  ws.getCell(`B${row}`).value = coWeb; ws.getCell(`B${row}`).font = F8; row++;
+  // ===== QR (bottom-right like the template) =====
+  const qrId = wb.addImage({ buffer: qrBuf, extension: "png" });
+  ws.addImage(qrId, { tl: { col: 3.1, row: thanksRow - 1 + 0.15 }, ext: { width: 125, height: 125 } });
+
+  const buffer = await wb.xlsx.writeBuffer();
+  return { buffer_base64: Buffer.from(buffer).toString("base64"), invoiceNo };
+}
+
 export const excelRouter = createRouter({
   generateExcel: authedMutation
     .input(z.object({ invoiceId: z.number() }))
@@ -55,6 +328,13 @@ export const excelRouter = createRouter({
 
       // Get company settings
       const [co] = await db.select().from(companySettings).where(eq(companySettings.tenantId, tenantId));
+
+      // Sales invoices (invoices table) use the official sales form layout (1:1 replica).
+      // Construction invoices keep the existing construction layout below.
+      const salesSource = !!(inv && (inv.invoice_number || inv.invoiceNumber) && !inv.invoice_no);
+      if (salesSource) {
+        return buildSalesReturnForm({ inv, items, customer, co });
+      }
 
       // Company details
       const coNameEn = co?.companyName || "YAFCO AL ARABIAH EST.";

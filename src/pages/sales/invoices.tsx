@@ -691,7 +691,7 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="flex-1 flex overflow-hidden min-h-0 h-[calc(100dvh-250px)] min-h-[520px]">
         {viewTab === "create" && (
         <div className="flex-1 flex min-h-0 w-full overflow-x-auto">
           {/* Left: Customer Details */}
