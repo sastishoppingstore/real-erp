@@ -73,7 +73,7 @@ export default function ConstructionDashboard() {
     { label: "Goods", labelAr: "البضاعة", icon: Package, path: "/app/construction/products", color: C.green },
     { label: "Accounts", labelAr: "الحسابات", icon: Users, path: "/app/construction/subcontractors", color: C.green },
     { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/advance-payments", color: C.green },
-    { label: "Invoices", labelAr: "الفواتير", icon: FolderKanban, path: "/app/construction/invoices", color: C.green },
+    { label: "Invoices", labelAr: "الفواتير", icon: FolderKanban, path: "/app/construction/sales-invoices", color: C.green },
     { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/cvr", color: C.green },
   ];
   // Sahl row 2: quick tour (blue / yellow / navy).
@@ -87,7 +87,7 @@ export default function ConstructionDashboard() {
   ];
   // Sahl row 3: document types (4 big + warehouse ops).
   const docTiles: Tile[] = [
-    { label: "New Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/construction/invoices", color: C.green },
+    { label: "New Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/construction/sales-invoices", color: C.green },
     { label: "New Contract", labelAr: "عقد جديد", icon: HardHat, path: "/app/construction/contracts/new", color: C.red },
     { label: "Advance Payments", labelAr: "الدفعات المقدمة", icon: Handshake, path: "/app/construction/advance-payments", color: C.salmon },
     { label: "Daily Report", labelAr: "التقرير اليومي", icon: CalendarCheck, path: "/app/construction/daily-reports/new", color: C.teal },
@@ -116,6 +116,7 @@ export default function ConstructionDashboard() {
     { label: "Saudization", labelAr: "السعودة", icon: Briefcase, path: "/app/construction/saudization", color: C.lime },
     { label: "HSE & Safety", labelAr: "السلامة", icon: HardHat, path: "/app/construction/hse", color: C.yellow, dark: true },
     { label: "Decennial", labelAr: "الضمان العشري", icon: Calculator, path: "/app/construction/decennial", color: C.navy },
+    { label: "Tax Invoices", labelAr: "الفواتير الضريبية", icon: Receipt, path: "/app/construction/invoices", color: C.red },
   ];
 
   if (statsLoading || projectsLoading || invLoading) {
@@ -173,7 +174,7 @@ export default function ConstructionDashboard() {
               </div>
             ))}
           </div>
-          <Button variant="secondary" size="sm" className="w-full font-bold" onClick={() => navigate("/app/construction/invoices")}>
+          <Button variant="secondary" size="sm" className="w-full font-bold" onClick={() => navigate("/app/construction/sales-invoices")}>
             <Plus className="size-4" />{rtl ? "فاتورة جديدة" : "New Invoice"}
           </Button>
         </div>
