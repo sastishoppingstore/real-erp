@@ -40,6 +40,10 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const [sel, setSel] = useState(0);
   const [partyId, setPartyId] = useState("");
   const [partyQ, setPartyQ] = useState("");
+  // Customer snapshot details: auto-filled from selected record (2+ letters),
+  // editable, sent with the invoice; backend refreshes the saved record and
+  // auto-creates walk-in when nothing is selected.
+  const [cd, setCd] = useState({ name: "", nameAr: "", phone: "", email: "", address: "", addressAr: "", vat: "", cr: "" });
   const [wh, setWh] = useState("");
   const [discount, setDiscount] = useState(0);
   const [taxPct, setTaxPct] = useState(15);
@@ -76,12 +80,26 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     { id: viewId ?? 0 }, { enabled: kind === "sales" && viewId !== null });
 
   const parties: any[] = (isSales ? customers : suppliers) ?? [];
+  const pickParty = (id: string) => {
+    setPartyId(id);
+    const c: any = parties.find((a: any) => String(a.id) === String(id));
+    if (c) {
+      setPartyQ(c.nameAr || c.name);
+      setCd({
+        name: c.name ?? "", nameAr: c.nameAr ?? "", phone: c.phone ?? c.mobile ?? "",
+        email: c.email ?? "", address: c.address ?? "", addressAr: c.addressAr ?? "",
+        vat: c.vatNumber ?? c.taxNumber ?? "", cr: c.crNumber ?? c.commercialRegistration ?? "",
+      });
+    }
+  };
+
+  const resetCd = () => setCd({ name: "", nameAr: "", phone: "", email: "", address: "", addressAr: "", vat: "", cr: "" });
   const history: any[] = kind === "sales" ? invoices ?? [] : kind === "purchase" ? pos ?? [] : kind === "quotation" ? quotes ?? [] : kind === "sales-return" ? credits ?? [] : pos ?? [];
   const results = useMemo(() => (products ?? []).slice(0, 8), [products]);
 
   useEffect(() => {
     setLines([]); setMsg(""); setOrigId(""); setReason(""); setPartyId("");
-    setPartyQ(""); setDiscount(0); setDocDate(today()); setViewId(null); setViewNav(0);
+    setPartyQ(""); setDiscount(0); setDocDate(today()); setViewId(null); setViewNav(0); resetCd();
   }, [kind]);
 
   // « » navigation loads invoice read-only (view mode disables save)
@@ -100,7 +118,24 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         productId: it.productId, code: it.sku ?? "", name: it.descriptionAr || it.description,
         unit: it.unit ?? "", qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0), disc: 0,
       })));
-      if (cust) { setPartyId(String(cust.id)); setPartyQ(cust.nameAr || cust.name); }
+      if (cust) {
+        setPartyId(String(cust.id)); setPartyQ(cust.nameAr || cust.name);
+        setCd({
+          name: cust.name ?? "", nameAr: cust.nameAr ?? "",
+          phone: cust.phone ?? cust.mobile ?? "", email: cust.email ?? "",
+          address: cust.address ?? "", addressAr: cust.addressAr ?? "",
+          vat: cust.vatNumber ?? cust.taxNumber ?? "",
+          cr: cust.crNumber ?? cust.commercialRegistration ?? "",
+        });
+      } else if (inv) {
+        setPartyId(""); setPartyQ(inv.customerNameAr || inv.customerName || "");
+        setCd({
+          name: inv.customerName ?? "", nameAr: inv.customerNameAr ?? "",
+          phone: inv.customerPhone ?? "", email: inv.customerEmail ?? "",
+          address: inv.customerAddress ?? "", addressAr: inv.customerAddressAr ?? "",
+          vat: inv.customerVat ?? "", cr: inv.customerCr ?? "",
+        });
+      }
       setDiscount(Number(inv?.discountAmount || 0));
       setDocDate(String(inv?.date ?? today()).slice(0, 10));
       setMsg(T("وضع العرض — الحفظ معطل", "View mode — saving disabled"));
@@ -109,6 +144,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const newDoc = () => {
     setLines([]); setDiscount(0); setOrigId(""); setReason(""); setViewId(null); setMsg("");
+    setPartyId(""); setPartyQ(""); resetCd();
   };
 
   const addLine = async (p: any) => {
@@ -200,7 +236,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     if (viewId !== null) { setMsg(T("وضع العرض — أنشئ مستنداً جديداً", "View mode — create a new document")); return; }
     if (saving) { setMsg(T("جاري الحفظ — تم منع التكرار", "Saving — duplicate blocked")); return; }
     if (!lines.length && kind !== "sales-return") { setMsg(T("أضف سطراً واحداً على الأقل", "Add at least one line")); return; }
-    if ((kind === "sales" || kind === "quotation" || kind === "sales-return") && !partyId) {
+    // Sales works WITHOUT a selected customer: backend resolves walk-in or
+    // auto-creates from the typed snapshot (autofill next time).
+    if ((kind === "quotation" || kind === "sales-return") && !partyId) {
       setMsg(T("اختر العميل", "Select customer")); return;
     }
     if ((kind === "purchase" || kind === "purchase-return") && !partyId) {
@@ -218,11 +256,22 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       const stamp = Date.now();
       const note = [reason || undefined, salesmanSuffix()].filter(Boolean).join(" — ") || undefined;
       if (kind === "sales") {
+        const custName = cd.name.trim() || parties.find((a: any) => String(a.id) === String(partyId))?.name;
         await invCreate.mutateAsync({
-          invoiceNumber: `INV-${stamp}`, customerId: Number(partyId), date: docDate,
+          invoiceNumber: `INV-${stamp}`,
+          ...(partyId ? { customerId: Number(partyId) } : {}),
+          date: docDate,
           subTotal: String(subtotal), discountAmount: String(discount),
           taxPercent: String(taxPct), taxAmount: taxAmt.toFixed(2),
           totalAmount: String(grand), notes: note,
+          customerName: custName || undefined,
+          customerNameAr: cd.nameAr.trim() || undefined,
+          customerPhone: cd.phone.trim() || undefined,
+          customerEmail: cd.email.trim() || undefined,
+          customerAddress: cd.address.trim() || undefined,
+          customerAddressAr: cd.addressAr.trim() || undefined,
+          customerVat: cd.vat.trim() || undefined,
+          customerCr: cd.cr.trim() || undefined,
           items: lines.map((l) => ({
             productId: l.productId, description: l.name, quantity: l.qty,
             unitPrice: String(l.price), totalAmount: String(lineTotal(l)),
@@ -339,9 +388,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           <span className="border px-1">{T("الكمية", "Qty")}: {lines.reduce((a, l) => a + Number(l.qty), 0)}</span>
           <label>{isSales ? T("العميل", "Customer") : T("المورد", "Supplier")}
             <span className="flex gap-1">
-              <input value={partyQ} onChange={(e) => setPartyQ(e.target.value)}
-                placeholder={T("بحث", "Search")} className={`${inputCls} w-[110px]`} disabled={viewId !== null} />
-              <select className={`${inputCls} w-[130px]`} value={partyId} onChange={(e) => setPartyId(e.target.value)} disabled={viewId !== null}>
+              <input value={partyQ} onChange={(e) => { setPartyQ(e.target.value); if (kind === "sales" && e.target.value.length >= 2 && !partyId) setCd((c) => ({ ...c, name: c.name || e.target.value })); }}
+                placeholder={T("بحث (حرفان للتعبئة)", "Search (2 letters)")} className={`${inputCls} w-[110px]`} disabled={viewId !== null} />
+              <select className={`${inputCls} w-[130px]`} value={partyId} onChange={(e) => pickParty(e.target.value)} disabled={viewId !== null}>
                 <option value="">—</option>
                 {parties.map((a: any) => <option key={a.id} value={a.id}>{a.nameAr || a.name}</option>)}
               </select>
@@ -374,6 +423,26 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             </label>
           )}
         </div>
+
+        {kind === "sales" && viewId === null && (
+          <details className="border-b border-[#bbb] bg-[#f7f7f7] px-1.5 py-1" open={!!partyId}>
+            <summary className="cursor-pointer text-[11px] text-[#555]">
+              {T("بيانات العميل (تُعبأ تلقائياً — قابلة للتعديل)", "Customer details (auto-filled — editable)")}
+            </summary>
+            <div className="grid grid-cols-2 gap-1 py-1 lg:grid-cols-4">
+              {([
+                ["name", T("الاسم", "Name")], ["nameAr", T("عربي", "Arabic")],
+                ["phone", T("الهاتف", "Phone")], ["email", T("البريد", "Email")],
+                ["address", T("العنوان", "Address")], ["addressAr", T("عنوان عربي", "Addr AR")],
+                ["vat", T("الضريبي", "VAT")], ["cr", T("السجل", "CR")],
+              ] as [string, string][]).map(([k, lbl]) => (
+                <label key={k} className="flex items-center gap-1 text-[11px]">{lbl}
+                  <input className={inputCls} value={(cd as any)[k]} onChange={(e) => setCd({ ...cd, [k]: e.target.value })} />
+                </label>
+              ))}
+            </div>
+          </details>
+        )}
 
         {viewId === null && kind !== "sales-return" && (
           <div className="relative flex gap-1 border-b border-[#bbb] p-1.5">
