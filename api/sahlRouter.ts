@@ -16,6 +16,8 @@ import {
   sahlProductUnits,
   sahlReservations,
   sahlCheques,
+  sahlBarcodes,
+  sahlAccountFlags,
 } from "@db/schema";
 import { eq, and, like, desc, or, gte, lte, sql } from "drizzle-orm";
 
@@ -23,14 +25,18 @@ const DEFAULT_LISTS = [
   { code: "P1", name: "Retail", nameAr: "تجزئة" },
   { code: "P2", name: "Wholesale", nameAr: "جملة" },
   { code: "P3", name: "Bulk", nameAr: "جملة الجملة" },
+  { code: "P4", name: "Corporate", nameAr: "شركات" },
 ];
 
 async function ensurePriceLists(db: any, tenantId: number) {
   const existing = await db.select().from(sahlPriceLists).where(eq(sahlPriceLists.tenantId, tenantId));
-  if (existing.length) return existing;
+  const codes = new Set(existing.map((e: any) => e.code));
   for (let i = 0; i < DEFAULT_LISTS.length; i++) {
-    await db.insert(sahlPriceLists).values({ tenantId, ...DEFAULT_LISTS[i], isDefault: i === 0 });
+    if (!codes.has(DEFAULT_LISTS[i].code)) {
+      await db.insert(sahlPriceLists).values({ tenantId, ...DEFAULT_LISTS[i], isDefault: i === 0 && existing.length === 0 });
+    }
   }
+  if (existing.length >= DEFAULT_LISTS.length) return existing;
   return db.select().from(sahlPriceLists).where(eq(sahlPriceLists.tenantId, tenantId));
 }
 
@@ -383,6 +389,280 @@ export const sahlRouter = createRouter({
             like(products.barcode, pattern),
           )!))
         .limit(Math.min(input.limit, 50));
+    }),
+
+  // ---- Extra barcodes per product (multi-barcode table) ----
+  barcodeList: authedQuery
+    .input(z.object({ productId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      return db.select().from(sahlBarcodes).where(and(
+        eq(sahlBarcodes.productId, input.productId),
+        eq(sahlBarcodes.tenantId, ctx.user.tenantId!)));
+    }),
+  barcodeAdd: authedQuery
+    .input(z.object({ productId: z.number(), barcode: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const code = input.barcode.trim();
+      const dup = await db.select({ id: sahlBarcodes.id }).from(sahlBarcodes)
+        .where(and(eq(sahlBarcodes.tenantId, ctx.user.tenantId!), eq(sahlBarcodes.barcode, code))).limit(1);
+      if (dup.length) throw new Error("Barcode already used");
+      const [{ id }] = await db.insert(sahlBarcodes).values({
+        tenantId: ctx.user.tenantId!, productId: input.productId, barcode: code,
+      }).$returningId();
+      return { id, success: true };
+    }),
+  barcodeDelete: authedQuery
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      await db.delete(sahlBarcodes).where(and(
+        eq(sahlBarcodes.id, input.id), eq(sahlBarcodes.tenantId, ctx.user.tenantId!)));
+      return { success: true };
+    }),
+
+  // ---- Strict product delete (blocked by stock OR any history) ----
+  productDelete: authedQuery
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const { products, invoiceItems, purchaseOrderItems, salesQuotationItems } = await import("@db/schema");
+      const stock = await db.select().from(inventoryBalances)
+        .where(and(eq(inventoryBalances.productId, input.id), eq(inventoryBalances.tenantId, ctx.user.tenantId!)));
+      const qty = stock.reduce((a: number, s: any) => a + Number(s.quantity || 0), 0);
+      if (qty !== 0) throw new Error(`Cannot delete: stock is ${qty}, must be zero`);
+      const moves = await db.select({ id: inventoryMovements.id }).from(inventoryMovements)
+        .where(and(eq(inventoryMovements.productId, input.id), eq(inventoryMovements.tenantId, ctx.user.tenantId!))).limit(1);
+      if (moves.length) throw new Error("Cannot delete: stock movements exist — deactivate instead");
+      const inv = await db.select({ id: invoiceItems.id }).from(invoiceItems)
+        .where(eq(invoiceItems.productId, input.id)).limit(1);
+      if (inv.length) throw new Error("Cannot delete: invoice lines exist — deactivate instead");
+      const po = await db.select({ id: purchaseOrderItems.id }).from(purchaseOrderItems)
+        .where(eq(purchaseOrderItems.productId, input.id)).limit(1);
+      if (po.length) throw new Error("Cannot delete: purchase lines exist — deactivate instead");
+      const qo = await db.select({ id: salesQuotationItems.id }).from(salesQuotationItems)
+        .where(eq(salesQuotationItems.productId, input.id)).limit(1);
+      if (qo.length) throw new Error("Cannot delete: quotation lines exist — deactivate instead");
+      await db.delete(sahlBarcodes).where(eq(sahlBarcodes.productId, input.id));
+      await db.delete(sahlProductUnits).where(eq(sahlProductUnits.productId, input.id));
+      await db.delete(products).where(eq(products.id, input.id));
+      return { success: true };
+    }),
+
+  // ---- Moved-items audit (only items that moved in range) ----
+  movedItems: authedQuery
+    .input(z.object({ from: z.string(), to: z.string(), warehouseId: z.number().optional() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { products } = await import("@db/schema");
+      const conds = [
+        eq(inventoryMovements.tenantId, ctx.user.tenantId!),
+        gte(inventoryMovements.createdAt, new Date(input.from)),
+        lte(inventoryMovements.createdAt, new Date(input.to + "T23:59:59")),
+      ];
+      if (input.warehouseId) conds.push(eq(inventoryMovements.warehouseId, input.warehouseId));
+      const rows = await db.select({
+        productId: inventoryMovements.productId,
+        name: products.name,
+        sku: products.sku,
+        inQty: sql<number>`coalesce(sum(case when ${inventoryMovements.quantity} > 0 then ${inventoryMovements.quantity} else 0 end),0)`,
+        outQty: sql<number>`coalesce(sum(case when ${inventoryMovements.quantity} < 0 then -${inventoryMovements.quantity} else 0 end),0)`,
+      }).from(inventoryMovements)
+        .leftJoin(products, eq(products.id, inventoryMovements.productId))
+        .where(and(...conds))
+        .groupBy(inventoryMovements.productId, products.name, products.sku);
+      const bals = await db.select().from(inventoryBalances)
+        .where(eq(inventoryBalances.tenantId, ctx.user.tenantId!));
+      return rows.map((r: any) => {
+        const closing = bals.filter((b: any) => b.productId === r.productId)
+          .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
+        return { ...r, closing, opening: closing - Number(r.inQty || 0) + Number(r.outQty || 0) };
+      });
+    }),
+
+  // ---- Serial search (movement serialNumber trail) ----
+  serialSearch: authedQuery
+    .input(z.object({ q: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { products } = await import("@db/schema");
+      return db.select({
+        id: inventoryMovements.id,
+        serialNumber: inventoryMovements.serialNumber,
+        movementType: inventoryMovements.movementType,
+        quantity: inventoryMovements.quantity,
+        reference: inventoryMovements.reference,
+        referenceId: inventoryMovements.referenceId,
+        createdAt: inventoryMovements.createdAt,
+        productId: inventoryMovements.productId,
+        productName: products.name,
+        productSku: products.sku,
+      }).from(inventoryMovements)
+        .leftJoin(products, eq(products.id, inventoryMovements.productId))
+        .where(and(
+          eq(inventoryMovements.tenantId, ctx.user.tenantId!),
+          like(inventoryMovements.serialNumber, `%${input.q}%`)))
+        .orderBy(desc(inventoryMovements.createdAt))
+        .limit(100);
+    }),
+
+  // ---- Treasury daily ledger (running balance) ----
+  treasuryLedger: authedQuery
+    .input(z.object({ from: z.string(), to: z.string(), limit: z.number().default(200) }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { cashboxTransactions } = await import("@db/schema");
+      const rows = await db.select().from(cashboxTransactions)
+        .where(and(
+          eq(cashboxTransactions.tenantId, ctx.user.tenantId!),
+          gte(cashboxTransactions.createdAt, new Date(input.from)),
+          lte(cashboxTransactions.createdAt, new Date(input.to + "T23:59:59"))))
+        .orderBy(cashboxTransactions.createdAt)
+        .limit(Math.min(input.limit, 500));
+      let running = rows.length ? Number(rows[0].balanceBefore || 0) : 0;
+      return rows.map((r: any) => {
+        running = Number(r.balanceAfter ?? running);
+        return { ...r, running };
+      });
+    }),
+
+  // ---- Expense analysis (by بند category + by payee note) ----
+  expenseAnalysis: authedQuery
+    .input(z.object({ from: z.string(), to: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { cashboxTransactions } = await import("@db/schema");
+      const rows = await db.select().from(cashboxTransactions)
+        .where(and(
+          eq(cashboxTransactions.tenantId, ctx.user.tenantId!),
+          eq(cashboxTransactions.transactionType, "expense"),
+          gte(cashboxTransactions.createdAt, new Date(input.from)),
+          lte(cashboxTransactions.createdAt, new Date(input.to + "T23:59:59"))));
+      const byCat: Record<string, number> = {};
+      for (const r of rows as any[]) {
+        const m = String(r.notes || "").match(/بند:([^—]+)/);
+        const cat = (m ? m[1] : "عام").trim();
+        byCat[cat] = (byCat[cat] || 0) + Number(r.amount || 0);
+      }
+      return {
+        total: rows.reduce((a: number, r: any) => a + Number(r.amount || 0), 0),
+        count: rows.length,
+        byCategory: Object.entries(byCat).map(([category, total]) => ({ category, total })),
+      };
+    }),
+
+  // ---- Itemized account statement (lines per invoice) ----
+  itemizedStatement: authedQuery
+    .input(z.object({ customerId: z.number(), from: z.string().optional(), to: z.string().optional(), limit: z.number().default(200) }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { invoiceItems, products } = await import("@db/schema");
+      const conds = [
+        eq(invoices.tenantId, ctx.user.tenantId!),
+        eq(invoices.customerId, input.customerId),
+      ];
+      if (input.from) conds.push(gte(invoices.date, input.from));
+      if (input.to) conds.push(lte(invoices.date, input.to));
+      return db.select({
+        invoiceId: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        date: invoices.date,
+        productName: products.name,
+        sku: products.sku,
+        quantity: invoiceItems.quantity,
+        unitPrice: invoiceItems.unitPrice,
+        totalAmount: invoiceItems.totalAmount,
+      }).from(invoiceItems)
+        .innerJoin(invoices, eq(invoices.id, invoiceItems.invoiceId))
+        .leftJoin(products, eq(products.id, invoiceItems.productId))
+        .where(and(...conds))
+        .orderBy(desc(invoices.date))
+        .limit(Math.min(input.limit, 500));
+    }),
+
+  // ---- Account review flags ----
+  flagDue: authedQuery.query(async ({ ctx }) => {
+    const db = getDb();
+    const today = new Date().toISOString().slice(0, 10);
+    return db.select().from(sahlAccountFlags).where(and(
+      eq(sahlAccountFlags.tenantId, ctx.user.tenantId!),
+      lte(sahlAccountFlags.reminderDate, today)));
+  }),
+  flagGet: authedQuery
+    .input(z.object({ accountKind: z.string(), accountId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const rows = await db.select().from(sahlAccountFlags).where(and(
+        eq(sahlAccountFlags.tenantId, ctx.user.tenantId!),
+        eq(sahlAccountFlags.accountKind, input.accountKind),
+        eq(sahlAccountFlags.accountId, input.accountId)));
+      return rows[0] ?? null;
+    }),
+  flagSet: authedQuery
+    .input(z.object({
+      accountKind: z.string(), accountId: z.number(),
+      reminderDate: z.string().optional(), notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const ex = await db.select({ id: sahlAccountFlags.id }).from(sahlAccountFlags).where(and(
+        eq(sahlAccountFlags.tenantId, ctx.user.tenantId!),
+        eq(sahlAccountFlags.accountKind, input.accountKind),
+        eq(sahlAccountFlags.accountId, input.accountId)));
+      if (ex.length) {
+        await db.update(sahlAccountFlags)
+          .set({ reminderDate: input.reminderDate || null, notes: input.notes || null })
+          .where(eq(sahlAccountFlags.id, ex[0].id));
+      } else {
+        await db.insert(sahlAccountFlags).values({
+          tenantId: ctx.user.tenantId!, accountKind: input.accountKind, accountId: input.accountId,
+          reminderDate: input.reminderDate || null, notes: input.notes || null,
+        });
+      }
+      return { success: true };
+    }),
+
+  // ---- PO / quotation line detail (invoice-hub master-detail) ----
+  poDetail: authedQuery
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { purchaseOrders, purchaseOrderItems, products } = await import("@db/schema");
+      const po = await db.query.purchaseOrders.findFirst({
+        where: and(eq(purchaseOrders.id, input.id), eq(purchaseOrders.tenantId, ctx.user.tenantId!)),
+      });
+      if (!po) return null;
+      const items = await db.select({
+        description: purchaseOrderItems.description,
+        quantity: purchaseOrderItems.quantity,
+        unitPrice: purchaseOrderItems.unitPrice,
+        totalAmount: purchaseOrderItems.totalAmount,
+        productName: products.name,
+      }).from(purchaseOrderItems)
+        .leftJoin(products, eq(products.id, purchaseOrderItems.productId))
+        .where(eq(purchaseOrderItems.poId, input.id));
+      return { ...po, items };
+    }),
+  quoteDetail: authedQuery
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { salesQuotations, salesQuotationItems, products } = await import("@db/schema");
+      const q = await db.query.salesQuotations.findFirst({
+        where: and(eq(salesQuotations.id, input.id), eq(salesQuotations.tenantId, ctx.user.tenantId!)),
+      });
+      if (!q) return null;
+      const items = await db.select({
+        description: salesQuotationItems.description,
+        quantity: salesQuotationItems.quantity,
+        unitPrice: salesQuotationItems.unitPrice,
+        totalAmount: salesQuotationItems.totalAmount,
+        productName: products.name,
+      }).from(salesQuotationItems)
+        .leftJoin(products, eq(products.id, salesQuotationItems.productId))
+        .where(eq(salesQuotationItems.quotationId, input.id));
+      return { ...q, items };
     }),
 
   // ---- Users (admin only; scrypt format matches passwordLogin) ----

@@ -31,6 +31,30 @@ export default function SahlPrices() {
 
   const T = (ar: string, en: string) => (rtl ? ar : en);
   const L = (lists ?? []) as any[];
+  const [marginList, setMarginList] = useState("");
+  const [marginPct, setMarginPct] = useState("25");
+  const [marginCat, setMarginCat] = useState("");
+  const [preview, setPreview] = useState<any[] | null>(null);
+  const { data: cats } = trpc.inventory.categoryList.useQuery();
+
+  const calcMargin = () => {
+    const rows = ((products ?? []) as any[])
+      .filter((p: any) => !marginCat || String(p.categoryId) === String(marginCat))
+      .map((p: any) => {
+        const cost = Number(p.purchasePrice || 0);
+        const price = cost * (1 + (Number(marginPct) || 0) / 100);
+        return { productId: p.id, sku: p.sku, name: p.nameAr || p.name, cost, price: Math.round(price * 100) / 100 };
+      });
+    setPreview(rows);
+  };
+  const commitMargin = () => {
+    if (!marginList || !preview?.length) { setMsg(T("اختر القائمة واحسب أولاً", "Pick list and preview first")); return; }
+    bulkSet.mutate({
+      priceListId: Number(marginList),
+      items: preview.map((r) => ({ productId: r.productId, price: r.price })),
+    });
+    setPreview(null);
+  };
 
   const applyBulk = (listId: number) => {
     // lines: productId=price
@@ -95,6 +119,35 @@ export default function SahlPrices() {
           "To edit: pick list, enter price, save — overrides base price when selected at sale")}
       </div>
       <PriceEditor lists={L} products={(products ?? []).slice(0, 50)} vals={vals} setVals={setVals} setPrice={setPrice} rtl={rtl} />
+      <div className="mt-2 border border-[#333] bg-[#111] p-2">
+        <b>{T("حساب أسعار البيع: التكلفة + هامش %", "Compute prices: cost + margin %")}</b>
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          <select className={inputCls} style={{ width: 150 }} value={marginList} onChange={(e) => setMarginList(e.target.value)}>
+            <option value="">—</option>
+            {L.map((l: any) => <option key={l.id} value={l.id}>{l.nameAr || l.name}</option>)}
+          </select>
+          <select className={inputCls} style={{ width: 150 }} value={marginCat} onChange={(e) => setMarginCat(e.target.value)}>
+            <option value="">{T("كل التصنيفات", "All categories")}</option>
+            {(cats ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.nameAr || c.name}</option>)}
+          </select>
+          <input className={inputCls} style={{ width: 80 }} value={marginPct} onChange={(e) => setMarginPct(e.target.value)} placeholder="%" />
+          <button className={btnCls} onClick={calcMargin}>{T("حساب (معاينة)", "Preview")}</button>
+          <button className={btnGreenCls} style={{ background: "#0a5c2a" }} disabled={bulkSet.isPending || !preview} onClick={commitMargin}>
+            {T("حفظ", "Commit")}
+          </button>
+        </div>
+        {preview && (
+          <div className="mt-1 max-h-[140px] overflow-auto border border-[#888] text-[12px]">
+            {preview.slice(0, 100).map((r) => (
+              <div key={r.productId} className="flex justify-between border-b border-[#333] px-1 py-0.5">
+                <span>{r.sku} — {r.name}</span>
+                <span>{r.cost} → <b>{r.price}</b></span>
+              </div>
+            ))}
+            {preview.length > 100 && <div className="px-1 text-white/60">+{preview.length - 100}</div>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

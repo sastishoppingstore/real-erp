@@ -48,6 +48,7 @@ export default function SahlProducts() {
     utils.inventory.inventoryList.invalidate();
     utils.inventory.movementList.invalidate();
     utils.sahl.productUnitList.invalidate();
+    utils.sahl.barcodeList.invalidate();
   };
   const create = trpc.inventory.productCreate.useMutation({
     onSuccess: () => { setF({ ...empty }); setSel(-1); refresh(); },
@@ -144,6 +145,41 @@ export default function SahlProducts() {
   const stockFor = (pid: number) =>
     (balances ?? []).filter((b: any) => b.productId === pid).reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
 
+  const [sortKey, setSortKey] = useState<"name" | "stock" | "profit">("name");
+  const [showInactive, setShowInactive] = useState(false);
+  const [lowOnly, setLowOnly] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const { data: barcodes } = trpc.sahl.barcodeList.useQuery(
+    selProduct ? { productId: selProduct.id } : undefined, { enabled: !!selProduct });
+  const barcodeAdd = trpc.sahl.barcodeAdd.useMutation({
+    onSuccess: () => { setBarcodeInput(""); refresh(); }, onError: (e) => setErr(e.message),
+  });
+  const barcodeDel = trpc.sahl.barcodeDelete.useMutation({
+    onSuccess: () => refresh(), onError: (e) => setErr(e.message),
+  });
+  const prodDelete = trpc.sahl.productDelete.useMutation({
+    onSuccess: () => { setF({ ...empty }); setSel(-1); refresh(); }, onError: (e) => setErr(e.message),
+  });
+
+  const visible = list
+    .filter((r: any) => (showInactive ? true : r.isActive !== false))
+    .filter((r: any) => (!lowOnly || stockFor(r.id) <= Number(r.reorderLevel ?? 0)))
+    .sort((a: any, b: any) => {
+      if (sortKey === "stock") return stockFor(b.id) - stockFor(a.id);
+      if (sortKey === "profit") return (Number(b.salePrice || 0) - Number(b.purchasePrice || 0)) - (Number(a.salePrice || 0) - Number(a.purchasePrice || 0));
+      return String(a.nameAr || a.name).localeCompare(String(b.nameAr || b.name));
+    });
+
+  const doDelete = () => {
+    if (!selProduct) return;
+    if (!confirm(rtl ? `حذف الصنف ${selProduct.nameAr || selProduct.name}؟` : `Delete ${selProduct.name}?`)) return;
+    prodDelete.mutate({ id: selProduct.id });
+  };
+  const toggleActive = () => {
+    if (!selProduct) return;
+    update.mutate({ id: selProduct.id, isActive: !(selProduct.isActive ?? true) });
+  };
+
   return (
     <div className="min-h-full bg-black p-2 text-[12px] text-white">
       {/* SCR-006 workspace */}
@@ -157,6 +193,28 @@ export default function SahlProducts() {
         <button className={btnCls} onClick={() => { setF({ ...empty }); setSel(-1); setErr(""); }}>
           {rtl ? "جديد" : "New"}
         </button>
+        <button className={btnCls} disabled={!selProduct || prodDelete.isPending} onClick={doDelete}>
+          {rtl ? "حذف" : "Delete"}
+        </button>
+        <button className={btnCls} disabled={!selProduct} onClick={toggleActive}>
+          {selProduct && selProduct.isActive === false ? (rtl ? "تفعيل" : "Activate") : (rtl ? "أرشفة" : "Archive")}
+        </button>
+        <label className="flex items-center gap-1 text-[11px] text-white/70">
+          {rtl ? "ترتيب" : "Sort"}
+          <select className={inputCls} style={{ width: 110 }} value={sortKey} onChange={(e) => setSortKey(e.target.value as any)}>
+            <option value="name">{rtl ? "الاسم" : "Name"}</option>
+            <option value="stock">{rtl ? "الكمية" : "Qty"}</option>
+            <option value="profit">{rtl ? "الربح" : "Profit"}</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-1 text-[11px] text-white/70">
+          <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />
+          {rtl ? "تحت حد الطلب فقط" : "Below reorder only"}
+        </label>
+        <label className="flex items-center gap-1 text-[11px] text-white/70">
+          <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+          {rtl ? "غير المستخدمة" : "Inactive too"}
+        </label>
         <span className="text-[11px] text-white/60">{rtl ? "الأصناف" : "Items"}: {list.length}</span>
       </div>
 
@@ -165,12 +223,15 @@ export default function SahlProducts() {
           rtl ? "الكود" : "SKU", rtl ? "الصنف" : "Name", rtl ? "الوحدة" : "Unit",
           rtl ? "الشراء" : "Cost", rtl ? "البيع" : "Price", rtl ? "الرصيد" : "Stock",
         ]}
-        rows={list.map((r: any) => [
+        rows={visible.map((r: any) => [
           r.sku ?? "", r.nameAr || r.name, r.unitId ?? "",
           r.purchasePrice ?? 0, r.salePrice ?? 0, stockFor(r.id),
         ])}
-        onSelect={pick}
-        selected={sel}
+        onSelect={(i) => {
+          const r = visible[i];
+          pick(list.indexOf(r));
+        }}
+        selected={selProduct ? visible.indexOf(selProduct) : -1}
         emptyText={rtl ? "لا توجد أصناف — أنشئ صنفاً جديداً" : "No products — create one below"}
       />
 
@@ -210,6 +271,25 @@ export default function SahlProducts() {
               <SahlField label={rtl ? "الباركود" : "Barcode"}>
                 <input className={inputCls} value={f.barcode} onChange={(e) => setF({ ...f, barcode: e.target.value })} />
               </SahlField>
+              <div className="mb-1.5 border border-white/30 p-1">
+                <div className="mb-1 text-[11px] font-bold text-white">{rtl ? "باركودات إضافية" : "Extra barcodes"}</div>
+                {(barcodes ?? []).map((b: any) => (
+                  <div key={b.id} className="flex items-center justify-between py-0.5 font-mono text-[12px] text-white">
+                    <span>{b.barcode}</span>
+                    <button className="border border-white/50 px-1 text-[11px]" onClick={() => barcodeDel.mutate({ id: b.id })}>✕</button>
+                  </div>
+                ))}
+                {selProduct && (
+                  <div className="mt-1 flex gap-1">
+                    <input className={inputCls} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)}
+                      placeholder={rtl ? "باركود جديد" : "New barcode"} />
+                    <button className={btnCls} disabled={barcodeAdd.isPending}
+                      onClick={() => barcodeInput.trim() && selProduct && barcodeAdd.mutate({ productId: selProduct.id, barcode: barcodeInput.trim() })}>
+                      +
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="bg-white/10 p-2">
               <SahlField label={rtl ? "سعر الشراء" : "Cost"}>

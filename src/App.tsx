@@ -349,6 +349,7 @@ const SahlSalesAnalysis = lazy(() => import("./pages/construction/sahl/Reports")
 const SahlPurchaseAnalysis = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlPurchaseAnalysis })));
 const SahlValuation = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlValuation })));
 const SahlVault = lazy(() => import("./pages/construction/sahl/Vault").then((m) => ({ default: m.SahlVaultRoute })));
+const SahlTreasury = lazy(() => import("./pages/construction/sahl/Treasury"));
 const SahlSalesmen = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlSalesmen })));
 const SahlUsers = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlUsers })));
 const SahlPrices = lazy(() => import("./pages/construction/sahl/Prices"));
@@ -949,6 +950,7 @@ export default function App() {
         <Route path="sahl/users" element={<SahlUsers />} />
         <Route path="sahl/prices" element={<SahlPrices />} />
         <Route path="sahl/vault/:tab" element={<SahlVault />} />
+        <Route path="sahl/treasury" element={<SahlTreasury />} />
         <Route path="wbs" element={<WBSList />} />
         <Route path="wbs/new" element={<WBSCreate />} />
         <Route path="wbs/:id" element={<WBSDetail />} />

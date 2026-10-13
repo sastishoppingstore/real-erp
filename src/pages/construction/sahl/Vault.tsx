@@ -224,28 +224,98 @@ function Moves({ T }: { T: (a: string, e: string) => string }) {
   );
 }
 
-// ---- Invoice archive (number / customer / memo) ----
+// ---- Invoices hub: tabs, filters, master-detail, totals, Excel ----
+type DocTab = "sales" | "purchase" | "sales-return" | "quotations";
 function Archive({ T }: { T: (a: string, e: string) => string }) {
+  const [tab, setTab] = useState<DocTab>("sales");
   const [f, setF] = useState({ q: "", from: "", to: "" });
-  const [go, setGo] = useState(false);
-  const { data, isFetching } = trpc.sahl.archiveSearch.useQuery(
-    { q: f.q || undefined, from: f.from || undefined, to: f.to || undefined, limit: 50 },
-    { enabled: go });
-  const rows: any[] = Array.isArray(data) ? data : [];
+  const [selId, setSelId] = useState<number | null>(null);
+  const { data: invoices } = trpc.sales.invoiceList.useQuery();
+  const { data: pos } = trpc.purchase.poList.useQuery();
+  const { data: quotes } = trpc.sales.quotationList.useQuery();
+  const { data: credits } = trpc.sales.creditNoteList.useQuery();
+  const { data: saleView } = trpc.sales.invoiceGet.useQuery(
+    { id: selId ?? 0 }, { enabled: tab === "sales" && selId !== null });
+  const { data: poView } = trpc.sahl.poDetail.useQuery(
+    { id: selId ?? 0 }, { enabled: tab === "purchase" && selId !== null });
+  const { data: qView } = trpc.sahl.quoteDetail.useQuery(
+    { id: selId ?? 0 }, { enabled: tab === "quotations" && selId !== null });
+
+  const inRange = (d: any) =>
+    (!f.from || String(d ?? "") >= f.from) && (!f.to || String(d ?? "").slice(0, 10) <= f.to);
+  const matchQ = (s: string) => !f.q.trim() || s.toLowerCase().includes(f.q.trim().toLowerCase());
+
+  let headers: any[] = [];
+  if (tab === "sales") headers = (invoices ?? []).filter((i: any) => inRange(i.date) && (matchQ(i.invoiceNumber ?? "") || matchQ(i.customerName ?? "") || matchQ(i.notes ?? "")));
+  if (tab === "purchase") headers = (pos ?? []).filter((p: any) => inRange(p.date) && (matchQ(p.poNumber ?? "") || matchQ(p.notes ?? "")));
+  if (tab === "sales-return") headers = (credits ?? []).filter((c: any) => inRange(c.date) && (matchQ(c.creditNoteNumber ?? "") || matchQ(c.reason ?? "")));
+  if (tab === "quotations") headers = (quotes ?? []).filter((x: any) => inRange(x.date) && (matchQ(x.quotationNumber ?? "") || matchQ(x.notes ?? "")));
+
+  const numOf = (h: any) => h.invoiceNumber ?? h.poNumber ?? h.creditNoteNumber ?? h.quotationNumber ?? h.id;
+  const totalOf = (h: any) => Number(h.totalAmount ?? h.amount ?? 0);
+  const sum = headers.reduce((a: number, h: any) => a + totalOf(h), 0);
+
+  const detailLines: any[] =
+    tab === "sales" ? ((saleView as any)?.items ?? []).map((it: any) => ({ name: it.description, qty: it.quantity, price: it.unitPrice, total: it.totalAmount }))
+    : tab === "purchase" ? ((poView as any)?.items ?? []).map((it: any) => ({ name: it.productName || it.description, qty: it.quantity, price: it.unitPrice, total: it.totalAmount }))
+    : tab === "quotations" ? ((qView as any)?.items ?? []).map((it: any) => ({ name: it.productName || it.description, qty: it.quantity, price: it.unitPrice, total: it.totalAmount }))
+    : [];
+
+  const exportExcel = () => {
+    const rows = [
+      ["#", T("الرقم", "No."), T("التاريخ", "Date"), T("الإجمالي", "Total")],
+      ...headers.map((h: any, i: number) => [i + 1, numOf(h), String(h.date ?? "").slice(0, 10), totalOf(h).toFixed(2)]),
+      ["", "", T("المجموع", "Sum"), sum.toFixed(2)],
+    ];
+    const csv = "\uFEFF" + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `archive-${tab}-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const tabs: [DocTab, string][] = [    ["sales", T("فواتير البيع", "Sales")], ["purchase", T("فواتير الشراء", "Purchases")],
+    ["sales-return", T("مرتجع البيع", "Sales returns")], ["quotations", T("عروض الأسعار", "Quotations")],
+  ];
   return (
     <div>
+      <div className="mb-1 flex flex-wrap gap-1">
+        {tabs.map(([k, lbl]) => (
+          <button key={k} className="border border-[#555] px-3 py-1 text-white"
+            style={{ background: tab === k ? "#2fae4e" : "#222" }}
+            onClick={() => { setTab(k); setSelId(null); }}>
+            {lbl}
+          </button>
+        ))}
+      </div>
       <div className="mb-1 flex flex-wrap gap-1">
         <input className={inputCls} style={{ width: 220 }} value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })}
           placeholder={T("رقم / عميل / ملحوظة", "No. / customer / memo")} />
         <input type="date" className={inputCls} style={{ width: 150 }} value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} />
         <input type="date" className={inputCls} style={{ width: 150 }} value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} />
-        <button className={btnCls} onClick={() => setGo(true)}>{T("بحث", "Search")}</button>
+        <button className={btnCls} onClick={exportExcel}>{T("تصدير إكسل", "Export Excel")}</button>
+        <button className={btnCls} onClick={() => window.print()}>{T("طباعة", "Print")}</button>
+        <span className="border border-[#555] px-2 py-1">{T("المجموع", "Sum")}: <b>{sum.toFixed(2)}</b> ({headers.length})</span>
       </div>
       <SahlGrid
-        columns={[T("الرقم", "No."), T("التاريخ", "Date"), T("العميل", "Customer"), T("الإجمالي", "Total"), T("الحالة", "Status")]}
-        rows={rows.map((r: any) => [r.invoiceNumber, String(r.date ?? "").slice(0, 10), r.customerName ?? "", Number(r.totalAmount || 0).toFixed(2), r.status ?? ""])}
-        emptyText={isFetching ? "..." : T("ابحث في الأرشيف", "Search the archive")}
+        columns={[T("الرقم", "No."), T("التاريخ", "Date"), T("الإجمالي", "Total"), T("الحالة", "Status")]}
+        rows={headers.slice(0, 200).map((h: any) => [numOf(h), String(h.date ?? "").slice(0, 10), totalOf(h).toFixed(2), h.status ?? ""])}
+        onSelect={(i) => setSelId(headers[i]?.id ?? null)}
+        selected={selId !== null ? headers.findIndex((h: any) => h.id === selId) : -1}
+        emptyText={T("لا توجد مستندات", "No documents")}
       />
+      {selId !== null && detailLines.length > 0 && (
+        <div className="mt-1 border border-[#888] bg-white p-1 text-[12px] text-black">
+          <b>{T("عرض الأصناف", "Line items")}</b>
+          {detailLines.map((l: any, i: number) => (
+            <div key={i} className="flex justify-between border-b border-[#eee] px-1 py-0.5">
+              <span>{l.name}</span>
+              <span>{Number(l.qty || 0)} × {Number(l.price || 0)} = {Number(l.total || 0).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

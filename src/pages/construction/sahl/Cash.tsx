@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { inputCls, btnCls, SahlGrid } from "./ui";
@@ -10,7 +11,12 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
   const { language } = useLanguage();
   const rtl = language === "ar";
   const utils = trpc.useUtils();
-  const [f, setF] = useState({ amount: "", description: "", category: "", method: "cash", ref: "", project: "", accountId: "", accountKind: "customer" });
+  const [params] = useSearchParams();
+  const [f, setF] = useState({
+    amount: "", description: "", category: "", method: "cash", ref: "", project: "",
+    accountId: params.get("accountId") ?? "",
+    accountKind: params.get("kind") === "supplier" ? "supplier" : "customer",
+  });
   const [msg, setMsg] = useState("");
   const [autoPrint, setAutoPrint] = useState(false);
   const lastStay = useRef(false);

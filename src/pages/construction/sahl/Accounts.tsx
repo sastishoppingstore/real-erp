@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import {
@@ -10,6 +11,7 @@ import {
 export default function SahlAccounts() {
   const { language } = useLanguage();
   const rtl = language === "ar";
+  const navigate = useNavigate();
   const utils = trpc.useUtils();
   const [kind, setKind] = useState<"customer" | "supplier">("customer");
   const [q, setQ] = useState("");
@@ -23,6 +25,9 @@ export default function SahlAccounts() {
   const { data: customers } = trpc.sales.customerList.useQuery(q && kind === "customer" ? { search: q } : undefined);
   const { data: suppliers } = trpc.purchase.supplierList.useQuery(q && kind === "supplier" ? { search: q } : undefined);
   const list = (kind === "customer" ? customers : suppliers) ?? [];
+  const { data: dueFlags } = trpc.sahl.flagDue.useQuery(undefined, { enabled: remindOnly });
+  const dueIds = new Set(((dueFlags ?? []) as any[]).filter((x: any) => x.accountKind === kind).map((x: any) => x.accountId));
+  const shownList = remindOnly ? list.filter((r: any) => dueIds.has(r.id)) : list;
   const selRow: any = sel >= 0 ? list[sel] : null;
 
   const { data: custInvoices } = trpc.sales.invoiceList.useQuery(
@@ -39,7 +44,27 @@ export default function SahlAccounts() {
     utils.purchase.supplierList.invalidate();
     utils.sales.invoiceList.invalidate();
     utils.sales.paymentList.invalidate();
+    utils.sahl.flagGet.invalidate();
   };
+  const { data: allCustomers } = trpc.sales.customerList.useQuery();
+  const { data: allSuppliers } = trpc.purchase.supplierList.useQuery();
+  const [remindOnly, setRemindOnly] = useState(false);
+  const [itemized, setItemized] = useState(false);
+  const [reminderDate, setReminderDate] = useState("");
+  const { data: flag } = trpc.sahl.flagGet.useQuery(
+    selRow ? { accountKind: kind, accountId: selRow.id } : { accountKind: kind, accountId: 0 },
+    { enabled: !!selRow });
+  const { data: itemizedRows } = trpc.sahl.itemizedStatement.useQuery(
+    selRow && kind === "customer" && itemized ? { customerId: selRow.id, limit: 200 } : { customerId: 0 },
+    { enabled: !!selRow && kind === "customer" && itemized });
+  const flagSave = trpc.sahl.flagSet.useMutation({
+    onSuccess: () => { setReminderDate(""); utils.sahl.flagGet.invalidate(); },
+    onError: (e) => setErr(e.message),
+  });
+
+  const totalDr = (allCustomers ?? []).reduce((a: number, c: any) => a + Math.max(0, Number(c.openingBalance || 0)), 0);
+  const totalCr = (allSuppliers ?? []).reduce((a: number, s: any) => a + Math.abs(Math.min(0, Number(s.openingBalance || 0))), 0)
+    + (allCustomers ?? []).reduce((a: number, c: any) => a + Math.abs(Math.min(0, Number(c.openingBalance || 0))), 0);
   const createCustomer = trpc.sales.customerCreate.useMutation({
     onSuccess: () => { reset(); refresh(); }, onError: (e) => setErr(e.message),
   });
@@ -135,6 +160,14 @@ export default function SahlAccounts() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={rtl ? "بحث" : "Search"}
           className={inputCls} style={{ width: 200 }} />
         <button className={btnCls} onClick={reset}>{rtl ? "جديد" : "New"}</button>
+        <span className="border border-[#555] px-1 text-[11px] text-white/80">
+          {rtl ? "مدينة" : "Dr"}: <b className="text-white">{totalDr.toFixed(0)}</b> ·
+          {rtl ? " دائنة" : " Cr"}: <b className="text-white">{totalCr.toFixed(0)}</b>
+        </span>
+        <label className="flex items-center gap-1 text-[11px] text-white/70">
+          <input type="checkbox" checked={remindOnly} onChange={(e) => setRemindOnly(e.target.checked)} />
+          {rtl ? "تحت المراجعة فقط" : "Due review only"}
+        </label>
         {balance !== null && (
           <span className="text-[11px] text-white/70">{rtl ? "الرصيد" : "Balance"}: <b className="text-white">{balance.toFixed(2)}</b></span>
         )}
@@ -142,9 +175,12 @@ export default function SahlAccounts() {
 
       <SahlGrid
         columns={[rtl ? "الاسم" : "Name", rtl ? "الهاتف" : "Phone", rtl ? "الضريبي" : "Tax No"]}
-        rows={list.map((r: any) => [r.nameAr || r.name, r.phone ?? r.mobile ?? "", r.taxNumber ?? r.vatNumber ?? ""])}
-        onSelect={pick}
-        selected={sel}
+        rows={shownList.map((r: any) => [r.nameAr || r.name, r.phone ?? r.mobile ?? "", r.taxNumber ?? r.vatNumber ?? ""])}
+        onSelect={(i) => {
+          const r = shownList[i];
+          pick(list.indexOf(r));
+        }}
+        selected={selRow ? shownList.indexOf(selRow) : -1}
         emptyText={rtl ? "لا توجد حسابات" : "No accounts"}
       />
 
@@ -212,15 +248,51 @@ export default function SahlAccounts() {
           </div>
           {kind === "customer" && selRow && (
             <div className="mt-2 bg-white p-2 text-[12px] text-black">
-              <b>{rtl ? "كشف حساب" : "Statement"} — {(custInvoices ?? []).length} {rtl ? "فواتير" : "invoices"} · {(custPayments ?? []).length} {rtl ? "مدفوعات" : "payments"}</b>
-              <div className="mt-1 max-h-[120px] overflow-auto border border-[#888]">
-                {(custInvoices ?? []).slice(0, 20).map((i: any) => (
-                  <div key={i.id} className="flex justify-between border-b border-[#eee] px-1 py-0.5">
-                    <span>{i.invoiceNumber} · {String(i.date ?? "").slice(0, 10)}</span>
-                    <span>{Number(i.totalAmount || 0).toFixed(2)} / {rtl ? "المتبقي" : "due"} {Number(i.balanceDue || 0).toFixed(2)}</span>
-                  </div>
-                ))}
+              <div className="mb-1 flex flex-wrap items-center gap-1">
+                <b>{rtl ? "كشف حساب" : "Statement"} — {(custInvoices ?? []).length} {rtl ? "فواتير" : "invoices"} · {(custPayments ?? []).length} {rtl ? "مدفوعات" : "payments"}</b>
+                <button className={btnCls} onClick={() => setItemized((v) => !v)}>
+                  {itemized ? (rtl ? "إجمالي" : "Summary") : (rtl ? "بالأصناف" : "Itemized")}
+                </button>
+                <button className={btnCls} onClick={() => navigate(`/app/construction/sahl/receipts?accountId=${selRow.id}`)}>
+                  {rtl ? "قبض" : "Receipt"}
+                </button>
               </div>
+              {itemized ? (
+                <div className="mt-1 max-h-[140px] overflow-auto border border-[#888]">
+                  {((itemizedRows ?? []) as any[]).map((r: any, i: number) => (
+                    <div key={i} className="flex justify-between border-b border-[#eee] px-1 py-0.5">
+                      <span>{String(r.date ?? "").slice(0, 10)} · {r.invoiceNumber} · {r.productName ?? ""}</span>
+                      <span>{Number(r.quantity || 0)} × {Number(r.unitPrice || 0)} = {Number(r.totalAmount || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-1 max-h-[120px] overflow-auto border border-[#888]">
+                  {(custInvoices ?? []).slice(0, 20).map((i: any) => (
+                    <div key={i.id} className="flex justify-between border-b border-[#eee] px-1 py-0.5">
+                      <span>{i.invoiceNumber} · {String(i.date ?? "").slice(0, 10)}</span>
+                      <span>{Number(i.totalAmount || 0).toFixed(2)} / {rtl ? "المتبقي" : "due"} {Number(i.balanceDue || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mt-1 flex flex-wrap items-center gap-1 border-t border-[#888] pt-1">
+                <span>{rtl ? "ذكرني بالمراجعة" : "Review on"}</span>
+                <input type="date" className={inputCls} style={{ width: 140 }}
+                  value={reminderDate || (flag as any)?.reminderDate || ""}
+                  onChange={(e) => setReminderDate(e.target.value)} />
+                <button className={btnCls} disabled={!reminderDate}
+                  onClick={() => flagSave.mutate({ accountKind: kind, accountId: selRow.id, reminderDate })}>
+                  {rtl ? "تذكير" : "Remind"}
+                </button>
+              </div>
+            </div>
+          )}
+          {kind === "supplier" && selRow && (
+            <div className="mt-2 bg-white p-2 text-[12px] text-black">
+              <button className={btnCls} onClick={() => navigate(`/app/construction/sahl/cash?accountId=${selRow.id}&kind=supplier`)}>
+                {rtl ? "صرف" : "Pay"}
+              </button>
             </div>
           )}
         </GreenDialog>

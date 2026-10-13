@@ -98,7 +98,7 @@ export default function ConstructionDashboard() {
   const topTiles: Tile[] = [
     { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/sahl/reports/daily", color: C.green },
     { label: "Invoices", labelAr: "الفواتير", icon: Receipt, path: "/app/construction/sahl/sales", color: C.green },
-    { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/sahl/cash", color: C.green },
+    { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/sahl/treasury", color: C.green },
     { label: "Accounts", labelAr: "الحسابات", icon: Users, path: "/app/construction/sahl/accounts", color: C.green },
     { label: "Goods", labelAr: "البضاعة", icon: Package, path: "/app/construction/sahl/products", color: C.green },
   ];
@@ -143,6 +143,7 @@ export default function ConstructionDashboard() {
     { label: "Barcode", labelAr: "الباركود", icon: Tags, path: "/app/construction/sahl/vault/labels", color: C.green },
     { label: "Prints", labelAr: "الطباعة", icon: FileText, path: "/app/construction/sahl/vault/prints", color: C.blue },
     { label: "Valuation", labelAr: "التقييم", icon: Calculator, path: "/app/construction/sahl/reports/stock", color: C.green },
+    { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/sahl/treasury", color: C.teal },
   ];
 
   const SahlTile = ({ t, h }: { t: Tile; h: number }) => (

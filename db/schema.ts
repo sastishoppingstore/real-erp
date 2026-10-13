@@ -7716,3 +7716,25 @@ export const sahlProductUnits = mysqlTable("sahl_product_units", {
 });
 
 export type SahlProductUnit = typeof sahlProductUnits.$inferSelect;
+
+export const sahlBarcodes = mysqlTable("sahl_barcodes", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+  barcode: varchar("barcode", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SahlBarcode = typeof sahlBarcodes.$inferSelect;
+
+export const sahlAccountFlags = mysqlTable("sahl_account_flags", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  accountKind: varchar("account_kind", { length: 20 }).default("customer").notNull(),
+  accountId: bigint("account_id", { mode: "number", unsigned: true }).notNull(),
+  reminderDate: date("reminder_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SahlAccountFlag = typeof sahlAccountFlags.$inferSelect;

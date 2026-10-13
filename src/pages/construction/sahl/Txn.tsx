@@ -13,7 +13,7 @@ import { inputCls, btnCls, FuncKey } from "./ui";
 // purchase-return|quotation. All saves hit real MySQL tRPC mutations.
 export type TxnKind = "sales" | "purchase" | "sales-return" | "purchase-return" | "quotation";
 
-interface Line { productId?: number; code: string; name: string; unit: string; qty: number; price: number; disc: number; }
+interface Line { productId?: number; code: string; name: string; unit: string; qty: number; price: number; disc: number; cost: number; }
 
 const TITLES: Record<TxnKind, { ar: string; en: string; color: string }> = {
   sales: { ar: "فاتورة بيع", en: "Sales invoice", color: "#2fae4e" },
@@ -122,6 +122,22 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   });
   const [showLookup, setShowLookup] = useState(false);
   const [showOpts, setShowOpts] = useState(false);
+  const [discPct, setDiscPct] = useState("");
+  // In-screen POS settings (yellow box): supermarket auto-add + duplicate rows
+  const [autoAdd, setAutoAdd] = useState(() => {
+    try { return localStorage.getItem("sahl-autoad") === "1"; } catch { return false; }
+  });
+  const [allowDup, setAllowDup] = useState(() => {
+    try { return localStorage.getItem("sahl-allowdup") !== "0"; } catch { return true; }
+  });
+  const setAuto = (v: boolean) => {
+    setAutoAdd(v);
+    try { localStorage.setItem("sahl-autoad", v ? "1" : "0"); } catch { /* ignore */ }
+  };
+  const setDup = (v: boolean) => {
+    setAllowDup(v);
+    try { localStorage.setItem("sahl-allowdup", v ? "1" : "0"); } catch { /* ignore */ }
+  };
   // view mode: loaded read-only invoice via « »
   const [viewId, setViewId] = useState<number | null>(null);
   const [viewNav, setViewNav] = useState(0);
@@ -218,13 +234,46 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     setPartyId(""); setPartyQ(""); resetCd();
   };
 
-  // Step 1 -> 2: pick item, default qty/price, focus qty
+  // Step 1 -> 2: pick item, default qty/price, focus qty.
+  // Supermarket mode: choosing adds immediately with qty 1 (rescan increments).
   const chooseItem = (p: any) => {
+    if (autoAdd && viewId === null && (kind === "sales" || kind === "purchase")) {
+      fastAdd(p, 1);
+      return;
+    }
     setActiveItem(p);
     setQ(p.nameAr || p.name);
     setQtyInput("1");
     setPriceInput("");
     setTimeout(() => { qtyRef.current?.focus(); qtyRef.current?.select(); }, 0);
+  };
+
+  const fastAdd = async (p: any, qn: number) => {
+    if (!allowDup) {
+      const idx = lines.findIndex((l) => l.productId === p.id && l.price === Number(p.salePrice ?? p.purchasePrice ?? 0));
+      if (idx >= 0) {
+        setLines(lines.map((l, i) => (i === idx ? { ...l, qty: l.qty + qn } : l)));
+        setQ("");
+        searchRef.current?.focus();
+        return;
+      }
+    }
+    let price = Number(p.salePrice ?? p.purchasePrice ?? 0);
+    if (priceListId && kind === "sales") {
+      try {
+        const rows: any = await utils.sahl.priceFor.fetch({ productId: p.id });
+        const hit = (rows ?? []).find((r: any) => String(r.id) === String(priceListId));
+        if (hit && hit.price !== null && Number(hit.price) >= 0) price = Number(hit.price);
+      } catch { /* keep base price */ }
+    }
+    const autoDisc = Number(p.fixedDiscount ?? 0);
+    setLines([...lines, {
+      productId: p.id, code: p.sku ?? "", name: p.nameAr || p.name,
+      unit: p.unitName ?? "", qty: qn, price, disc: autoDisc > 0 ? autoDisc * qn : 0,
+      cost: Number(p.purchasePrice ?? 0),
+    }]);
+    setQ("");
+    searchRef.current?.focus();
   };
 
   // Step 2 -> 3 (Enter in qty) and Step 3 -> add (Enter in price)
@@ -251,10 +300,14 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     setLines([...lines, {
       productId: p.id, code: p.sku ?? "", name: p.nameAr || p.name,
       unit: p.unitName ?? "", qty: qn, price, disc: autoDisc > 0 ? autoDisc * qn : 0,
+      cost: Number(p.purchasePrice ?? 0),
     }]);
     setQ(""); setQtyInput("1"); setPriceInput(""); setActiveItem(null);
     searchRef.current?.focus();
   };
+
+  const totalCost = lines.reduce((a, l) => a + l.qty * (l.cost || 0), 0);
+  const profit = net - totalCost;
 
   const addLine = async (p: any) => {
     if (viewId !== null) return;
@@ -627,6 +680,13 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                 className={`${inputCls} text-center font-bold`} />
             </label>
             <button className={btnCls} onClick={commitLine}>{T("4. أضف", "4. Add")}</button>
+            <label className="flex items-center gap-1 border border-yellow-600 bg-[#fff8e1] px-1 py-0.5 text-[11px] text-black" title={T("إعدادات", "Settings")}>
+              ⚙
+              <input type="checkbox" checked={autoAdd} onChange={(e) => setAuto(e.target.checked)} />
+              {T("إضافة تلقائية", "Auto-add")}
+              <input type="checkbox" checked={allowDup} onChange={(e) => setDup(e.target.checked)} />
+              {T("تكرار الصنف", "Dup rows")}
+            </label>
             {results.length > 0 && !activeItem && (
               <div className="absolute start-0 top-full z-10 w-[340px] border border-black bg-white">
                 {results.map((p: any) => (
@@ -746,6 +806,11 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             </label>
           )}
           <b>{T("الصافي", "Net")}: {grand.toFixed(2)}</b>
+          {kind === "sales" && (
+            <span className="border border-white/40 px-1" title={T("مكسب الفاتورة = الصافي − التكلفة", "Invoice profit = net − COGS")}>
+              {T("مكسب", "Profit")}: <b className="tabular-nums">{profit.toFixed(2)}</b>
+            </span>
+          )}
           <button className={btnCls} onClick={() => save(false, false)} disabled={saving || viewId !== null}>{T("حفظ (F9)", "Save (F9)")}</button>
           <button className={btnCls} onClick={() => setSettleOpen(true)} disabled={!lines.length}>{T("سداد (F11)", "Settle (F11)")}</button>
           <button className={btnCls} onClick={doPrint}>{T("طباعة", "Print")}</button>
@@ -804,7 +869,18 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         </div>
         {showOpts && (
           <div className="flex flex-col gap-1 border border-[#888] bg-white p-1 text-[11px]">
-            <button className={btnCls} onClick={applyLineDisc}>{T("خصم سطر", "Line discount")}</button>
+            <button className={btnCls} onClick={applyLineDisc}>{T("خصم سطر (قيمة)", "Line disc (value)")}</button>
+            <span className="flex gap-1">
+              <input className={inputCls} style={{ width: 70 }} value={discPct}
+                onChange={(e) => setDiscPct(e.target.value)} placeholder="%" />
+              <button className={btnCls} onClick={() => {
+                const pc = Number(discPct);
+                if (pc >= 0 && pc <= 100) {
+                  setLines(lines.map((l, i) => (i === sel ? { ...l, disc: (l.qty * l.price * pc) / 100 } : l)));
+                }
+                setDiscPct(""); setShowOpts(false);
+              }}>{T("خصم %", "Disc %")}</button>
+            </span>
             <button className={btnCls} onClick={() => { setLines([]); setShowOpts(false); }}>{T("مسح الكل", "Clear all")}</button>
             <button className={btnCls} onClick={() => setShowOpts(false)}>{T("إغلاق", "Close")}</button>
           </div>

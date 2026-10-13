@@ -147,7 +147,7 @@ export const cashboxRouter = createRouter({
         description: `Expense: ${input.description}`,
         balanceBefore: String(prevBal),
         balanceAfter: String(prevBal - amount),
-        notes: input.notes,
+        notes: [input.category ? `بند:${input.category}` : "", input.notes || ""].filter(Boolean).join(" — ") || undefined,
         status: "completed",
       }).$returningId();
       return { id, transactionNumber: txNum, success: true };
