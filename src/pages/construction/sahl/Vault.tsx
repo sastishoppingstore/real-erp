@@ -202,24 +202,37 @@ function Transfer({ T }: { T: (a: string, e: string) => string }) {
 function Moves({ T }: { T: (a: string, e: string) => string }) {
   const [q, setQ] = useState("");
   const [pid, setPid] = useState("");
+  const [serial, setSerial] = useState("");
   const { data: products } = trpc.inventory.productList.useQuery(q ? { search: q } : undefined);
   const { data: moves } = trpc.inventory.movementList.useQuery(
     pid ? { productId: Number(pid) } : undefined, { enabled: !!pid });
+  const { data: serials } = trpc.sahl.serialHistory.useQuery(
+    serial.trim() ? { q: serial.trim() } : undefined, { enabled: serial.trim().length > 0 });
   return (
     <div>
-      <div className="mb-1 flex gap-1">
+      <div className="mb-1 flex flex-wrap gap-1">
         <input className={inputCls} style={{ width: 200 }} value={q} onChange={(e) => setQ(e.target.value)}
           placeholder={T("بحث صنف", "Search item")} />
         <select className={inputCls} style={{ width: 260 }} value={pid} onChange={(e) => setPid(e.target.value)}>
           <option value="">—</option>
           {(products ?? []).slice(0, 20).map((p: any) => <option key={p.id} value={p.id}>{p.sku} — {p.nameAr || p.name}</option>)}
         </select>
+        <input className={inputCls} style={{ width: 180 }} value={serial} onChange={(e) => setSerial(e.target.value)}
+          placeholder={T("بحث سيريال", "Serial search")} />
       </div>
-      <SahlGrid
-        columns={[T("التاريخ", "Date"), T("النوع", "Type"), T("المرجع", "Ref"), T("الكمية", "Qty")]}
-        rows={(moves ?? []).slice(0, 100).map((m: any) => [String(m.createdAt ?? "").slice(0, 10), m.movementType, `${m.reference ?? ""}#${m.referenceId ?? ""}`, Number(m.quantity || 0)])}
-        emptyText={T("اختر صنفاً", "Pick a product")}
-      />
+      {serial.trim() ? (
+        <SahlGrid
+          columns={[T("السيريال", "Serial"), T("الصنف", "Item"), T("الحالة", "Status"), T("الفاتورة", "Invoice"), T("العميل", "Customer")]}
+          rows={(serials ?? []).map((s: any) => [s.serial, s.productName ?? "", s.status, s.invoiceNumber ?? "", s.customerName ?? ""])}
+          emptyText={T("لا نتائج", "No results")}
+        />
+      ) : (
+        <SahlGrid
+          columns={[T("التاريخ", "Date"), T("النوع", "Type"), T("المرجع", "Ref"), T("الكمية", "Qty")]}
+          rows={(moves ?? []).slice(0, 100).map((m: any) => [String(m.createdAt ?? "").slice(0, 10), m.movementType, `${m.reference ?? ""}#${m.referenceId ?? ""}`, Number(m.quantity || 0)])}
+          emptyText={T("اختر صنفاً", "Pick a product")}
+        />
+      )}
     </div>
   );
 }
@@ -384,7 +397,7 @@ function Cheques({ T }: { T: (a: string, e: string) => string }) {
 function Inst({ T }: { T: (a: string, e: string) => string }) {
   const utils = trpc.useUtils();
   const { msg, setMsg } = useMsg();
-  const [f, setF] = useState({ customerId: "", totalAmount: "", count: "3", startDate: new Date().toISOString().slice(0, 10) });
+  const [f, setF] = useState({ customerId: "", totalAmount: "", count: "3", startDate: new Date().toISOString().slice(0, 10), profit: "0" });
   const [sel, setSel] = useState("");
   const { data: list } = trpc.installments.list.useQuery({ limit: 20 });
   const { data: customers } = trpc.sales.customerList.useQuery();
@@ -412,10 +425,11 @@ function Inst({ T }: { T: (a: string, e: string) => string }) {
         </select>
         <input type="number" min="0" className={inputCls} style={{ width: 110 }} value={f.totalAmount} onChange={(e) => setF({ ...f, totalAmount: e.target.value })} placeholder={T("الإجمالي", "Total")} />
         <input type="number" min="1" className={inputCls} style={{ width: 70 }} value={f.count} onChange={(e) => setF({ ...f, count: e.target.value })} placeholder={T("العدد", "#")} />
+        <input type="number" min="0" className={inputCls} style={{ width: 80 }} value={f.profit} onChange={(e) => setF({ ...f, profit: e.target.value })} placeholder={T("الربح %", "Profit %")} />
         <input type="date" className={inputCls} style={{ width: 150 }} value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} />
         <button className={btnGreenCls} style={{ background: "#0a5c2a" }} disabled={create.isPending}
           onClick={() => f.customerId && Number(f.totalAmount) > 0 && Number(f.count) > 0
-            ? create.mutate({ customerId: Number(f.customerId), totalAmount: String(f.totalAmount), numberOfInstallments: Number(f.count), startDate: f.startDate })
+            ? create.mutate({ customerId: Number(f.customerId), totalAmount: String(f.totalAmount), numberOfInstallments: Number(f.count), profitPercent: Number(f.profit) || 0, startDate: f.startDate })
             : setMsg(T("أكمل الحقول", "Fill fields"))}>
           {T("إنشاء", "Create")}
         </button>

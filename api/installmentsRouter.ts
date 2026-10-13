@@ -70,6 +70,7 @@ export const installmentsRouter = createRouter({
       totalAmount: z.string(),
       downPayment: z.string().default("0"),
       numberOfInstallments: z.number(),
+      profitPercent: z.number().min(0).max(100).default(0),
       installmentType: z.enum(["weekly", "biweekly", "monthly", "quarterly", "custom"]).default("monthly"),
       intervalDays: z.number().default(30),
       startDate: z.string(),
@@ -80,7 +81,8 @@ export const installmentsRouter = createRouter({
       const total = Number(input.totalAmount);
       const downPayment = Number(input.downPayment);
       const financed = total - downPayment;
-      const installmentAmount = financed / input.numberOfInstallments;
+      const withProfit = financed * (1 + (Number(input.profitPercent) || 0) / 100);
+      const installmentAmount = withProfit / input.numberOfInstallments;
       const installmentNumber = `INST-${Date.now()}`;
 
       const endDate = new Date(input.startDate);
@@ -94,7 +96,8 @@ export const installmentsRouter = createRouter({
         invoiceId: input.invoiceId,
         totalAmount: String(total),
         downPayment: String(downPayment),
-        financedAmount: String(financed),
+        financedAmount: String(withProfit),
+        profitPercent: String(Number(input.profitPercent) || 0),
         numberOfInstallments: input.numberOfInstallments,
         installmentAmount: String(installmentAmount),
         installmentType: input.installmentType,
@@ -102,7 +105,7 @@ export const installmentsRouter = createRouter({
         startDate: input.startDate,
         endDate: endDate.toISOString().split("T")[0],
         totalPaid: String(downPayment),
-        remainingAmount: String(financed),
+        remainingAmount: String(withProfit),
         status: "active",
         notes: input.notes,
       }).$returningId();

@@ -1953,6 +1953,7 @@ export const installments = mysqlTable("installments", {
   totalAmount: decimal("total_amount", { precision: 18, scale: 4 }).notNull(),
   downPayment: decimal("down_payment", { precision: 18, scale: 4 }).default("0").notNull(),
   financedAmount: decimal("financed_amount", { precision: 18, scale: 4 }).notNull(),
+  profitPercent: decimal("profit_percent", { precision: 5, scale: 2 }).default("0"),
   numberOfInstallments: int("number_of_installments").notNull(),
   installmentAmount: decimal("installment_amount", { precision: 18, scale: 4 }).notNull(),
   installmentType: mysqlEnum("installment_type", ["weekly", "biweekly", "monthly", "quarterly", "custom"]).default("monthly").notNull(),
@@ -7738,3 +7739,42 @@ export const sahlAccountFlags = mysqlTable("sahl_account_flags", {
 });
 
 export type SahlAccountFlag = typeof sahlAccountFlags.$inferSelect;
+
+export const sahlSettings = mysqlTable("sahl_settings", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  key: varchar("key", { length: 100 }).notNull(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const sahlSerials = mysqlTable("sahl_serials", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+  serial: varchar("serial", { length: 255 }).notNull(),
+  status: mysqlEnum("status", ["in_stock", "sold", "returned"]).default("in_stock").notNull(),
+  purchaseRef: varchar("purchase_ref", { length: 100 }),
+  saleInvoiceId: bigint("sale_invoice_id", { mode: "number", unsigned: true }),
+  customerId: bigint("customer_id", { mode: "number", unsigned: true }),
+  warrantyMonths: int("warranty_months").default(12),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SahlSerial = typeof sahlSerials.$inferSelect;
+
+export const sahlShifts = mysqlTable("sahl_shifts", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  userId: bigint("user_id", { mode: "number", unsigned: true }),
+  openedAt: timestamp("opened_at").defaultNow().notNull(),
+  closedAt: timestamp("closed_at"),
+  openingBalance: decimal("opening_balance", { precision: 18, scale: 4 }).default("0").notNull(),
+  closingCounted: decimal("closing_counted", { precision: 18, scale: 4 }),
+  daySales: decimal("day_sales", { precision: 18, scale: 4 }).default("0"),
+  dayExpenses: decimal("day_expenses", { precision: 18, scale: 4 }).default("0"),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
+});
+
+export type SahlShift = typeof sahlShifts.$inferSelect;

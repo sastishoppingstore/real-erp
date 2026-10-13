@@ -351,6 +351,9 @@ const SahlValuation = lazy(() => import("./pages/construction/sahl/Reports").the
 const SahlVault = lazy(() => import("./pages/construction/sahl/Vault").then((m) => ({ default: m.SahlVaultRoute })));
 const SahlTreasury = lazy(() => import("./pages/construction/sahl/Treasury"));
 const SahlPrints = lazy(() => import("./pages/construction/sahl/Prints"));
+const SahlLogin = lazy(() => import("./pages/construction/sahl/Login"));
+const SahlAdmin = lazy(() => import("./pages/construction/sahl/Admin"));
+const SahlMoreReports = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlMoreReports })));
 const SahlSalesmen = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlSalesmen })));
 const SahlUsers = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlUsers })));
 const SahlPrices = lazy(() => import("./pages/construction/sahl/Prices"));
@@ -526,6 +529,7 @@ export default function App() {
       {/* Public landing page */}
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/sahl-login" element={<SahlLogin />} />
       <Route path="/register" element={<RegisterBusiness />} />
       <Route path="/company-onboarding" element={<CompanyOnboarding />} />
       <Route path="/verify-otp" element={<VerifyOtp />} />
@@ -953,6 +957,8 @@ export default function App() {
         <Route path="sahl/vault/:tab" element={<SahlVault />} />
         <Route path="sahl/treasury" element={<SahlTreasury />} />
         <Route path="sahl/prints" element={<SahlPrints />} />
+        <Route path="sahl/admin" element={<SahlAdmin />} />
+        <Route path="sahl/reports/more" element={<SahlMoreReports />} />
         <Route path="wbs" element={<WBSList />} />
         <Route path="wbs/new" element={<WBSCreate />} />
         <Route path="wbs/:id" element={<WBSDetail />} />

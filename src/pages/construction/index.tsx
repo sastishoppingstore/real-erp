@@ -144,6 +144,8 @@ export default function ConstructionDashboard() {
     { label: "Prints", labelAr: "الطباعة", icon: FileText, path: "/app/construction/sahl/prints", color: C.blue },
     { label: "Valuation", labelAr: "التقييم", icon: Calculator, path: "/app/construction/sahl/reports/stock", color: C.green },
     { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/sahl/treasury", color: C.teal },
+    { label: "Admin", labelAr: "الإدارة", icon: Settings, path: "/app/construction/sahl/admin", color: C.navy },
+    { label: "More reports", labelAr: "تقارير أخرى", icon: FileBarChart, path: "/app/construction/sahl/reports/more", color: C.blue },
   ];
 
   const SahlTile = ({ t, h }: { t: Tile; h: number }) => (

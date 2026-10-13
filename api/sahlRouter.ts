@@ -18,6 +18,9 @@ import {
   sahlCheques,
   sahlBarcodes,
   sahlAccountFlags,
+  sahlSettings,
+  sahlSerials,
+  sahlShifts,
 } from "@db/schema";
 import { eq, and, like, desc, or, gte, lte, sql } from "drizzle-orm";
 
@@ -379,6 +382,7 @@ export const sahlRouter = createRouter({
         fixedDiscount: (products as any).fixedDiscount,
         taxRate: products.taxRate, isActive: products.isActive,
         unitName: units.name,
+        isSerialTracked: (products as any).isSerialTracked,
       }).from(products)
         .leftJoin(units, eq(units.id, (products as any).unitId))
         .where(and(
@@ -663,6 +667,232 @@ export const sahlRouter = createRouter({
         .leftJoin(products, eq(products.id, salesQuotationItems.productId))
         .where(eq(salesQuotationItems.quotationId, input.id));
       return { ...q, items };
+    }),
+
+  // ---- Supervisor passcode (verified server-side with scrypt) ----
+  supervisorSet: adminQuery
+    .input(z.object({ password: z.string().min(4) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const salt = crypto.randomBytes(16).toString("hex");
+      const hash = crypto.scryptSync(input.password, salt, 64).toString("hex");
+      const ex = await db.select({ id: sahlSettings.id }).from(sahlSettings).where(and(
+        eq(sahlSettings.tenantId, ctx.user.tenantId!), eq(sahlSettings.key, "supervisor_pin")));
+      if (ex.length) {
+        await db.update(sahlSettings).set({ value: `scrypt$${salt}$${hash}` }).where(eq(sahlSettings.id, ex[0].id));
+      } else {
+        await db.insert(sahlSettings).values({
+          tenantId: ctx.user.tenantId!, key: "supervisor_pin", value: `scrypt$${salt}$${hash}`,
+        });
+      }
+      return { success: true };
+    }),
+  supervisorHas: authedQuery.query(async ({ ctx }) => {
+    const db = getDb();
+    const rows = await db.select({ id: sahlSettings.id }).from(sahlSettings).where(and(
+      eq(sahlSettings.tenantId, ctx.user.tenantId!), eq(sahlSettings.key, "supervisor_pin"))).limit(1);
+    return { set: rows.length > 0 };
+  }),
+  supervisorVerify: authedQuery
+    .input(z.object({ password: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const rows = await db.select().from(sahlSettings).where(and(
+        eq(sahlSettings.tenantId, ctx.user.tenantId!), eq(sahlSettings.key, "supervisor_pin"))).limit(1);
+      if (!rows.length || !rows[0].value) throw new Error("No supervisor passcode set");
+      const [, salt, hash] = String(rows[0].value).split("$");
+      const candidate = crypto.scryptSync(input.password, salt, 64).toString("hex");
+      if (candidate !== hash) throw new Error("Wrong passcode");
+      return { ok: true };
+    }),
+
+  // ---- Serial tracking (per-unit receive/issue/history) ----
+  serialReceive: authedQuery
+    .input(z.object({
+      productId: z.number(), serials: z.array(z.string().min(1)).min(1).max(200),
+      purchaseRef: z.string().optional(), warrantyMonths: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      let added = 0;
+      for (const s of input.serials.map((x) => x.trim()).filter(Boolean)) {
+        const ex = await db.select({ id: sahlSerials.id }).from(sahlSerials).where(and(
+          eq(sahlSerials.tenantId, ctx.user.tenantId!), eq(sahlSerials.serial, s))).limit(1);
+        if (ex.length) {
+          await db.update(sahlSerials).set({
+            status: "in_stock", productId: input.productId,
+            purchaseRef: input.purchaseRef || null, saleInvoiceId: null, customerId: null,
+          }).where(eq(sahlSerials.id, ex[0].id));
+        } else {
+          await db.insert(sahlSerials).values({
+            tenantId: ctx.user.tenantId!, productId: input.productId, serial: s,
+            status: "in_stock", purchaseRef: input.purchaseRef || null,
+            warrantyMonths: input.warrantyMonths ?? 12,
+          });
+          added++;
+        }
+      }
+      return { success: true, added };
+    }),
+  serialIssue: authedQuery
+    .input(z.object({
+      productId: z.number(), serials: z.array(z.string().min(1)).min(1).max(200),
+      invoiceId: z.number().optional(), customerId: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      for (const s of input.serials.map((x) => x.trim()).filter(Boolean)) {
+        const ex = await db.select().from(sahlSerials).where(and(
+          eq(sahlSerials.tenantId, ctx.user.tenantId!), eq(sahlSerials.serial, s))).limit(1);
+        if (!ex.length || ex[0].status !== "in_stock" || ex[0].productId !== input.productId) {
+          throw new Error(`Serial not in stock: ${s}`);
+        }
+        await db.update(sahlSerials).set({
+          status: "sold", saleInvoiceId: input.invoiceId || null, customerId: input.customerId || null,
+        }).where(eq(sahlSerials.id, ex[0].id));
+      }
+      return { success: true, count: input.serials.length };
+    }),
+  serialHistory: authedQuery
+    .input(z.object({ q: z.string().optional(), productId: z.number().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { products, invoices: invT, customers: custT } = await import("@db/schema");
+      const conds = [eq(sahlSerials.tenantId, ctx.user.tenantId!)];
+      if (input?.q) conds.push(like(sahlSerials.serial, `%${input.q}%`));
+      if (input?.productId) conds.push(eq(sahlSerials.productId, input.productId));
+      return db.select({
+        id: sahlSerials.id, serial: sahlSerials.serial, status: sahlSerials.status,
+        purchaseRef: sahlSerials.purchaseRef, saleInvoiceId: sahlSerials.saleInvoiceId,
+        createdAt: sahlSerials.createdAt,
+        productName: products.name, productSku: products.sku,
+        invoiceNumber: invT.invoiceNumber, customerName: custT.name,
+      }).from(sahlSerials)
+        .leftJoin(products, eq(products.id, sahlSerials.productId))
+        .leftJoin(invT, eq(invT.id, sahlSerials.saleInvoiceId))
+        .leftJoin(custT, eq(custT.id, sahlSerials.customerId))
+        .where(and(...conds))
+        .orderBy(desc(sahlSerials.createdAt))
+        .limit(200);
+    }),
+
+  // ---- Shifts (open / close with counted cash) ----
+  shiftCurrent: authedQuery.query(async ({ ctx }) => {
+    const db = getDb();
+    const rows = await db.select().from(sahlShifts).where(and(
+      eq(sahlShifts.tenantId, ctx.user.tenantId!), eq(sahlShifts.status, "open")))
+      .orderBy(desc(sahlShifts.openedAt)).limit(1);
+    return rows[0] ?? null;
+  }),
+  shiftOpen: authedQuery
+    .input(z.object({ openingBalance: z.number().min(0).default(0), notes: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const open = await db.select({ id: sahlShifts.id }).from(sahlShifts).where(and(
+        eq(sahlShifts.tenantId, ctx.user.tenantId!), eq(sahlShifts.status, "open"))).limit(1);
+      if (open.length) throw new Error("A shift is already open");
+      const [{ id }] = await db.insert(sahlShifts).values({
+        tenantId: ctx.user.tenantId!, userId: ctx.user.id,
+        openingBalance: String(input.openingBalance), notes: input.notes || null, status: "open",
+      }).$returningId();
+      return { id, success: true };
+    }),
+  shiftClose: authedQuery
+    .input(z.object({ counted: z.number().min(0), daySales: z.number().min(0).default(0), dayExpenses: z.number().min(0).default(0), notes: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const open = await db.select().from(sahlShifts).where(and(
+        eq(sahlShifts.tenantId, ctx.user.tenantId!), eq(sahlShifts.status, "open")))
+        .orderBy(desc(sahlShifts.openedAt)).limit(1);
+      if (!open.length) throw new Error("No open shift");
+      await db.update(sahlShifts).set({
+        status: "closed", closedAt: new Date(),
+        closingCounted: String(input.counted),
+        daySales: String(input.daySales), dayExpenses: String(input.dayExpenses),
+        notes: input.notes || open[0].notes,
+      }).where(eq(sahlShifts.id, open[0].id));
+      const expected = Number(open[0].openingBalance || 0) + Number(input.daySales) - Number(input.dayExpenses);
+      return { success: true, expected, counted: input.counted, diff: input.counted - expected };
+    }),
+  shiftList: authedQuery
+    .input(z.object({ limit: z.number().default(20) }).optional())
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      return db.select().from(sahlShifts)
+        .where(eq(sahlShifts.tenantId, ctx.user.tenantId!))
+        .orderBy(desc(sahlShifts.openedAt))
+        .limit(Math.min(input?.limit ?? 20, 100));
+    }),
+
+  // ---- Year summary (closing visibility WITHOUT purge) ----
+  yearSummary: authedQuery
+    .input(z.object({ year: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { cashboxTransactions } = await import("@db/schema");
+      const invs = await db.select().from(invoices)
+        .where(and(eq(invoices.tenantId, ctx.user.tenantId!),
+          gte(invoices.date, `${input.year}-01-01`), lte(invoices.date, `${input.year}-12-31`)));
+      const cash = await db.select().from(cashboxTransactions)
+        .where(eq(cashboxTransactions.tenantId, ctx.user.tenantId!));
+      const sales = invs.reduce((a: number, i: any) => a + Number(i.totalAmount || 0), 0);
+      return {
+        year: input.year,
+        invoiceCount: invs.length,
+        salesTotal: sales,
+        cashIn: cash.filter((c: any) => c.transactionType === "cash_in").reduce((a: number, c: any) => a + Number(c.amount || 0), 0),
+        cashOut: cash.filter((c: any) => c.transactionType !== "cash_in").reduce((a: number, c: any) => a + Number(c.amount || 0), 0),
+      };
+    }),
+
+  // ---- Tenant data export (JSON backup of master + docs) ----
+  backupExport: authedQuery.query(async ({ ctx }) => {
+    const db = getDb();
+    const { products, productCategories, suppliers, warehouses, units } = await import("@db/schema");
+    const tid = ctx.user.tenantId!;
+    const [prods, cats, custs, sups, whs, uns, lists, serials, cheques, invs] = await Promise.all([
+      db.select().from(products).where(eq(products.tenantId, tid)),
+      db.select().from(productCategories).where(eq(productCategories.tenantId, tid)),
+      db.select().from(customers).where(eq(customers.tenantId, tid)),
+      db.select().from(suppliers).where(eq(suppliers.tenantId, tid)),
+      db.select().from(warehouses).where(eq(warehouses.tenantId, tid)),
+      db.select().from(units).where(eq(units.tenantId, tid)),
+      db.select().from(sahlPriceLists).where(eq(sahlPriceLists.tenantId, tid)),
+      db.select().from(sahlSerials).where(eq(sahlSerials.tenantId, tid)),
+      db.select().from(sahlCheques).where(eq(sahlCheques.tenantId, tid)),
+      db.select().from(invoices).where(eq(invoices.tenantId, tid)).limit(2000),
+    ]);
+    return {
+      exportedAt: new Date().toISOString(), tenantId: tid,
+      products: prods, categories: cats, customers: custs, suppliers: sups,
+      warehouses: whs, units: uns, priceLists: lists, serials, cheques, invoices: invs,
+    };
+  }),
+
+  // ---- Own password change ----
+  changePasswordSelf: authedQuery
+    .input(z.object({ oldPassword: z.string().min(1), newPassword: z.string().min(4) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const rows = await db.select().from(users).where(and(
+        eq(users.id, ctx.user.id), eq(users.tenantId, ctx.user.tenantId!))).limit(1);
+      if (!rows.length || !rows[0].passwordEncrypted) throw new Error("Account not found");
+      const stored = String(rows[0].passwordEncrypted);
+      let ok = false;
+      try {
+        if (stored.startsWith("scrypt$")) {
+          const [, salt, hash] = stored.split("$");
+          ok = crypto.scryptSync(input.oldPassword, salt, 64).toString("hex") === hash;
+        } else {
+          ok = crypto.createHash("sha256").update(input.oldPassword).digest("hex") === stored;
+        }
+      } catch { ok = false; }
+      if (!ok) throw new Error("Wrong current password");
+      const salt = crypto.randomBytes(16).toString("hex");
+      const hash = crypto.scryptSync(input.newPassword, salt, 64).toString("hex");
+      await db.update(users).set({ passwordEncrypted: `scrypt$${salt}$${hash}` })
+        .where(eq(users.id, rows[0].id));
+      return { success: true };
     }),
 
   // ---- Users (admin only; scrypt format matches passwordLogin) ----
