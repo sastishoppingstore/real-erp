@@ -623,6 +623,7 @@ export const products = mysqlTable("products", {
   isActive: boolean("is_active").default(true),
   isTaxable: boolean("is_taxable").default(true),
   taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).default("15").notNull(),
+  isSerialTracked: boolean("is_serial_tracked").default(false),
   weight: decimal("weight", { precision: 10, scale: 4 }),
   dimensions: varchar("dimensions", { length: 100 }),
   image: mediumtext("image"),
@@ -7701,3 +7702,15 @@ export const sahlCheques = mysqlTable("sahl_cheques", {
 });
 
 export type SahlCheque = typeof sahlCheques.$inferSelect;
+
+export const sahlProductUnits = mysqlTable("sahl_product_units", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+  unitName: varchar("unit_name", { length: 50 }).notNull(),
+  factor: decimal("factor", { precision: 18, scale: 4 }).default("1").notNull(),
+  salePrice: decimal("sale_price", { precision: 18, scale: 4 }).default("0").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SahlProductUnit = typeof sahlProductUnits.$inferSelect;

@@ -12,6 +12,21 @@ export default function SahlSettings() {
   const rtl = language === "ar";
   const utils = trpc.useUtils();
   const [msg, setMsg] = useState("");
+  const [prefs, setPrefs] = useState(() => {
+    try {
+      return {
+        showCost: localStorage.getItem("sahl-showCost") !== "0",
+        autoPrint: localStorage.getItem("sahl-autoPrint") === "1",
+        confirmDelete: localStorage.getItem("sahl-confirmDelete") !== "0",
+      };
+    } catch {
+      return { showCost: true, autoPrint: false, confirmDelete: true };
+    }
+  });
+  const setPref = (k: "showCost" | "autoPrint" | "confirmDelete", v: boolean) => {
+    setPrefs((p) => ({ ...p, [k]: v }));
+    try { localStorage.setItem(`sahl-${k}`, v ? "1" : "0"); } catch { /* ignore */ }
+  };
 
   const { data: company } = trpc.settings.companySettingsGet.useQuery();
   const { data: currencies } = trpc.settings.currencyList.useQuery();
@@ -152,6 +167,19 @@ export default function SahlSettings() {
                 {rtl ? "إغلاق" : "Close"}
               </button>
             </div>
+            <SectionHead>{rtl ? "خيارات العرض" : "Display options"}</SectionHead>
+            <label className="mb-1 flex items-center gap-2 text-[12px] text-black">
+              <input type="checkbox" checked={prefs.showCost} onChange={(e) => setPref("showCost", e.target.checked)} />
+              {rtl ? "إظهار سعر التكلفة" : "Show cost price"}
+            </label>
+            <label className="mb-1 flex items-center gap-2 text-[12px] text-black">
+              <input type="checkbox" checked={prefs.autoPrint} onChange={(e) => setPref("autoPrint", e.target.checked)} />
+              {rtl ? "طباعة تلقائية بعد الحفظ" : "Auto-print after save"}
+            </label>
+            <label className="mb-1 flex items-center gap-2 text-[12px] text-black">
+              <input type="checkbox" checked={prefs.confirmDelete} onChange={(e) => setPref("confirmDelete", e.target.checked)} />
+              {rtl ? "تأكيد قبل الحذف" : "Confirm before delete"}
+            </label>
           </div>
           <div className="space-y-2">
             <ListMgr

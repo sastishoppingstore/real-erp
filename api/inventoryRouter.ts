@@ -207,6 +207,10 @@ export const inventoryRouter = createRouter({
       purchasePrice: z.string().optional(),
       salePrice: z.string().optional(),
       isActive: z.boolean().optional(),
+      isTaxable: z.boolean().optional(),
+      taxRate: z.string().optional(),
+      image: z.string().optional(),
+      isSerialTracked: z.boolean().optional(),
       reorderLevel: z.number().optional(),
     }))
     .mutation(async ({ input }) => {

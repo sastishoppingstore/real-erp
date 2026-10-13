@@ -10,8 +10,9 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
   const { language } = useLanguage();
   const rtl = language === "ar";
   const utils = trpc.useUtils();
-  const [f, setF] = useState({ amount: "", description: "", category: "", method: "cash", ref: "" });
+  const [f, setF] = useState({ amount: "", description: "", category: "", method: "cash", ref: "", project: "", accountId: "", accountKind: "customer" });
   const [msg, setMsg] = useState("");
+  const [autoPrint, setAutoPrint] = useState(false);
   const lastStay = useRef(false);
 
   const { data: bal } = trpc.cashbox.currentBalance.useQuery();
@@ -25,7 +26,8 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
   };
   const showSaved = (stay: boolean) => {
     setMsg(rtl ? "✓ تم الحفظ" : "✓ Saved");
-    if (!stay) setF({ amount: "", description: "", category: "", method: "cash", ref: "" });
+    if (!stay) setF({ amount: "", description: "", category: "", method: "cash", ref: "", project: "", accountId: f.accountId, accountKind: f.accountKind });
+    if (autoPrint) window.print();
     refresh();
   };
   const showErr = (e: any) => setMsg(e.message ?? String(e));
@@ -33,18 +35,38 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
   const cashOut = trpc.cashbox.cashOut.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
   const addExpense = trpc.cashbox.addExpense.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
 
+  const { data: customers } = trpc.sales.customerList.useQuery();
+  const { data: suppliers } = trpc.purchase.supplierList.useQuery();
+  const parties: any[] = f.accountKind === "customer" ? customers ?? [] : suppliers ?? [];
+  const partyName = parties.find((a: any) => String(a.id) === String(f.accountId))?.name ?? "";
+
   const save = (stay: boolean, expense: boolean) => {
     setMsg("");
     if (!(Number(f.amount) > 0)) { setMsg(rtl ? "أدخل مبلغاً صحيحاً" : "Enter a valid amount"); return; }
     if (!f.description.trim()) { setMsg(rtl ? "أدخل البيان" : "Enter description"); return; }
     lastStay.current = stay;
+    const extras = [
+      partyName ? `${rtl ? "الحساب" : "Account"}: ${partyName}` : "",
+      f.project.trim() ? `${rtl ? "المشروع" : "Project"}: ${f.project.trim()}` : "",
+      f.ref || "",
+    ].filter(Boolean).join(" — ");
     const base = {
       amount: String(f.amount), description: f.description.trim(),
-      paymentMethod: f.method as any, notes: f.ref || undefined,
+      paymentMethod: f.method as any, notes: extras || undefined,
     };
-    if (mode === "receipt") cashIn.mutate({ ...base, referenceType: "receipt" });
+    if (mode === "receipt") {
+      cashIn.mutate({
+        ...base,
+        ...(f.accountId ? { referenceType: f.accountKind, referenceId: Number(f.accountId) } : {}),
+      });
+    }
     else if (expense) addExpense.mutate({ ...base, category: f.category || undefined });
-    else cashOut.mutate(base);
+    else {
+      cashOut.mutate({
+        ...base,
+        ...(f.accountId ? { referenceType: f.accountKind, referenceId: Number(f.accountId) } : {}),
+      });
+    }
   };
 
   const title = mode === "receipt" ? (rtl ? "المقبوضات" : "Receipts") : (rtl ? "المدفوعات والمصروفات" : "Payments & expenses");
@@ -64,8 +86,22 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
             <input type="number" min="0" className={inputCls} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></label>
           <label className="flex items-center gap-2"><span className="w-24 shrink-0">{T("البيان", "Description")}</span>
             <input className={inputCls} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
+          <label className="flex items-center gap-2"><span className="w-24 shrink-0">{T("الحساب", "Account")}</span>
+            <span className="flex flex-1 gap-1">
+              <select className={inputCls} style={{ width: 90 }} value={f.accountKind} onChange={(e) => setF({ ...f, accountKind: e.target.value, accountId: "" })}>
+                <option value="customer">{T("عميل", "Cust")}</option>
+                <option value="supplier">{T("مورد", "Supp")}</option>
+              </select>
+              <select className={inputCls} value={f.accountId} onChange={(e) => setF({ ...f, accountId: e.target.value })}>
+                <option value="">—</option>
+                {parties.map((a: any) => <option key={a.id} value={a.id}>{a.nameAr || a.name}</option>)}
+              </select>
+            </span></label>
+          <label className="flex items-center gap-2"><span className="w-24 shrink-0">{T("المشروع", "Project")}</span>
+            <input className={inputCls} value={f.project} onChange={(e) => setF({ ...f, project: e.target.value })}
+              placeholder={T("تسجيل مصروف للمشروع", "Project expense")} /></label>
           {mode === "payment" && (
-            <label className="flex items-center gap-2"><span className="w-24 shrink-0">{T("التصنيف", "Category")}</span>
+            <label className="flex items-center gap-2"><span className="w-24 shrink-0">{T("بند المصروف", "Item")}</span>
               <input className={inputCls} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} /></label>
           )}
           <div className="flex gap-2">
@@ -86,7 +122,11 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
             {mode === "payment" && (
               <button className={btnCls} onClick={() => save(false, true)}>{T("حفظ كمصروف", "Save as expense")}</button>
             )}
-            <button className={btnCls} onClick={() => setF({ amount: "", description: "", category: "", method: "cash", ref: "" })}>
+            <label className="flex items-center gap-1 text-[12px]">
+              <input type="checkbox" checked={autoPrint} onChange={(e) => setAutoPrint(e.target.checked)} />
+              {T("طباعة", "Print")}
+            </label>
+            <button className={btnCls} onClick={() => setF({ amount: "", description: "", category: "", method: "cash", ref: "", project: "", accountId: "", accountKind: "customer" })}>
               {T("إلغاء", "Cancel")}
             </button>
           </div>

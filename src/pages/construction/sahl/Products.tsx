@@ -11,6 +11,7 @@ import {
 const empty = {
   sku: "", name: "", nameAr: "", categoryId: "", unitId: "", barcode: "",
   purchasePrice: "", salePrice: "", reorderLevel: 0, description: "",
+  isTaxable: true, taxRate: "15", isActive: true, isSerialTracked: false,
 };
 
 export default function SahlProducts() {
@@ -23,6 +24,8 @@ export default function SahlProducts() {
   const [err, setErr] = useState("");
   const [tab, setTab] = useState<"stock" | "moves">("stock");
   const [opening, setOpening] = useState({ warehouseId: "", qty: "" });
+  const [unitForm, setUnitForm] = useState({ unitName: "", factor: "1", salePrice: "" });
+  const [editingUnit, setEditingUnit] = useState<number | null>(null);
 
   const { data: rows } = trpc.inventory.productList.useQuery(q ? { search: q } : undefined);
   const { data: cats } = trpc.inventory.categoryList.useQuery();
@@ -34,11 +37,16 @@ export default function SahlProducts() {
     selProduct ? { productId: selProduct.id } : undefined,
     { enabled: tab === "moves" && !!selProduct }
   );
+  const { data: punits } = trpc.sahl.productUnitList.useQuery(
+    selProduct ? { productId: selProduct.id } : undefined,
+    { enabled: !!selProduct }
+  );
 
   const refresh = () => {
     utils.inventory.productList.invalidate();
     utils.inventory.inventoryList.invalidate();
     utils.inventory.movementList.invalidate();
+    utils.sahl.productUnitList.invalidate();
   };
   const create = trpc.inventory.productCreate.useMutation({
     onSuccess: () => { setF({ ...empty }); setSel(-1); refresh(); },
@@ -52,16 +60,31 @@ export default function SahlProducts() {
     onSuccess: () => { setOpening({ warehouseId: "", qty: "" }); refresh(); },
     onError: (e) => setErr(e.message),
   });
+  const unitAdd = trpc.sahl.productUnitAdd.useMutation({
+    onSuccess: () => { setUnitForm({ unitName: "", factor: "1", salePrice: "" }); setEditingUnit(null); refresh(); },
+    onError: (e) => setErr(e.message),
+  });
+  const unitUpdate = trpc.sahl.productUnitUpdate.useMutation({
+    onSuccess: () => { setUnitForm({ unitName: "", factor: "1", salePrice: "" }); setEditingUnit(null); refresh(); },
+    onError: (e) => setErr(e.message),
+  });
+  const unitDelete = trpc.sahl.productUnitDelete.useMutation({
+    onSuccess: () => refresh(),
+    onError: (e) => setErr(e.message),
+  });
 
   const pick = (i: number) => {
     const r = (rows ?? [])[i];
     setSel(i);
     setErr("");
+    setEditingUnit(null);
     setF({
       sku: r.sku ?? "", name: r.name ?? "", nameAr: r.nameAr ?? "",
       categoryId: r.categoryId ?? "", unitId: r.unitId ?? "", barcode: r.barcode ?? "",
       purchasePrice: r.purchasePrice ?? "", salePrice: r.salePrice ?? "",
       reorderLevel: r.reorderLevel ?? 0, description: r.description ?? "",
+      isTaxable: r.isTaxable ?? true, taxRate: r.taxRate ?? "15",
+      isActive: r.isActive ?? true, isSerialTracked: r.isSerialTracked ?? false,
     });
   };
 
@@ -80,6 +103,8 @@ export default function SahlProducts() {
       salePrice: f.salePrice === "" ? undefined : String(f.salePrice),
       reorderLevel: Number(f.reorderLevel) || 0,
       description: f.description || undefined,
+      isTaxable: !!f.isTaxable, taxRate: String(f.taxRate ?? "15"),
+      isActive: !!f.isActive, isSerialTracked: !!f.isSerialTracked,
     };
     if (selProduct) update.mutate({ id: selProduct.id, ...payload });
     else create.mutate(payload as any);
@@ -197,6 +222,70 @@ export default function SahlProducts() {
               </SahlField>
               <SahlField label={rtl ? "حد الطلب" : "Reorder"}>
                 <input type="number" min="0" className={inputCls} value={f.reorderLevel} onChange={(e) => setF({ ...f, reorderLevel: e.target.value })} />
+              </SahlField>
+            </div>
+          </div>
+          <div className="mt-2 grid gap-3 lg:grid-cols-2">
+            <div className="bg-white p-2 text-black">
+              <div className="mb-1 text-[12px] font-bold">
+                {rtl ? "وحدات الصنف (الوحدة × المعامل = سعر البيع)" : "Product units (unit × factor = price)"}
+              </div>
+              <div className="border border-[#888] text-[12px]">
+                <div className="flex justify-between border-b border-[#555] bg-[#eee] px-1 py-0.5">
+                  <span>{rtl ? "الوحدة" : "Unit"}</span><span>×</span><span>{rtl ? "السعر" : "Price"}</span><span />
+                </div>
+                {!selProduct ? <div className="px-1 py-1 text-[#777]">{rtl ? "احفظ الصنف أولاً" : "Save the product first"}</div>
+                  : (punits ?? []).map((u: any) => (
+                    <div key={u.id} className="flex items-center justify-between gap-1 border-b border-[#ddd] px-1 py-0.5">
+                      <span>{u.unitName} × {Number(u.factor || 1)} = {Number(u.salePrice || 0)}</span>
+                      <span className="flex gap-1">
+                        <button className={btnCls} onClick={() => { setEditingUnit(u.id); setUnitForm({ unitName: u.unitName, factor: String(u.factor ?? 1), salePrice: String(u.salePrice ?? 0) }); }}>
+                          {rtl ? "تعديل" : "Edit"}
+                        </button>
+                        <button className={btnCls} onClick={() => { if (confirm(rtl ? "حذف الوحدة؟" : "Delete unit?")) unitDelete.mutate({ id: u.id }); }}>
+                          {rtl ? "حذف" : "Del"}
+                        </button>
+                      </span>
+                    </div>
+                  ))}
+              </div>
+              {selProduct && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <input className={inputCls} style={{ width: 90 }} value={unitForm.unitName} onChange={(e) => setUnitForm({ ...unitForm, unitName: e.target.value })} placeholder={rtl ? "وحدة" : "Unit"} />
+                  <input type="number" min="0" className={inputCls} style={{ width: 70 }} value={unitForm.factor} onChange={(e) => setUnitForm({ ...unitForm, factor: e.target.value })} placeholder="×" />
+                  <input type="number" min="0" className={inputCls} style={{ width: 90 }} value={unitForm.salePrice} onChange={(e) => setUnitForm({ ...unitForm, salePrice: e.target.value })} placeholder={rtl ? "السعر" : "Price"} />
+                  <button className={btnCls} disabled={unitAdd.isPending || unitUpdate.isPending}
+                    onClick={() => {
+                      if (!unitForm.unitName.trim()) { setErr(rtl ? "اسم الوحدة مطلوب" : "Unit name required"); return; }
+                      const p = { unitName: unitForm.unitName.trim(), factor: Number(unitForm.factor) || 1, salePrice: Number(unitForm.salePrice) || 0 };
+                      if (editingUnit) unitUpdate.mutate({ id: editingUnit, ...p });
+                      else unitAdd.mutate({ productId: selProduct.id, ...p });
+                    }}>
+                    {editingUnit ? (rtl ? "تعديل" : "Update") : (rtl ? "أضف وحدة" : "Add unit")}
+                  </button>
+                  {editingUnit && <button className={btnCls} onClick={() => { setEditingUnit(null); setUnitForm({ unitName: "", factor: "1", salePrice: "" }); }}>{rtl ? "إلغاء" : "Cancel"}</button>}
+                </div>
+              )}
+            </div>
+            <div className="bg-white p-2 text-black">
+              <div className="mb-1 text-[12px] font-bold">{rtl ? "خيارات" : "Options"}</div>
+              <label className="mb-1 flex items-center gap-2 text-[12px]">
+                <input type="checkbox" checked={!!f.isTaxable} onChange={(e) => setF({ ...f, isTaxable: e.target.checked })} />
+                {rtl ? "خاضع للضريبة" : "Taxable"}
+              </label>
+              <SahlField label={rtl ? "نسبة الضريبة %" : "Tax %"}>
+                <input type="number" min="0" className={inputCls} value={f.taxRate} onChange={(e) => setF({ ...f, taxRate: e.target.value })} />
+              </SahlField>
+              <label className="mb-1 flex items-center gap-2 text-[12px]">
+                <input type="checkbox" checked={!!f.isActive} onChange={(e) => setF({ ...f, isActive: e.target.checked })} />
+                {rtl ? "صنف نشط" : "Active"}
+              </label>
+              <label className="mb-1 flex items-center gap-2 text-[12px]">
+                <input type="checkbox" checked={!!f.isSerialTracked} onChange={(e) => setF({ ...f, isSerialTracked: e.target.checked })} />
+                {rtl ? "تتبع السيريال (Serial Number)" : "Serial tracking"}
+              </label>
+              <SahlField label={rtl ? "ملاحظات" : "Notes"}>
+                <input className={inputCls} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
               </SahlField>
             </div>
           </div>

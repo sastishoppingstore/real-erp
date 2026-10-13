@@ -17,7 +17,7 @@ export default function SahlAccounts() {
   const [err, setErr] = useState("");
   const [f, setF] = useState<any>({
     name: "", nameAr: "", phone: "", email: "", address: "", addressAr: "",
-    taxNumber: "", crNumber: "", openingBalance: "", notes: "",
+    taxNumber: "", crNumber: "", openingBalance: "", openingBalanceDate: "", openDir: "debit", notes: "",
   });
 
   const { data: customers } = trpc.sales.customerList.useQuery(q && kind === "customer" ? { search: q } : undefined);
@@ -56,7 +56,7 @@ export default function SahlAccounts() {
   const reset = () => {
     setF({
       name: "", nameAr: "", phone: "", email: "", address: "", addressAr: "",
-      taxNumber: "", crNumber: "", openingBalance: "", notes: "",
+      taxNumber: "", crNumber: "", openingBalance: "", openingBalanceDate: "", openDir: "debit", notes: "",
     });
     setSel(-1);
     setErr("");
@@ -66,12 +66,22 @@ export default function SahlAccounts() {
     const r: any = list[i];
     setSel(i);
     setErr("");
+    const ob = Number(r.openingBalance ?? 0);
     setF({
       name: r.name ?? "", nameAr: r.nameAr ?? "", phone: r.phone ?? r.mobile ?? "",
       email: r.email ?? "", address: r.address ?? "", addressAr: r.addressAr ?? "",
       taxNumber: r.taxNumber ?? r.vatNumber ?? "", crNumber: r.crNumber ?? "",
-      openingBalance: r.openingBalance ?? r.creditLimit ?? "", notes: r.notes ?? "",
+      openingBalance: ob === 0 ? "" : String(Math.abs(ob)),
+      openingBalanceDate: r.openingBalanceDate ?? "",
+      openDir: ob < 0 ? "credit" : "debit",
+      notes: r.notes ?? "",
     });
+  };
+
+  const signedOpening = () => {
+    if (f.openingBalance === "") return undefined;
+    const v = Math.abs(Number(f.openingBalance) || 0);
+    return String(f.openDir === "credit" ? -v : v);
   };
 
   const save = () => {
@@ -82,7 +92,8 @@ export default function SahlAccounts() {
         name: f.name.trim(), nameAr: f.nameAr || undefined, phone: f.phone || undefined,
         email: f.email || undefined, address: f.address || undefined, addressAr: f.addressAr || undefined,
         taxNumber: f.taxNumber || undefined, crNumber: f.crNumber || undefined,
-        openingBalance: f.openingBalance === "" ? undefined : String(f.openingBalance),
+        openingBalance: signedOpening(),
+        openingBalanceDate: f.openingBalanceDate || undefined,
         notes: f.notes || undefined,
       };
       if (selRow) updateCustomer.mutate({ id: selRow.id, ...p });
@@ -96,6 +107,12 @@ export default function SahlAccounts() {
       if (selRow) updateSupplier.mutate({ id: selRow.id, ...p });
       else createSupplier.mutate(p as any);
     }
+  };
+
+  const deactivate = () => {
+    if (kind !== "customer" || !selRow) return;
+    if (!confirm(rtl ? "إيقاف الحساب؟ (لا حذف مع وجود حركات)" : "Deactivate account? (no delete with transactions)")) return;
+    updateCustomer.mutate({ id: selRow.id, isActive: false });
   };
 
   const balance = kind === "customer" && selRow
@@ -139,6 +156,9 @@ export default function SahlAccounts() {
           footer={
             <>
               <button className={btnCls} onClick={reset}>{rtl ? "إلغاء" : "Cancel"}</button>
+              {kind === "customer" && selRow && (
+                <button className={btnCls} onClick={deactivate}>{rtl ? "إيقاف" : "Deactivate"}</button>
+              )}
               <button className={btnGreenCls} style={{ background: "#0a5c2a" }}
                 disabled={createCustomer.isPending || updateCustomer.isPending || createSupplier.isPending || updateSupplier.isPending}
                 onClick={save}>
@@ -174,7 +194,14 @@ export default function SahlAccounts() {
                 <input className={inputCls} value={f.crNumber} onChange={(e) => setF({ ...f, crNumber: e.target.value })} />
               </SahlField>
               <SahlField label={rtl ? "الرصيد الافتتاحي" : "Opening"}>
-                <input type="number" className={inputCls} value={f.openingBalance} onChange={(e) => setF({ ...f, openingBalance: e.target.value })} />
+                <span className="flex gap-1">
+                  <input type="number" min="0" className={inputCls} value={f.openingBalance} onChange={(e) => setF({ ...f, openingBalance: e.target.value })} />
+                  <select className={inputCls} style={{ width: 90 }} value={f.openDir} onChange={(e) => setF({ ...f, openDir: e.target.value })}>
+                    <option value="debit">{rtl ? "مدين" : "Dr"}</option>
+                    <option value="credit">{rtl ? "دائن" : "Cr"}</option>
+                  </select>
+                  <input type="date" className={inputCls} style={{ width: 140 }} value={f.openingBalanceDate} onChange={(e) => setF({ ...f, openingBalanceDate: e.target.value })} />
+                </span>
               </SahlField>
             </div>
           </div>

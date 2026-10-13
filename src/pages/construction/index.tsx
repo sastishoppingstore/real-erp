@@ -5,8 +5,8 @@ import { useLanguage } from "@/providers/language";
 import {
   FileText, Receipt, Users, Wallet, Package,
   ArrowLeftRight, FileBarChart, ClipboardList,
-  Calculator, Plus, ShoppingCart, ClipboardCheck, ListOrdered, Settings,
-  Presentation, Undo2, Tags, X,
+  Calculator, Plus, ShoppingCart, ShoppingBag, ClipboardCheck, ListOrdered, Settings,
+  Presentation, PackageOpen, Tags, HandCoins, SlidersHorizontal, Headset, X,
 } from "lucide-react";
 
 const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -39,7 +39,7 @@ interface Tile {
 const TOUR_STEPS = [
   { ar: "هذه الواجهة الرئيسية — كل مربع يفتح وحدة حقيقية", en: "This is the main dashboard — every tile opens a real module" },
   { ar: "الصف الأخضر: التقارير والفواتير والخزينة والحسابات والبضاعة", en: "Green row: reports, invoices, treasury, accounts, inventory" },
-  { ar: "الأزرق: إدارة الحسابات والأصناف وإعداد البرنامج", en: "Blue: account/product management and program settings" },
+  { ar: "الأزرق: إدخال الحسابات والأصناف وإعداد البرنامج", en: "Blue: product/account entry and program settings" },
   { ar: "مربعات البيع والشراء والمخازن بأسفل الشاشة", en: "Sales, purchase and warehouse tiles at the bottom" },
   { ar: "زر فاتورة جديدة يفتح منشئ الفواتير مباشرة", en: "New Invoice opens the bill creator directly" },
 ];
@@ -50,6 +50,14 @@ export default function ConstructionDashboard() {
   const rtl = language === "ar";
   const [tour, setTour] = useState(false);
   const [step, setStep] = useState(0);
+  const [showSupport, setShowSupport] = useState(false);
+  const [dashBg, setDashBg] = useState(() => {
+    try { return localStorage.getItem("sahl-dashbg") || "#000000"; } catch { return "#000000"; }
+  });
+  const changeBg = (bg: string) => {
+    setDashBg(bg);
+    try { localStorage.setItem("sahl-dashbg", bg); } catch { /* ignore */ }
+  };
   const { data: stats } = trpc.construction.constructionStats.useQuery(undefined);
   const { data: projects } = trpc.construction.projectList.useQuery(undefined);
   const { data: invoices } = trpc.constructionInvoices.invoiceList.useQuery(undefined);
@@ -100,25 +108,25 @@ export default function ConstructionDashboard() {
     { label: "Daily movement", labelAr: "الحركة اليومية", icon: ClipboardList, path: "/app/construction/sahl/reports/daily", color: C.navy },
   ];
   const utilTiles: Tile[] = [
-    { label: "Account management", labelAr: "إدارة الحسابات", icon: Users, path: "/app/construction/sahl/accounts", color: C.blue },
-    { label: "Product management", labelAr: "إدارة الأصناف", icon: ListOrdered, path: "/app/construction/sahl/products", color: C.blue },
+    { label: "Enter accounts", labelAr: "إدخال الحسابات", icon: Users, path: "/app/construction/sahl/accounts", color: C.blue },
+    { label: "Enter products", labelAr: "إدخال الأصناف", icon: ListOrdered, path: "/app/construction/sahl/products", color: C.blue },
     { label: "Program settings", labelAr: "إعداد البرنامج", icon: Settings, path: "/app/construction/sahl/settings", color: C.blue },
-    { label: "Guided tour", labelAr: "جولة تعريفية", icon: Presentation, action: "tour", color: C.blue },
+    { label: "Quick tour", labelAr: "جولة سريعة", icon: Presentation, action: "tour", color: C.blue },
   ];
   // SCR-002 main transaction grid (uneven widths preserved).
   const txnTiles: Tile[] = [
     { label: "Stocktaking", labelAr: "جرد مخزن", icon: ClipboardCheck, path: "/app/construction/sahl/reports/stock", color: C.teal, span: 2 },
-    { label: "Expenses", labelAr: "المصروفات", icon: Wallet, path: "/app/construction/sahl/cash", color: C.coral, span: 1 },
+    { label: "Payment", labelAr: "صرف", icon: HandCoins, path: "/app/construction/sahl/cash", color: C.coral, span: 1 },
     { label: "Purchase", labelAr: "شراء", icon: ShoppingCart, path: "/app/construction/sahl/purchase", color: C.redOrange, span: 2 },
-    { label: "Sales", labelAr: "بيع", icon: Tags, path: "/app/construction/sahl/sales", color: C.green, span: 2 },
+    { label: "Sales", labelAr: "بيع", icon: ShoppingBag, path: "/app/construction/sahl/sales", color: C.green, span: 2 },
   ];
   const txnTiles2: Tile[] = [
-    { label: "Warehouse adjustment", labelAr: "تسوية مخزن", icon: Calculator, path: "/app/construction/sahl/reports/stock", color: C.turquoise },
-    { label: "Warehouse transfer", labelAr: "تحويل مخزن", icon: ArrowLeftRight, path: "/app/construction/transfers", color: C.tealDark },
-    { label: "Quotations", labelAr: "عرض الأسعار", icon: FileText, path: "/app/construction/sahl/quotation", color: C.green },
-    { label: "Purchase return", labelAr: "مرتجع شراء", icon: Undo2, path: "/app/construction/sahl/purchase-return", color: C.burgundy },
-    { label: "Receipts", labelAr: "المقبوضات", icon: Receipt, path: "/app/construction/sahl/receipts", color: C.green },
-    { label: "Sales return", labelAr: "مرتجع بيع", icon: Receipt, path: "/app/construction/sahl/sales-return", color: C.green },
+    { label: "Warehouse adjustment", labelAr: "تسوية مخزن", icon: SlidersHorizontal, path: "/app/construction/sahl/reports/stock", color: C.turquoise },
+    { label: "Warehouse transfer", labelAr: "تحويل لمخزن", icon: ArrowLeftRight, path: "/app/construction/transfers", color: C.tealDark },
+    { label: "Quotations", labelAr: "عرض الأسعار", icon: Calculator, path: "/app/construction/sahl/quotation", color: C.green },
+    { label: "Purchase return", labelAr: "مرتجع شراء", icon: PackageOpen, path: "/app/construction/sahl/purchase-return", color: C.burgundy },
+    { label: "Receipt", labelAr: "قبض", icon: Wallet, path: "/app/construction/sahl/receipts", color: C.green },
+    { label: "Sales return", labelAr: "مرتجع بيع", icon: PackageOpen, path: "/app/construction/sahl/sales-return", color: C.green },
   ];
 
   // Management & follow-up strip (new Sahl modules, all real).
@@ -151,7 +159,7 @@ export default function ConstructionDashboard() {
   );
 
   return (
-    <div className="min-h-full bg-black p-2 text-white">
+    <div className="min-h-full p-2 text-white" style={{ background: dashBg }}>
       {/* ===== brand + top green row (side-by-side at every width incl. 640×342) ===== */}
       <div className="flex gap-2">
         <div className="grid min-w-0 flex-1 gap-2" style={{ gridTemplateColumns: "repeat(5, minmax(88px, 1fr))" }}>
@@ -250,10 +258,42 @@ export default function ConstructionDashboard() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-1 pt-1 text-[10px] text-white/40">
-        <span>{rtl ? "الدعم الفني" : "Support"}</span>
-        <span className="font-mono">640×342 ref</span>
+      <div className="flex items-center justify-between px-1 pt-1 text-[10px]">
+        <div className="flex items-center gap-1">
+          <button onClick={() => setShowSupport(true)}
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-white"
+            style={{ background: "#e05242" }}>
+            <Headset style={{ width: 14, height: 14 }} />
+            {rtl ? "الدعم الفني" : "Support"}
+          </button>
+          {(["#000000", "#141414", "#0d1b2a", "#1b1035"] as string[]).map((bg) => (
+            <button key={bg} onClick={() => changeBg(bg)} title={bg}
+              className="size-4 border"
+              style={{ background: bg, borderColor: dashBg === bg ? "#fff" : "#555" }} />
+          ))}
+        </div>
+        <span className="font-mono text-white/40">640×342 ref</span>
       </div>
+
+      {showSupport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowSupport(false)}>
+          <div className="w-full max-w-xs border border-white/20 bg-[#161616] p-4 text-white" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-between">
+              <b className="text-[13px]">{rtl ? "الدعم الفني" : "Technical support"}</b>
+              <button onClick={() => setShowSupport(false)} className="text-white/60 hover:text-white"><X style={{ width: 16, height: 16 }} /></button>
+            </div>
+            <p className="text-[12px] text-white/85">
+              {rtl
+                ? "للدعم: تواصل مع مدير النظام من صفحة المستخدمين، أو راجع سجل الحركات من التقارير."
+                : "For support: contact your system administrator from the Users page, or review Reports."}
+            </p>
+            <button onClick={() => { setShowSupport(false); navigate("/app/construction/sahl/users"); }}
+              className="mt-3 px-3 py-1 text-[12px] font-bold text-white" style={{ background: C.green }}>
+              {rtl ? "المستخدمون" : "Users"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ===== guided tour overlay (real behavior for جولة تعريفية) ===== */}
       {tour && (

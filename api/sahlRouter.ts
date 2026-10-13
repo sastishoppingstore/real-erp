@@ -13,6 +13,7 @@ import {
   sahlSalesmen,
   sahlPriceLists,
   sahlPriceItems,
+  sahlProductUnits,
   sahlReservations,
   sahlCheques,
 } from "@db/schema";
@@ -310,6 +311,52 @@ export const sahlRouter = createRouter({
         barcode: (p as any).barcode || (p as any).sku,
         price: (p as any).salePrice,
       };
+    }),
+
+  // ---- Product units (وحدات الصنف + conversion + price) ----
+  productUnitList: authedQuery
+    .input(z.object({ productId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      return db.select().from(sahlProductUnits).where(and(
+        eq(sahlProductUnits.productId, input.productId),
+        eq(sahlProductUnits.tenantId, ctx.user.tenantId!)));
+    }),
+  productUnitAdd: authedQuery
+    .input(z.object({
+      productId: z.number(), unitName: z.string().min(1),
+      factor: z.number().positive().default(1), salePrice: z.number().min(0).default(0),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const [{ id }] = await db.insert(sahlProductUnits).values({
+        tenantId: ctx.user.tenantId!, productId: input.productId, unitName: input.unitName,
+        factor: String(input.factor), salePrice: String(input.salePrice),
+      }).$returningId();
+      return { id, success: true };
+    }),
+  productUnitUpdate: authedQuery
+    .input(z.object({
+      id: z.number(), unitName: z.string().optional(),
+      factor: z.number().positive().optional(), salePrice: z.number().min(0).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const { id, factor, salePrice, ...rest } = input;
+      await db.update(sahlProductUnits).set({
+        ...rest,
+        ...(factor !== undefined ? { factor: String(factor) } : {}),
+        ...(salePrice !== undefined ? { salePrice: String(salePrice) } : {}),
+      }).where(and(eq(sahlProductUnits.id, id), eq(sahlProductUnits.tenantId, ctx.user.tenantId!)));
+      return { success: true };
+    }),
+  productUnitDelete: authedQuery
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      await db.delete(sahlProductUnits).where(and(
+        eq(sahlProductUnits.id, input.id), eq(sahlProductUnits.tenantId, ctx.user.tenantId!)));
+      return { success: true };
     }),
 
   // ---- Users (admin only; scrypt format matches passwordLogin) ----
