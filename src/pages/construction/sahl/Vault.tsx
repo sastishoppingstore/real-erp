@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { SahlField, SahlGrid, inputCls, btnCls, btnGreenCls } from "./ui";
@@ -49,11 +49,15 @@ export default function SahlVault({ tab }: { tab: Tab }) {
 }
 
 function TabBtn({ active, label, href }: { active: boolean; label: string; href: string }) {
+  const navigate = useNavigate();
   return (
-    <a href={href} className="border border-[#555] px-3 py-1 text-white"
-      style={{ background: active ? "#2fae4e" : "#222" }}>
+    <button
+      onClick={() => navigate(href)}
+      className="border border-[#555] px-3 py-1 text-white"
+      style={{ background: active ? "#2fae4e" : "#222" }}
+    >
       {label}
-    </a>
+    </button>
   );
 }
 
@@ -240,6 +244,7 @@ function Cheques({ T }: { T: (a: string, e: string) => string }) {
   const { msg, setMsg } = useMsg();
   const [f, setF] = useState({ number: "", bank: "", amount: "", dueDate: "", notes: "" });
   const [st, setSt] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const { data: rows } = trpc.sahl.chequeList.useQuery(st ? { status: st } : undefined);
   const create = trpc.sahl.chequeCreate.useMutation({
     onSuccess: () => { setF({ number: "", bank: "", amount: "", dueDate: "", notes: "" }); utils.sahl.chequeList.invalidate(); },
@@ -278,13 +283,16 @@ function Cheques({ T }: { T: (a: string, e: string) => string }) {
         emptyText={T("لا توجد شيكات", "No cheques")}
       />
       <div className="mt-1 flex flex-wrap gap-1">
-        {(rows ?? []).filter((c: any) => c.status === "registered").slice(0, 10).map((c: any) => (
+        {(rows ?? []).filter((c: any) => c.status === "registered").slice(0, showAll ? 200 : 10).map((c: any) => (
           <span key={c.id} className="flex gap-1 border border-[#333] px-1 py-0.5">
             {c.number}
             <button className={btnCls} onClick={() => setStatus.mutate({ id: c.id, status: "collected" })}>{T("حُصل", "Collect")}</button>
             <button className={btnCls} onClick={() => setStatus.mutate({ id: c.id, status: "returned" })}>{T("رُجع", "Return")}</button>
           </span>
         ))}
+        {(rows ?? []).filter((c: any) => c.status === "registered").length > 10 && !showAll && (
+          <button className={btnCls} onClick={() => setShowAll(true)}>{T("المزيد", "More")}</button>
+        )}
       </div>
     </div>
   );
@@ -391,6 +399,7 @@ function Labels({ T }: { T: (a: string, e: string) => string }) {
 function Prints({ T }: { T: (a: string, e: string) => string }) {
   const utils = trpc.useUtils();
   const { msg, setMsg } = useMsg();
+  const { data: themesQ } = trpc.invoiceTheme.list.useQuery();
   const themes: any[] = Array.isArray(themesQ) ? themesQ : [];
   const setDefault = trpc.invoiceTheme.setDefault.useMutation({
     onSuccess: () => { utils.invoiceTheme.list.invalidate(); setMsg(T("تم", "Done")); },
@@ -408,10 +417,16 @@ function Prints({ T }: { T: (a: string, e: string) => string }) {
         emptyText={T("لا توجد قوالب", "No templates")}
       />
       <div className="mt-1 flex flex-wrap gap-1">
-        {themes.filter((t: any) => typeof t.id === "number").slice(0, 12).map((t: any) => (
-          <button key={t.id} className={btnCls} onClick={() => setDefault.mutate({ themeId: t.id })}>
-            {T("افتراضي", "Default")}: {t.name ?? t.id}
-          </button>
+        {themes.map((t: any) => (
+          typeof t.id === "number" ? (
+            <button key={t.id} className={btnCls} onClick={() => setDefault.mutate({ themeId: t.id })}>
+              {T("افتراضي", "Default")}: {t.name ?? t.id}
+            </button>
+          ) : (
+            <span key={t.themeKey ?? t.name} className="border border-[#555] px-3 py-1 text-[12px] text-white/60" title={T("قالب جاهز", "Built-in theme")}>
+              {t.name ?? t.themeKey}
+            </span>
+          )
         ))}
       </div>
       <div className="mt-1 text-[11px] text-white/60">

@@ -42,6 +42,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const [wh, setWh] = useState("");
   const [discount, setDiscount] = useState(0);
   const [origId, setOrigId] = useState("");
+  const [docDate, setDocDate] = useState(today());
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -74,7 +75,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const results = useMemo(() => (products ?? []).slice(0, 8), [products]);
 
   useEffect(() => {
-    setLines([]); setMsg(""); setOrigId(""); setReason(""); setPartyId(""); setPartyQ(""); setDiscount(0);
+    setLines([]); setMsg(""); setOrigId(""); setReason(""); setPartyId(""); setPartyQ(""); setDiscount(0); setDocDate(today());
   }, [kind]);
 
   const addLine = async (p: any) => {
@@ -96,6 +97,18 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const subtotal = lines.reduce((a, l) => a + l.qty * l.price, 0);
   const net = Math.max(0, subtotal - Number(discount));
+  const origDoc: any = isReturn ? history.find((h: any) => String(h.id) === String(origId)) : null;
+  const origTotal = origDoc ? Number(origDoc.totalAmount ?? origDoc.total ?? 0) : 0;
+  const returnAmount = lines.length ? net : origTotal;
+
+  const editQty = () => {
+    const v = prompt(rtl ? "الكمية" : "Qty");
+    if (v && Number(v) > 0) setLines(lines.map((l, i) => (i === sel ? { ...l, qty: Number(v) } : l)));
+  };
+  const editPrice = () => {
+    const v = prompt(rtl ? "السعر" : "Price");
+    if (v && Number(v) >= 0) setLines(lines.map((l, i) => (i === sel ? { ...l, price: Number(v) } : l)));
+  };
 
   const invCreate = trpc.sales.invoiceCreate.useMutation();
   const poCreate = trpc.purchase.poCreate.useMutation();
@@ -124,6 +137,10 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       setMsg(rtl ? "اختر المورد" : "Select supplier"); return;
     }
     if (isReturn && !origId) { setMsg(rtl ? "اختر المستند الأصلي" : "Select original document"); return; }
+    if (kind === "sales-return" && returnAmount <= 0) {
+      setMsg(rtl ? "لا يوجد مبلغ للمرتجع — أضف أسطراً أو تحقق من الفاتورة الأصلية" : "Nothing to return — add lines or check the original invoice");
+      return;
+    }
     if ((kind === "purchase" || kind === "purchase-return") && !wh) {
       setMsg(rtl ? "اختر المخزن" : "Select warehouse"); return;
     }
@@ -132,7 +149,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       const stamp = Date.now();
       if (kind === "sales") {
         await invCreate.mutateAsync({
-          invoiceNumber: `INV-${stamp}`, customerId: Number(partyId), date: today(),
+          invoiceNumber: `INV-${stamp}`, customerId: Number(partyId), date: docDate,
           subTotal: String(subtotal), discountAmount: String(discount),
           totalAmount: String(net),
           items: lines.map((l) => ({
@@ -143,7 +160,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         setMsg(`${rtl ? "تم حفظ الفاتورة" : "Invoice saved"} — INV-${stamp}`);
       } else if (kind === "quotation") {
         await quoteCreate.mutateAsync({
-          quotationNumber: `Q-${stamp}`, customerId: Number(partyId), date: today(),
+          quotationNumber: `Q-${stamp}`, customerId: Number(partyId), date: docDate,
           subTotal: String(subtotal), totalAmount: String(net),
           items: lines.map((l) => ({
             productId: l.productId, description: l.name, quantity: l.qty,
@@ -153,7 +170,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         setMsg(`${rtl ? "تم حفظ العرض" : "Quotation saved"} — Q-${stamp}`);
       } else if (kind === "purchase") {
         const po = await poCreate.mutateAsync({
-          poNumber: `PO-${stamp}`, supplierId: Number(partyId), date: today(),
+          poNumber: `PO-${stamp}`, supplierId: Number(partyId), date: docDate,
           subTotal: String(subtotal), totalAmount: String(net),
           items: lines.map((l) => ({
             productId: l.productId, description: l.name, quantity: l.qty,
@@ -162,7 +179,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         });
         await grnCreate.mutateAsync({
           grnNumber: `GRN-${stamp}`, poId: po.id, supplierId: Number(partyId),
-          warehouseId: Number(wh), date: today(),
+          warehouseId: Number(wh), date: docDate,
           items: lines.map((l) => ({
             productId: l.productId!, quantity: l.qty,
             unitPrice: String(l.price), totalAmount: String(l.qty * l.price),
@@ -172,7 +189,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       } else if (kind === "sales-return") {
         const c = await creditCreate.mutateAsync({
           creditNoteNumber: `CN-${stamp}`, customerId: Number(partyId),
-          invoiceId: Number(origId), date: today(), amount: String(net || subtotal),
+          invoiceId: Number(origId), date: docDate, amount: String(returnAmount),
           reason: reason || undefined,
         });
         setMsg(`${rtl ? "تم حفظ المرتجع مرتبطاً بالفاتورة" : "Return saved against invoice"} — ${c.id}`);
@@ -205,15 +222,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       else if (e.key === "F6") { e.preventDefault(); window.print(); }
       else if (e.key === "F7" || e.key === "F12") { e.preventDefault(); searchRef.current?.focus(); }
       else if (e.key === "F8") { e.preventDefault(); setLines(lines.filter((_, i) => i !== sel)); }
-      else if (e.key === "F10") {
-        e.preventDefault();
-        const v = prompt(rtl ? "الكمية" : "Qty");
-        if (v && Number(v) > 0) setLines(lines.map((l, i) => (i === sel ? { ...l, qty: Number(v) } : l)));
-      } else if (e.key === "F11") {
-        e.preventDefault();
-        const v = prompt(rtl ? "السعر" : "Price");
-        if (v && Number(v) >= 0) setLines(lines.map((l, i) => (i === sel ? { ...l, price: Number(v) } : l)));
-      } else if (e.key === "Escape") { setLines([]); }
+      else if (e.key === "F10") { e.preventDefault(); editQty(); }
+      else if (e.key === "F11") { e.preventDefault(); editPrice(); } else if (e.key === "Escape") { setLines([]); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -231,7 +241,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           <div className="border border-[#888] px-2 py-1 font-bold" style={{ background: "#ffeb3b" }}>
             {T("الإجمالي", "Total")}: {net.toFixed(2)}
           </div>
-          <label>{T("التاريخ", "Date")}<input type="date" className={inputCls} defaultValue={today()} /></label>
+          <label>{T("التاريخ", "Date")}<input type="date" className={inputCls} value={docDate} onChange={(e) => setDocDate(e.target.value)} /></label>
           <span className="border px-1">{T("الأصناف", "Lines")}: {lines.length}</span>
           <span className="border px-1">{T("الكمية", "Qty")}: {lines.reduce((a, l) => a + Number(l.qty), 0)}</span>
           <label>{isSales ? T("العميل", "Customer") : T("المورد", "Supplier")}  <span className="flex gap-1">
@@ -356,8 +366,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         <FuncKey k="F6" label={T("طباعة", "Print")} onClick={() => window.print()} color="#455a64" />
         <FuncKey k="F7" label={T("صنف", "Item")} onClick={() => searchRef.current?.focus()} color="#00838f" />
         <FuncKey k="F8" label={T("حذف سطر", "Del line")} onClick={() => setLines(lines.filter((_, i) => i !== sel))} color="#6a1b9a" />
-        <FuncKey k="F10" label={T("الكمية", "Qty")} color="#ef6c00" />
-        <FuncKey k="F11" label={T("السعر", "Price")} color="#1565c0" />
+        <FuncKey k="F10" label={T("الكمية", "Qty")} onClick={editQty} color="#ef6c00" />
+        <FuncKey k="F11" label={T("السعر", "Price")} onClick={editPrice} color="#1565c0" />
         <FuncKey k="F12" label={T("بحث", "Lookup")} onClick={() => searchRef.current?.focus()} color="#37474f" />
       </div>
     </div>

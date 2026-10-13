@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { inputCls, btnCls, SahlGrid } from "./ui";
@@ -12,6 +12,7 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
   const utils = trpc.useUtils();
   const [f, setF] = useState({ amount: "", description: "", category: "", method: "cash", ref: "" });
   const [msg, setMsg] = useState("");
+  const lastStay = useRef(false);
 
   const { data: bal } = trpc.cashbox.currentBalance.useQuery();
   const { data: txns } = trpc.cashbox.transactionList.useQuery({ limit: 20 });
@@ -22,27 +23,28 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
     utils.cashbox.transactionList.invalidate();
     utils.cashbox.todaySummary.invalidate();
   };
-  const cashIn = trpc.cashbox.cashIn.useMutation({ onSuccess: () => { done(); refresh(); }, onError: (e) => setMsg(e.message) });
-  const cashOut = trpc.cashbox.cashOut.useMutation({ onSuccess: () => { done(); refresh(); }, onError: (e) => setMsg(e.message) });
-  const addExpense = trpc.cashbox.addExpense.useMutation({ onSuccess: () => { done(); refresh(); }, onError: (e) => setMsg(e.message) });
-
-  const done = () => {
+  const showSaved = (stay: boolean) => {
     setMsg(rtl ? "✓ تم الحفظ" : "✓ Saved");
-    setF({ amount: "", description: "", category: "", method: "cash", ref: "" });
+    if (!stay) setF({ amount: "", description: "", category: "", method: "cash", ref: "" });
+    refresh();
   };
+  const showErr = (e: any) => setMsg(e.message ?? String(e));
+  const cashIn = trpc.cashbox.cashIn.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
+  const cashOut = trpc.cashbox.cashOut.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
+  const addExpense = trpc.cashbox.addExpense.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
 
   const save = (stay: boolean, expense: boolean) => {
     setMsg("");
     if (!(Number(f.amount) > 0)) { setMsg(rtl ? "أدخل مبلغاً صحيحاً" : "Enter a valid amount"); return; }
     if (!f.description.trim()) { setMsg(rtl ? "أدخل البيان" : "Enter description"); return; }
-    const finish = () => { if (!stay) setF({ amount: "", description: "", category: "", method: "cash", ref: "" }); };
+    lastStay.current = stay;
     const base = {
       amount: String(f.amount), description: f.description.trim(),
       paymentMethod: f.method as any, notes: f.ref || undefined,
     };
-    if (mode === "receipt") cashIn.mutate({ ...base, referenceType: "receipt" }, { onSuccess: finish });
-    else if (expense) addExpense.mutate({ ...base, category: f.category || undefined }, { onSuccess: finish });
-    else cashOut.mutate(base, { onSuccess: finish });
+    if (mode === "receipt") cashIn.mutate({ ...base, referenceType: "receipt" });
+    else if (expense) addExpense.mutate({ ...base, category: f.category || undefined });
+    else cashOut.mutate(base);
   };
 
   const title = mode === "receipt" ? (rtl ? "المقبوضات" : "Receipts") : (rtl ? "المدفوعات والمصروفات" : "Payments & expenses");
@@ -75,7 +77,8 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
               <input className={inputCls} value={f.ref} onChange={(e) => setF({ ...f, ref: e.target.value })} /></label>
           </div>
           <label className="flex items-center gap-2"><span className="w-24 shrink-0">{T("التاريخ", "Date")}</span>
-            <input type="date" className={inputCls} defaultValue={new Date().toISOString().slice(0, 10)} /></label>
+            <input type="date" className={inputCls} defaultValue={new Date().toISOString().slice(0, 10)} disabled
+              title={T("يُستخدم تاريخ الخادم حفاظاً على ترتيب الأرصدة", "Server date is used to keep balances ordered")} /></label>
           <div className="flex flex-wrap gap-1">
             <button className={btnCls} disabled={cashIn.isPending || cashOut.isPending || addExpense.isPending}
               onClick={() => save(false, false)}>{T("حفظ", "Save")}</button>
@@ -84,7 +87,7 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
               <button className={btnCls} onClick={() => save(false, true)}>{T("حفظ كمصروف", "Save as expense")}</button>
             )}
             <button className={btnCls} onClick={() => setF({ amount: "", description: "", category: "", method: "cash", ref: "" })}>
-              {T("خروج", "Exit")}
+              {T("إلغاء", "Cancel")}
             </button>
           </div>
         </div>

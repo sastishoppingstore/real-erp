@@ -90,12 +90,24 @@ export default function SahlProducts() {
       setErr(rtl ? "اختر المخزن وأدخل كمية افتتاحية" : "Select warehouse and opening qty");
       return;
     }
+    const cur = (balances ?? [])
+      .filter((b: any) => b.productId === selProduct.id && String(b.warehouseId) === String(opening.warehouseId))
+      .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
+    // adjustmentCreate sets an ABSOLUTE target: from zero post as-is,
+    // otherwise add on top after explicit confirmation.
+    let target = Number(opening.qty);
+    if (cur > 0) {
+      const add = confirm(rtl
+        ? `الرصيد الحالي ${cur}. هل تريد الإضافة عليه (يصبح ${cur + target})؟ موافق=إضافة / إلغاء=استبدال`
+        : `Current stock is ${cur}. Add on top (becomes ${cur + target})? OK=add / Cancel=overwrite`);
+      if (add) target = cur + target;
+    }
     adjust.mutate({
       adjustmentDate: new Date().toISOString().slice(0, 10),
       adjustmentType: "addition",
       reason: rtl ? "رصيد افتتاحي" : "Opening stock",
       warehouseId: Number(opening.warehouseId),
-      items: [{ productId: selProduct.id, quantity: Number(opening.qty), unitCost: String(selProduct.purchasePrice ?? 0) }],
+      items: [{ productId: selProduct.id, quantity: target, unitCost: String(selProduct.purchasePrice ?? 0) }],
     } as any);
   };
 
@@ -140,7 +152,7 @@ export default function SahlProducts() {
           footer={
             <>
               <button className={btnCls} onClick={() => { setF({ ...empty }); setSel(-1); }}>
-                {rtl ? "خروج" : "Exit"}
+                {rtl ? "إلغاء" : "Cancel"}
               </button>
               <button
                 className={btnGreenCls} style={{ background: "#0a5c2a" }}
@@ -217,20 +229,31 @@ export default function SahlProducts() {
             <div className="bg-white p-2 text-black">
               <div className="mb-1 flex gap-2 text-[12px] font-bold">
                 <button onClick={() => setTab("stock")} style={{ textDecoration: tab === "stock" ? "underline" : "none" }}>
-                  {rtl ? "الحركة" : "Movements"}
+                  {rtl ? "الأرصدة" : "Stock"}
                 </button>
                 <button onClick={() => setTab("moves")} style={{ textDecoration: tab === "moves" ? "underline" : "none" }}>
-                  {rtl ? "السجل" : "History"}
+                  {rtl ? "الحركة" : "Movements"}
                 </button>
               </div>
-              <div className="max-h-[120px] overflow-auto border border-[#888] text-[11px]">
-                {!selProduct ? "—" : (moves ?? []).slice(0, 30).map((m: any) => (
-                  <div key={m.id} className="flex justify-between border-b border-[#eee] px-1 py-0.5">
-                    <span>{m.movementType} / {m.reference}</span>
-                    <b>{Number(m.quantity || 0)}</b>
-                  </div>
-                ))}
-              </div>
+              {tab === "stock" ? (
+                <div className="max-h-[120px] overflow-auto border border-[#888] text-[11px]">
+                  {!selProduct ? "—" : (balances ?? []).filter((b: any) => b.productId === selProduct.id).map((b: any) => (
+                    <div key={b.id} className="flex justify-between border-b border-[#eee] px-1 py-0.5">
+                      <span>{b.warehouseName ?? b.warehouseId}</span>
+                      <b>{Number(b.quantity || 0)}</b>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="max-h-[120px] overflow-auto border border-[#888] text-[11px]">
+                  {!selProduct ? "—" : (moves ?? []).slice(0, 30).map((m: any) => (
+                    <div key={m.id} className="flex justify-between border-b border-[#eee] px-1 py-0.5">
+                      <span>{m.movementType} / {m.reference}</span>
+                      <b>{Number(m.quantity || 0)}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </GreenDialog>

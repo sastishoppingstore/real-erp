@@ -138,7 +138,7 @@ export default function SahlAccounts() {
             : rtl ? "بطاقة مورد" : "Supplier card"}
           footer={
             <>
-              <button className={btnCls} onClick={reset}>{rtl ? "خروج" : "Exit"}</button>
+              <button className={btnCls} onClick={reset}>{rtl ? "إلغاء" : "Cancel"}</button>
               <button className={btnGreenCls} style={{ background: "#0a5c2a" }}
                 disabled={createCustomer.isPending || updateCustomer.isPending || createSupplier.isPending || updateSupplier.isPending}
                 onClick={save}>

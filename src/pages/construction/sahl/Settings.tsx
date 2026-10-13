@@ -45,15 +45,19 @@ export default function SahlSettings() {
   });
   const addCurrency = trpc.settings.currencyCreate.useMutation({
     onSuccess: () => utils.settings.currencyList.invalidate(),
+    onError: (e) => setMsg(e.message),
   });
   const addUnit = trpc.inventory.unitCreate.useMutation({
     onSuccess: () => utils.inventory.unitList.invalidate(),
+    onError: (e) => setMsg(e.message),
   });
   const addWarehouse = trpc.inventory.warehouseCreate.useMutation({
     onSuccess: () => utils.inventory.warehouseList.invalidate(),
+    onError: (e) => setMsg(e.message),
   });
   const addCategory = trpc.inventory.categoryCreate.useMutation({
     onSuccess: () => utils.inventory.categoryList.invalidate(),
+    onError: (e) => setMsg(e.message),
   });
 
   const ListMgr = ({

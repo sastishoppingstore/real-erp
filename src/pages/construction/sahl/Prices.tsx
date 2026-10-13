@@ -61,7 +61,9 @@ export default function SahlPrices() {
                 onChange={(e) => setNames({ ...names, [l.id]: { name: names[l.id]?.name ?? l.name, nameAr: e.target.value } })} />
             </SahlField>
             <button className={btnCls}
-              onClick={() => names[l.id] && rename.mutate({ id: l.id, ...names[l.id] })}>
+              onClick={() => names[l.id]
+                ? rename.mutate({ id: l.id, ...names[l.id] })
+                : setMsg(T("عدّل الاسم أولاً ثم أعد التسمية", "Edit a name first, then rename"))}>
               {T("إعادة تسمية", "Rename")}
             </button>
             <div className="mt-1">
