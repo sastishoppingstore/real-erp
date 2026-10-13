@@ -339,6 +339,19 @@ const CollaborationNotificationCenter = lazy(() => import("./pages/collaboration
 // Construction Module Pages
 const ConstructionLayout = lazy(() => import("./pages/construction/ConstructionLayout"));
 const ConstructionDashboard = lazy(() => import("./pages/construction"));
+const SahlSettings = lazy(() => import("./pages/construction/sahl/Settings"));
+const SahlProducts = lazy(() => import("./pages/construction/sahl/Products"));
+const SahlAccounts = lazy(() => import("./pages/construction/sahl/Accounts"));
+const SahlTxn = lazy(() => import("./pages/construction/sahl/Txn"));
+const SahlCash = lazy(() => import("./pages/construction/sahl/Cash"));
+const SahlDaily = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlDaily })));
+const SahlSalesAnalysis = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlSalesAnalysis })));
+const SahlPurchaseAnalysis = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlPurchaseAnalysis })));
+const SahlValuation = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlValuation })));
+const SahlVault = lazy(() => import("./pages/construction/sahl/Vault").then((m) => ({ default: m.SahlVaultRoute })));
+const SahlSalesmen = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlSalesmen })));
+const SahlUsers = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlUsers })));
+const SahlPrices = lazy(() => import("./pages/construction/sahl/Prices"));
 const WBSList = lazy(() => import("./pages/construction/wbs/WBSList"));
 const WBSCreate = lazy(() => import("./pages/construction/wbs/WBSCreate"));
 const WBSDetail = lazy(() => import("./pages/construction/wbs/WBSDetail"));
@@ -918,6 +931,24 @@ export default function App() {
         <Route path="progress-billing" element={<ConstructionProgressBilling />} />
         <Route path="invoices" element={<ConstructionInvoicePage />} />
         <Route path="sales-invoices" element={<InvoicesPage />} />
+        <Route path="sahl/settings" element={<SahlSettings />} />
+        <Route path="sahl/products" element={<SahlProducts />} />
+        <Route path="sahl/accounts" element={<SahlAccounts />} />
+        <Route path="sahl/sales" element={<SahlTxn kind="sales" />} />
+        <Route path="sahl/purchase" element={<SahlTxn kind="purchase" />} />
+        <Route path="sahl/sales-return" element={<SahlTxn kind="sales-return" />} />
+        <Route path="sahl/purchase-return" element={<SahlTxn kind="purchase-return" />} />
+        <Route path="sahl/quotation" element={<SahlTxn kind="quotation" />} />
+        <Route path="sahl/cash" element={<SahlCash mode="payment" />} />
+        <Route path="sahl/receipts" element={<SahlCash mode="receipt" />} />
+        <Route path="sahl/reports/daily" element={<SahlDaily />} />
+        <Route path="sahl/reports/sales" element={<SahlSalesAnalysis />} />
+        <Route path="sahl/reports/purchase" element={<SahlPurchaseAnalysis />} />
+        <Route path="sahl/reports/stock" element={<SahlValuation />} />
+        <Route path="sahl/salesmen" element={<SahlSalesmen />} />
+        <Route path="sahl/users" element={<SahlUsers />} />
+        <Route path="sahl/prices" element={<SahlPrices />} />
+        <Route path="sahl/vault/:tab" element={<SahlVault />} />
         <Route path="wbs" element={<WBSList />} />
         <Route path="wbs/new" element={<WBSCreate />} />
         <Route path="wbs/:id" element={<WBSDetail />} />

@@ -1,50 +1,61 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
-import { useNavigate } from "react-router";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import {
-  Building2, HardHat, FileText, Receipt, Users, Wrench, CalendarCheck,
-  FileSpreadsheet, ClipboardList, ShieldCheck, Briefcase, FileBarChart,
-  Handshake, Plus, ArrowRight, Wallet, Boxes, Package, ArrowLeftRight,
-  Truck, Calculator, ClipboardCheck, ListOrdered, FolderKanban,
+  FileText, Receipt, Users, Wallet, Package,
+  ArrowLeftRight, FileBarChart, ClipboardList,
+  Calculator, Plus, ShoppingCart, ClipboardCheck, ListOrdered, Settings,
+  Presentation, Undo2, Tags, X,
 } from "lucide-react";
 
 const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 0 });
 
-// Sahl palette (from the desktop app): one flat bright color per tile.
+// Sahl desktop palette — flat squares, no gradients/shadows.
 const C = {
-  green: "bg-[#2fae4e]",
-  blue: "bg-[#1b9bd7]",
-  yellow: "bg-[#f5c518]",
-  navy: "bg-[#1b3a5f]",
-  red: "bg-[#e05242]",
-  salmon: "bg-[#ef6a5a]",
-  teal: "bg-[#1a9e8f]",
-  maroon: "bg-[#7b2d4e]",
-  emerald: "bg-[#0d8a5f]",
-  lime: "bg-[#65a30d]",
+  green: "#2fae4e",
+  blue: "#1b9bd7",
+  navy: "#1b3a5f",
+  teal: "#1a9e8f",
+  tealDark: "#0d7d72",
+  redOrange: "#e05242",
+  coral: "#ef6a5a",
+  burgundy: "#7b2d4e",
+  turquoise: "#0fa3b1",
+  yellow: "#f5c518",
 };
 
 interface Tile {
   label: string;
   labelAr: string;
   icon: any;
-  path: string;
+  path?: string;
+  action?: string;
   color: string;
   dark?: boolean;
+  span?: number;
 }
+
+const TOUR_STEPS = [
+  { ar: "هذه الواجهة الرئيسية — كل مربع يفتح وحدة حقيقية", en: "This is the main dashboard — every tile opens a real module" },
+  { ar: "الصف الأخضر: التقارير والفواتير والخزينة والحسابات والبضاعة", en: "Green row: reports, invoices, treasury, accounts, inventory" },
+  { ar: "الأزرق: إدارة الحسابات والأصناف وإعداد البرنامج", en: "Blue: account/product management and program settings" },
+  { ar: "مربعات البيع والشراء والمخازن بأسفل الشاشة", en: "Sales, purchase and warehouse tiles at the bottom" },
+  { ar: "زر فاتورة جديدة يفتح منشئ الفواتير مباشرة", en: "New Invoice opens the bill creator directly" },
+];
 
 export default function ConstructionDashboard() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const rtl = language === "ar";
-  const { data: stats, isLoading: statsLoading } = trpc.construction.constructionStats.useQuery(undefined);
-  const { data: projects, isLoading: projectsLoading } = trpc.construction.projectList.useQuery(undefined);
-  const { data: invoices, isLoading: invLoading } = trpc.constructionInvoices.invoiceList.useQuery(undefined);
+  const [tour, setTour] = useState(false);
+  const [step, setStep] = useState(0);
+  const { data: stats } = trpc.construction.constructionStats.useQuery(undefined);
+  const { data: projects } = trpc.construction.projectList.useQuery(undefined);
+  const { data: invoices } = trpc.constructionInvoices.invoiceList.useQuery(undefined);
+  const { data: company } = trpc.settings.companySettingsGet.useQuery();
+  const brandAr = (company as any)?.companyNameAr || (company as any)?.companyName || "سهل";
+  const brandEn = (company as any)?.companyName || "SAHL";
 
   const activeProjects = projects?.filter((p) => p.status === "active") || [];
   const totalContractValue = projects?.reduce((sum, p) => sum + Number(p.contractValue || 0), 0) || 0;
@@ -65,246 +76,203 @@ export default function ConstructionDashboard() {
       const key = String(inv.createdAt || "").slice(0, 7);
       if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + Number(inv.grandTotal || 0));
     });
-    return [...buckets.entries()].map(([m, v]) => ({ month: m.slice(5), total: Math.round(v) }));
+    const arr = [...buckets.entries()].map(([m, v]) => ({ month: m.slice(5), total: Math.round(v) }));
+    const max = Math.max(1, ...arr.map((a) => a.total));
+    return { arr, max };
   })();
 
-  // Sahl row 1: hero + 5 green tiles (all open real pages).
-  const heroTiles: Tile[] = [
-    { label: "Goods", labelAr: "البضاعة", icon: Package, path: "/app/construction/products", color: C.green },
-    { label: "Accounts", labelAr: "الحسابات", icon: Users, path: "/app/construction/subcontractors", color: C.green },
-    { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/advance-payments", color: C.green },
-    { label: "Invoices", labelAr: "الفواتير", icon: FolderKanban, path: "/app/construction/sales-invoices", color: C.green },
-    { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/cvr", color: C.green },
+  const go = (t: Tile) => {
+    if (t.action === "tour") { setStep(0); setTour(true); return; }
+    if (t.path) navigate(t.path);
+  };
+
+  // SCR-002 top row: five green squares.
+  const topTiles: Tile[] = [
+    { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/sahl/reports/daily", color: C.green },
+    { label: "Invoices", labelAr: "الفواتير", icon: Receipt, path: "/app/construction/sahl/sales", color: C.green },
+    { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/sahl/cash", color: C.green },
+    { label: "Accounts", labelAr: "الحسابات", icon: Users, path: "/app/construction/sahl/accounts", color: C.green },
+    { label: "Goods", labelAr: "البضاعة", icon: Package, path: "/app/construction/sahl/products", color: C.green },
   ];
-  // Sahl row 2: quick tour (blue / yellow / navy).
-  const tourTiles: Tile[] = [
-    { label: "Enter Items", labelAr: "إدخال الأصناف", icon: ListOrdered, path: "/app/construction/products", color: C.blue },
-    { label: "New Contract", labelAr: "إعداد العقود", icon: FileText, path: "/app/construction/contracts/new", color: C.blue },
-    { label: "Projects", labelAr: "المشاريع", icon: Building2, path: "/app/construction/contracts", color: C.blue },
-    { label: "Enter Accounts", labelAr: "إدخال الحسابات", icon: ClipboardCheck, path: "/app/construction/subcontractors", color: C.yellow, dark: true },
-    { label: "Daily Movement", labelAr: "الحركة اليومية", icon: ClipboardList, path: "/app/construction/daily-reports", color: C.navy },
-    { label: "Sales Analysis", labelAr: "تحليل المبيعات", icon: FileBarChart, path: "/app/construction/cvr", color: C.navy },
+  // SCR-002 second row: two dark-blue reports + four blue utilities.
+  const reportTiles: Tile[] = [
+    { label: "Sales analysis", labelAr: "تحليل المبيعات", icon: FileBarChart, path: "/app/construction/sahl/reports/sales", color: C.navy },
+    { label: "Daily movement", labelAr: "الحركة اليومية", icon: ClipboardList, path: "/app/construction/sahl/reports/daily", color: C.navy },
   ];
-  // Sahl row 3: document types (4 big + warehouse ops).
-  const docTiles: Tile[] = [
-    { label: "New Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/construction/sales-invoices", color: C.green },
-    { label: "New Contract", labelAr: "عقد جديد", icon: HardHat, path: "/app/construction/contracts/new", color: C.red },
-    { label: "Advance Payments", labelAr: "الدفعات المقدمة", icon: Handshake, path: "/app/construction/advance-payments", color: C.salmon },
-    { label: "Daily Report", labelAr: "التقرير اليومي", icon: CalendarCheck, path: "/app/construction/daily-reports/new", color: C.teal },
+  const utilTiles: Tile[] = [
+    { label: "Account management", labelAr: "إدارة الحسابات", icon: Users, path: "/app/construction/sahl/accounts", color: C.blue },
+    { label: "Product management", labelAr: "إدارة الأصناف", icon: ListOrdered, path: "/app/construction/sahl/products", color: C.blue },
+    { label: "Program settings", labelAr: "إعداد البرنامج", icon: Settings, path: "/app/construction/sahl/settings", color: C.blue },
+    { label: "Guided tour", labelAr: "جولة تعريفية", icon: Presentation, action: "tour", color: C.blue },
   ];
-  const opsTiles: Tile[] = [
-    { label: "Warehouses", labelAr: "المخازن", icon: Building2, path: "/app/construction/warehouses", color: C.green },
-    { label: "Materials", labelAr: "المواد", icon: Boxes, path: "/app/construction/materials", color: C.green },
-    { label: "Transfers", labelAr: "التحويلات المخزنية", icon: Truck, path: "/app/construction/transfers", color: C.teal },
-    { label: "Subcontractors", labelAr: "المقاولون", icon: Users, path: "/app/construction/subcontractors", color: C.maroon },
-    { label: "Payments", labelAr: "المدفوعات", icon: Wallet, path: "/app/construction/sub-payments", color: C.emerald },
-    { label: "Equipment", labelAr: "المعدات", icon: Wrench, path: "/app/construction/equipment-schedule", color: C.teal },
+  // SCR-002 main transaction grid (uneven widths preserved).
+  const txnTiles: Tile[] = [
+    { label: "Stocktaking", labelAr: "جرد مخزن", icon: ClipboardCheck, path: "/app/construction/sahl/reports/stock", color: C.teal, span: 2 },
+    { label: "Expenses", labelAr: "المصروفات", icon: Wallet, path: "/app/construction/sahl/cash", color: C.coral, span: 1 },
+    { label: "Purchase", labelAr: "شراء", icon: ShoppingCart, path: "/app/construction/sahl/purchase", color: C.redOrange, span: 2 },
+    { label: "Sales", labelAr: "بيع", icon: Tags, path: "/app/construction/sahl/sales", color: C.green, span: 2 },
   ];
-  // Warehouse section (dedicated strip).
-  const warehouseTiles: Tile[] = [
-    { label: "Warehouses", labelAr: "المخازن", icon: Building2, path: "/app/construction/warehouses", color: C.teal },
-    { label: "Stock Levels", labelAr: "مستويات المخزون", icon: Boxes, path: "/app/construction/stock", color: C.emerald },
-    { label: "Products", labelAr: "الأصناف", icon: Package, path: "/app/construction/products", color: C.green },
-    { label: "Transfers", labelAr: "التحويلات المخزنية", icon: ArrowLeftRight, path: "/app/construction/transfers", color: C.blue },
-    { label: "BOQ", labelAr: "جداول الكميات", icon: FileSpreadsheet, path: "/app/construction/boq", color: C.lime },
-  ];
-  // Setup / compliance strip.
-  const setupTiles: Tile[] = [
-    { label: "WBS", labelAr: "هيكل العمل", icon: ClipboardList, path: "/app/construction/wbs", color: C.blue },
-    { label: "Variations", labelAr: "التغييرات", icon: FileText, path: "/app/construction/variations", color: C.emerald },
-    { label: "Compliance", labelAr: "المطابقة", icon: ShieldCheck, path: "/app/construction/compliance/sbc", color: C.green },
-    { label: "Saudization", labelAr: "السعودة", icon: Briefcase, path: "/app/construction/saudization", color: C.lime },
-    { label: "HSE & Safety", labelAr: "السلامة", icon: HardHat, path: "/app/construction/hse", color: C.yellow, dark: true },
-    { label: "Decennial", labelAr: "الضمان العشري", icon: Calculator, path: "/app/construction/decennial", color: C.navy },
-    { label: "Tax Invoices", labelAr: "الفواتير الضريبية", icon: Receipt, path: "/app/construction/invoices", color: C.red },
+  const txnTiles2: Tile[] = [
+    { label: "Warehouse adjustment", labelAr: "تسوية مخزن", icon: Calculator, path: "/app/construction/sahl/reports/stock", color: C.turquoise },
+    { label: "Warehouse transfer", labelAr: "تحويل مخزن", icon: ArrowLeftRight, path: "/app/construction/transfers", color: C.tealDark },
+    { label: "Quotations", labelAr: "عرض الأسعار", icon: FileText, path: "/app/construction/sahl/quotation", color: C.green },
+    { label: "Purchase return", labelAr: "مرتجع شراء", icon: Undo2, path: "/app/construction/sahl/purchase-return", color: C.burgundy },
+    { label: "Receipts", labelAr: "المقبوضات", icon: Receipt, path: "/app/construction/sahl/receipts", color: C.green },
+    { label: "Sales return", labelAr: "مرتجع بيع", icon: Receipt, path: "/app/construction/sahl/sales-return", color: C.green },
   ];
 
-  if (statsLoading || projectsLoading || invLoading) {
-    return (
-      <div className="space-y-3">
-        <div className="grid gap-2 lg:grid-cols-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-32 rounded-md bg-white/10" />)}
-        </div>
-      </div>
-    );
-  }
+  // Management & follow-up strip (new Sahl modules, all real).
+  const mgmtTiles: Tile[] = [
+    { label: "Salesmen", labelAr: "المندوبون", icon: Users, path: "/app/construction/sahl/salesmen", color: C.blue },
+    { label: "Users", labelAr: "المستخدمون", icon: Settings, path: "/app/construction/sahl/users", color: C.navy },
+    { label: "Prices", labelAr: "الأسعار", icon: Tags, path: "/app/construction/sahl/prices", color: C.green },
+    { label: "Stocktake", labelAr: "الجرد", icon: ClipboardCheck, path: "/app/construction/sahl/vault/stocktake", color: C.teal },
+    { label: "Transfer", labelAr: "التحويل", icon: ArrowLeftRight, path: "/app/construction/sahl/vault/transfer", color: C.tealDark },
+    { label: "Item moves", labelAr: "حركة صنف", icon: ClipboardList, path: "/app/construction/sahl/vault/moves", color: C.turquoise },
+    { label: "Archive", labelAr: "الأرشيف", icon: FileText, path: "/app/construction/sahl/vault/archive", color: C.navy },
+    { label: "Cheques", labelAr: "الشيكات", icon: Receipt, path: "/app/construction/sahl/vault/cheques", color: C.blue },
+    { label: "Installments", labelAr: "الأقساط", icon: Calculator, path: "/app/construction/sahl/vault/inst", color: C.burgundy },
+    { label: "Barcode", labelAr: "الباركود", icon: Tags, path: "/app/construction/sahl/vault/labels", color: C.green },
+    { label: "Prints", labelAr: "الطباعة", icon: FileText, path: "/app/construction/sahl/vault/prints", color: C.blue },
+    { label: "Valuation", labelAr: "التقييم", icon: Calculator, path: "/app/construction/sahl/reports/stock", color: C.green },
+  ];
 
-  const Tile = ({ t, big }: { t: Tile; big?: boolean }) => (
+  const SahlTile = ({ t, h }: { t: Tile; h: number }) => (
     <button
-      key={t.path + t.label}
-      onClick={() => navigate(t.path)}
-      className={`group flex flex-col items-center justify-center gap-1 px-1.5 text-center shadow transition-all hover:shadow-xl hover:brightness-110 ${t.color} ${t.dark ? "text-slate-800" : "text-white"} ${big ? "min-h-[140px] py-4 lg:min-h-[150px] lg:py-5" : "min-h-[110px] py-3 lg:min-h-[128px] lg:py-4"}`}
+      onClick={() => go(t)}
+      title={rtl ? t.labelAr : t.label}
+      className="flex flex-col items-center justify-center gap-1 px-1 text-center text-white transition-[filter] hover:brightness-110 active:brightness-90 focus-visible:outline-2 focus-visible:outline-white"
+      style={{ background: t.color, height: h, color: t.dark ? "#1e293b" : "#fff" }}
     >
-      <t.icon className={big ? "h-9 w-9 lg:h-11 lg:w-11" : "h-8 w-8 lg:h-9 lg:w-9"} strokeWidth={1.6} />
-      <span className={`font-bold leading-tight ${big ? "text-base lg:text-lg" : "text-[13px] lg:text-[15px]"}`}>{t.labelAr}</span>
-      <span className={`text-[10px] leading-tight lg:text-[11px] ${t.dark ? "opacity-70" : "opacity-85"}`}>{t.label}</span>
+      <t.icon style={{ width: 30, height: 30 }} strokeWidth={1.4} />
+      <span className="text-[12px] font-bold leading-tight">{rtl ? t.labelAr : t.label}</span>
+      <span className="text-[10px] leading-tight opacity-80">{rtl ? t.label : t.labelAr}</span>
     </button>
   );
 
-  const SectionTitle = ({ ar, en }: { ar: string; en: string }) => (
-    <div className="flex items-baseline justify-between px-1 pt-1">
-      <h3 className="text-sm font-bold text-white/90">{ar} <span className="font-normal text-white/50">· {en}</span></h3>
-    </div>
-  );
-
   return (
-    <div className="space-y-2.5">
-      {/* ===== Sahl row 1: hero + 5 green tiles (side-by-side on every screen size) ===== */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <div className={`col-span-2 flex flex-col justify-between gap-2 p-3 text-white shadow sm:col-span-3 lg:col-span-1 lg:p-4 ${C.green}`}>
-          <div className="flex items-center gap-3">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/20">
-              <HardHat className="h-8 w-8" strokeWidth={1.6} />
-            </span>
-            <div>
-              <h2 className="text-xl font-bold leading-tight">{rtl ? "المقاولات" : "Construction"}</h2>
-              <p className="text-[11px] opacity-90">{rtl ? "لإدارة المشاريع والمخازن" : "Projects & warehouse management"}</p>
+    <div className="min-h-full bg-black p-2 text-white">
+      {/* ===== brand + top green row (side-by-side at every width incl. 640×342) ===== */}
+      <div className="flex gap-2">
+        <div className="grid min-w-0 flex-1 gap-2" style={{ gridTemplateColumns: "repeat(5, minmax(88px, 1fr))" }}>
+          {topTiles.map((t) => <SahlTile key={t.label} t={t} h={104} />)}
+        </div>
+        <div className="flex w-[168px] shrink-0 flex-col items-center justify-center gap-1 px-2 text-center text-white" style={{ background: C.green, minHeight: 104 }}>
+          <span className="text-[26px] font-bold leading-tight">{brandAr}</span>
+          <span className="text-[10px] font-bold tracking-[0.2em]">{brandEn}</span>
+          <span className="text-[12px] font-bold leading-tight">{rtl ? "المقاولات" : "Construction"}</span>
+          <span className="text-[10px] leading-tight opacity-90">{rtl ? "المشاريع والمخازن والفواتير" : "Projects, stock & invoices"}</span>
+        </div>
+      </div>
+
+      {/* ===== second row: 2 dark-blue + 4 blue ===== */}
+      <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: "repeat(6, minmax(88px, 1fr))" }}>
+        {reportTiles.map((t) => <SahlTile key={t.label} t={t} h={88} />)}
+        {utilTiles.map((t) => <SahlTile key={t.label} t={t} h={88} />)}
+      </div>
+
+      {/* ===== main transaction grid: uneven widths (2fr 1fr 2fr 2fr) ===== */}
+      <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: "2fr 1fr 2fr 2fr" }}>
+        {txnTiles.map((t) => <SahlTile key={t.label} t={t} h={96} />)}
+      </div>
+      <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: "repeat(6, minmax(80px, 1fr))" }}>
+        {txnTiles2.map((t) => <SahlTile key={t.label} t={t} h={88} />)}
+      </div>
+
+      {/* ===== management & follow-up strip ===== */}
+      <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: "repeat(6, minmax(80px, 1fr))" }}>
+        {mgmtTiles.map((t) => <SahlTile key={t.label} t={t} h={72} />)}
+      </div>
+
+      {/* ===== dense desktop data strip (real persisted data only) ===== */}
+      <div className="mt-2 border border-[#333] bg-[#111]">
+        <div className="flex items-center justify-between border-b border-[#333] px-2 py-1" style={{ background: C.green }}>
+          <span className="text-[12px] font-bold text-white">{rtl ? "تحليل المبيعات — آخر 6 أشهر" : "Sales analysis — last 6 months"}</span>
+          <button onClick={() => navigate("/app/construction/sahl/sales")} className="flex items-center gap-1 bg-white/20 px-2 py-0.5 text-[11px] font-bold text-white hover:bg-white/30">
+            <Plus style={{ width: 12, height: 12 }} />{rtl ? "فاتورة جديدة" : "New Invoice"}
+          </button>
+        </div>
+        <div className="grid gap-2 p-2 lg:grid-cols-2">
+          <div>
+            <div className="mb-1 flex gap-2 text-[11px] text-white/70">
+              <span>{rtl ? "إجمالي الفواتير" : "Invoiced"}: <b className="text-white tabular-nums">{fmt(totalInvoiced)}</b></span>
+              <span>{rtl ? "العقود" : "Contracts"}: <b className="text-white tabular-nums">{fmt(totalContractValue)}</b></span>
+              <span>{rtl ? "المتبقي" : "Outstanding"}: <b className="text-white tabular-nums">{fmt(outstanding)}</b></span>
+              <span>{rtl ? "النشطة" : "Active"}: <b className="text-white tabular-nums">{stats?.activeProjects ?? activeProjects.length}</b></span>
+            </div>
+            <div className="flex h-[110px] items-end gap-1 border border-[#333] bg-black p-1" dir="ltr">
+              {monthlySales.arr.map((m) => (
+                <div key={m.month} className="flex flex-1 flex-col items-center justify-end gap-0.5" title={`${m.month}: ${fmt(m.total)}`}>
+                  <span className="text-[9px] text-white/60 tabular-nums">{m.total >= 1000 ? `${Math.round(m.total / 1000)}k` : m.total}</span>
+                  <div className="w-full" style={{ height: `${Math.max(3, Math.round((m.total / monthlySales.max) * 78))}px`, background: C.green }} />
+                  <span className="text-[9px] text-white/60">{m.month}</span>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[
-              { ar: "إجمالي المبيعات", en: "Sales", v: `${fmt(totalInvoiced)}` },
-              { ar: "قيمة العقود", en: "Contracts", v: `${fmt(totalContractValue)}` },
-              { ar: "المتبقي", en: "Outstanding", v: `${fmt(outstanding)}` },
-              { ar: "المشاريع النشطة", en: "Active", v: String(stats?.activeProjects ?? activeProjects.length) },
-            ].map((k) => (
-              <div key={k.en} className="rounded bg-black/20 px-2 py-1.5">
-                <p className="text-[10px] opacity-85">{k.ar}</p>
-                <p className="text-sm font-bold leading-tight tabular-nums">{k.v}</p>
-              </div>
-            ))}
-          </div>
-          <Button variant="secondary" size="sm" className="w-full font-bold" onClick={() => navigate("/app/construction/sales-invoices")}>
-            <Plus className="size-4" />{rtl ? "فاتورة جديدة" : "New Invoice"}
-          </Button>
-        </div>
-        {heroTiles.map((t) => <Tile key={t.label} t={t} />)}
-      </div>
-
-      {/* ===== Sahl row 2: quick tour ===== */}
-      <SectionTitle ar="ابدا بمشاهدة الجولة السريعة" en="Quick tour" />
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        {tourTiles.map((t) => <Tile key={t.label} t={t} />)}
-      </div>
-
-      {/* ===== Sahl row 3: document types ===== */}
-      <SectionTitle ar="حدد نوع المستند" en="Documents" />
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {docTiles.map((t) => <Tile key={t.label} t={t} big />)}
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        {opsTiles.map((t) => <Tile key={t.label} t={t} />)}
-      </div>
-
-      {/* ===== Warehouse section ===== */}
-      <SectionTitle ar="المخازن" en="Warehouse" />
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-        {warehouseTiles.map((t) => <Tile key={t.label} t={t} />)}
-      </div>
-
-      {/* ===== Setup & compliance ===== */}
-      <SectionTitle ar="الإعداد والمطابقة" en="Setup & compliance" />
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
-        {setupTiles.map((t) => <Tile key={t.label} t={t} />)}
-      </div>
-
-      {/* ===== Sales analysis + follow-up (below the fold) ===== */}
-      <div className="grid gap-2 pt-1 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
-          <CardHeader className="py-3">
-            <CardTitle className="text-base">{rtl ? "تحليل المبيعات — آخر 6 أشهر" : "Sales Analysis — Last 6 Months"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={monthlySales}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(v: any) => [`${fmt(Number(v))} SAR`, rtl ? "المبيعات" : "Sales"]} />
-                <Bar dataKey="total" fill="#2fae4e" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-base">{rtl ? "أحدث الفواتير" : "Recent Invoices"}</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/app/construction/invoices")}>
-              {rtl ? "عرض الكل" : "View all"}<ArrowRight className="ml-1 size-3.5" />
-            </Button>
-          </CardHeader>
-          <CardContent>
+          <div>
+            <div className="mb-1 flex items-center justify-between text-[12px]">
+              <span className="font-bold">{rtl ? "أحدث الفواتير" : "Recent invoices"}</span>
+              <button onClick={() => navigate("/app/construction/invoices")} className="text-[11px] text-white/70 hover:text-white">{rtl ? "عرض الكل" : "View all"}</button>
+            </div>
             {recentInvoices.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">{rtl ? "لا توجد فواتير بعد" : "No invoices yet"}</p>
+              <p className="border border-[#333] bg-black px-2 py-4 text-center text-[12px] text-white/50">{rtl ? "لا توجد فواتير بعد" : "No invoices yet"}</p>
             ) : (
-              <div className="space-y-2">
-                {recentInvoices.map((inv: any) => (
-                  <div key={inv.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-mono text-sm font-semibold">{inv.invoiceNo}</p>
-                      <p className="truncate text-xs text-muted-foreground">{inv.customerName || ""}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono text-sm font-bold">{fmt(Number(inv.grandTotal || 0))}</p>
-                      <Badge variant="outline" className="text-[10px]">{inv.status}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <table className="w-full border-collapse text-[11px]">
+                <thead><tr style={{ background: C.green }} className="text-white">
+                  <th className="border border-[#1d7a37] px-1 py-1 font-normal">{rtl ? "الرقم" : "No."}</th>
+                  <th className="border border-[#1d7a37] px-1 py-1 font-normal">{rtl ? "العميل" : "Customer"}</th>
+                  <th className="border border-[#1d7a37] px-1 py-1 font-normal">{rtl ? "الإجمالي" : "Total"}</th>
+                  <th className="border border-[#1d7a37] px-1 py-1 font-normal">{rtl ? "الحالة" : "Status"}</th>
+                </tr></thead>
+                <tbody>
+                  {recentInvoices.map((inv: any) => (
+                    <tr key={inv.id} className="odd:bg-[#161616] even:bg-black hover:bg-[#1f1f1f]">
+                      <td className="border border-[#333] px-1 py-1 font-mono">{inv.invoiceNo}</td>
+                      <td className="max-w-[120px] truncate border border-[#333] px-1 py-1">{inv.customerName || ""}</td>
+                      <td className="border border-[#333] px-1 py-1 text-right tabular-nums">{fmt(Number(inv.grandTotal || 0))}</td>
+                      <td className="border border-[#333] px-1 py-1">{inv.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-2 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-base">{rtl ? "المشاريع النشطة" : "Active Projects"}</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/app/construction/contracts")}>
-              {rtl ? "عرض الكل" : "View all"}<ArrowRight className="ml-1 size-3.5" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {activeProjects.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <Building2 className="mb-2 h-10 w-10 opacity-50" />
-                <p className="text-sm font-medium">{rtl ? "لا توجد مشاريع نشطة" : "No active projects"}</p>
-                <Button className="mt-3" size="sm" onClick={() => navigate("/app/construction/contracts/new")}>
-                  <Plus className="mr-1 size-4" />{rtl ? "مشروع جديد" : "New Project"}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {activeProjects.slice(0, 5).map((p: any) => (
-                  <div key={p.id} className="flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 transition-colors hover:bg-accent/50" onClick={() => navigate(`/app/construction/contracts/${p.id}`)}>
-                    <div className="flex min-w-0 items-center gap-2">
-                      <HardHat className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate text-sm font-medium">{p.name}</span>
-                    </div>
-                    <span className="font-mono text-sm">{fmt(Number(p.contractValue || 0))} SAR</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <div className="grid grid-cols-2 content-start gap-2">
-          {[
-            { l: "Invoices", ar: "الفواتير", v: (invoices || []).length },
-            { l: "Subcontractors", ar: "المقاولون", v: stats?.totalSubcontractors ?? 0 },
-            { l: "Projects", ar: "المشاريع", v: projects?.length ?? 0 },
-            { l: "Contracts Value", ar: "قيمة العقود", v: `${fmt(totalContractValue)}` },
-          ].map((k) => (
-            <Card key={k.l}>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">{k.ar}</p>
-                <p className="mt-1 text-2xl font-bold">{k.v}</p>
-                <p className="text-[11px] text-muted-foreground/70">{k.l}</p>
-              </CardContent>
-            </Card>
-          ))}
+            <div className="mt-1 border border-[#333] bg-black px-2 py-1 text-[11px] text-white/70">
+              {rtl ? "المشاريع النشطة" : "Active projects"}: <b className="text-white">{activeProjects.length}</b>
+              {" · "}
+              <button onClick={() => navigate("/app/construction/contracts")} className="hover:text-white">{rtl ? "العقود" : "Contracts"}</button>
+              {" · "}
+              <button onClick={() => navigate("/app/construction/daily-reports")} className="hover:text-white">{rtl ? "التقارير اليومية" : "Daily reports"}</button>
+              {" · "}
+              <button onClick={() => navigate("/app/construction/hse")} className="hover:text-white">{rtl ? "السلامة" : "HSE"}</button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div className="flex items-center justify-between px-1 pt-1 text-[10px] text-white/40">
+        <span>{rtl ? "الدعم الفني" : "Support"}</span>
+        <span className="font-mono">640×342 ref</span>
+      </div>
+
+      {/* ===== guided tour overlay (real behavior for جولة تعريفية) ===== */}
+      {tour && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setTour(false)}>
+          <div className="w-full max-w-sm border border-white/20 bg-[#161616] p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-between">
+              <b className="text-[13px]">{rtl ? "جولة تعريفية" : "Guided tour"} ({step + 1}/{TOUR_STEPS.length})</b>
+              <button onClick={() => setTour(false)} className="text-white/60 hover:text-white"><X style={{ width: 16, height: 16 }} /></button>
+            </div>
+            <p className="min-h-[44px] text-[12px] text-white/85">{rtl ? TOUR_STEPS[step].ar : TOUR_STEPS[step].en}</p>
+            <div className="mt-3 flex justify-between">
+              <button disabled={step === 0} onClick={() => setStep(step - 1)} className="border border-white/30 px-3 py-1 text-[12px] disabled:opacity-40">{rtl ? "السابق" : "Back"}</button>
+              {step < TOUR_STEPS.length - 1
+                ? <button onClick={() => setStep(step + 1)} className="px-3 py-1 text-[12px] font-bold text-white" style={{ background: C.green }}>{rtl ? "التالي" : "Next"}</button>
+                : <button onClick={() => { setTour(false); navigate("/app/construction/sahl/sales"); }} className="px-3 py-1 text-[12px] font-bold text-white" style={{ background: C.green }}>{rtl ? "ابدأ — فاتورة جديدة" : "Start — new invoice"}</button>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

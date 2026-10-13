@@ -63,6 +63,7 @@ import { educationRouter } from "./educationRouter";
 import { thermalPrintRouter } from "./thermalPrintRouter";
 import { hotelRouter } from "./hotelRouter";
 import { constructionRouter } from "./constructionRouter";
+import { sahlRouter } from "./sahlRouter";
 import { constructionInvoiceRouter } from "./constructionInvoiceRouter";
 import { constructionPaymentRouter } from "./constructionPaymentRouter";
 import { jobCostingRouter } from "./jobCostingRouter";
@@ -159,6 +160,7 @@ word: wordRouter,
   education: educationRouter,
   hotel: hotelRouter,
   construction: constructionRouter,
+  sahl: sahlRouter,
   constructionInvoices: constructionInvoiceRouter,
   constructionPayment: constructionPaymentRouter,
   jobCosting: jobCostingRouter,

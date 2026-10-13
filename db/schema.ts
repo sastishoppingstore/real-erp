@@ -7629,3 +7629,75 @@ export const visaExpiryAlerts = mysqlTable("visa_expiry_alerts", {
   acknowledgedAt: timestamp("acknowledged_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// =====================================================
+// SAHL EXTENSION (migration 0015) — salesmen, price lists,
+// reservations, cheques. All tenant-scoped, additive only.
+// =====================================================
+
+export const sahlSalesmen = mysqlTable("sahl_salesmen", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  nameAr: varchar("name_ar", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default("0").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SahlSalesman = typeof sahlSalesmen.$inferSelect;
+
+export const sahlPriceLists = mysqlTable("sahl_price_lists", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  nameAr: varchar("name_ar", { length: 100 }),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SahlPriceList = typeof sahlPriceLists.$inferSelect;
+
+export const sahlPriceItems = mysqlTable("sahl_price_items", {
+  id: serial("id").primaryKey(),
+  priceListId: bigint("price_list_id", { mode: "number", unsigned: true }).notNull(),
+  productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+  price: decimal("price", { precision: 18, scale: 4 }).default("0").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export type SahlPriceItem = typeof sahlPriceItems.$inferSelect;
+
+export const sahlReservations = mysqlTable("sahl_reservations", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  quotationId: bigint("quotation_id", { mode: "number", unsigned: true }),
+  customerId: bigint("customer_id", { mode: "number", unsigned: true }),
+  productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+  warehouseId: bigint("warehouse_id", { mode: "number", unsigned: true }),
+  quantity: decimal("quantity", { precision: 18, scale: 4 }).notNull(),
+  expiresAt: date("expires_at"),
+  status: mysqlEnum("status", ["reserved", "converted", "released", "expired"]).default("reserved").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SahlReservation = typeof sahlReservations.$inferSelect;
+
+export const sahlCheques = mysqlTable("sahl_cheques", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull(),
+  number: varchar("number", { length: 100 }).notNull(),
+  bank: varchar("bank", { length: 255 }),
+  partyType: mysqlEnum("party_type", ["customer", "supplier"]).default("customer").notNull(),
+  partyId: bigint("party_id", { mode: "number", unsigned: true }),
+  amount: decimal("amount", { precision: 18, scale: 4 }).notNull(),
+  dueDate: date("due_date"),
+  status: mysqlEnum("status", ["registered", "collected", "returned"]).default("registered").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SahlCheque = typeof sahlCheques.$inferSelect;

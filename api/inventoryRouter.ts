@@ -78,6 +78,21 @@ export const inventoryRouter = createRouter({
       return db.select().from(units).where(eq(units.tenantId, ctx.user.tenantId!));
     }),
 
+  unitCreate: authedQuery
+    .input(z.object({
+      name: z.string(),
+      symbol: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const [{ id }] = await db.insert(units).values({
+        name: input.name,
+        symbol: input.symbol || input.name.slice(0, 10),
+        tenantId: ctx.user.tenantId!,
+      }).$returningId();
+      return { id, success: true };
+    }),
+
   // Warehouses
   warehouseList: authedQuery
     .query(async ({ ctx }) => {
@@ -185,6 +200,10 @@ export const inventoryRouter = createRouter({
       sku: z.string().optional(),
       name: z.string().optional(),
       nameAr: z.string().optional(),
+      categoryId: z.number().optional(),
+      unitId: z.number().optional(),
+      barcode: z.string().optional(),
+      description: z.string().optional(),
       purchasePrice: z.string().optional(),
       salePrice: z.string().optional(),
       isActive: z.boolean().optional(),
