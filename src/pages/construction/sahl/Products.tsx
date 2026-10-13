@@ -10,7 +10,8 @@ import {
 // adjustmentCreate so every quantity is an auditable movement.
 const empty = {
   sku: "", name: "", nameAr: "", categoryId: "", unitId: "", barcode: "",
-  purchasePrice: "", salePrice: "", reorderLevel: 0, description: "",
+  purchasePrice: "", salePrice: "", minPrice: "", fixedDiscount: "",
+  reorderLevel: 0, description: "",
   isTaxable: true, taxRate: "15", isActive: true, isSerialTracked: false,
 };
 
@@ -82,6 +83,7 @@ export default function SahlProducts() {
       sku: r.sku ?? "", name: r.name ?? "", nameAr: r.nameAr ?? "",
       categoryId: r.categoryId ?? "", unitId: r.unitId ?? "", barcode: r.barcode ?? "",
       purchasePrice: r.purchasePrice ?? "", salePrice: r.salePrice ?? "",
+      minPrice: (r as any).minPrice ?? "", fixedDiscount: (r as any).fixedDiscount ?? "",
       reorderLevel: r.reorderLevel ?? 0, description: r.description ?? "",
       isTaxable: r.isTaxable ?? true, taxRate: r.taxRate ?? "15",
       isActive: r.isActive ?? true, isSerialTracked: r.isSerialTracked ?? false,
@@ -101,6 +103,8 @@ export default function SahlProducts() {
       barcode: f.barcode || undefined,
       purchasePrice: f.purchasePrice === "" ? undefined : String(f.purchasePrice),
       salePrice: f.salePrice === "" ? undefined : String(f.salePrice),
+      minPrice: f.minPrice === "" ? undefined : String(f.minPrice),
+      fixedDiscount: f.fixedDiscount === "" ? undefined : String(f.fixedDiscount),
       reorderLevel: Number(f.reorderLevel) || 0,
       description: f.description || undefined,
       isTaxable: !!f.isTaxable, taxRate: String(f.taxRate ?? "15"),
@@ -213,6 +217,12 @@ export default function SahlProducts() {
               </SahlField>
               <SahlField label={rtl ? "سعر البيع" : "Price"}>
                 <input type="number" min="0" className={inputCls} value={f.salePrice} onChange={(e) => setF({ ...f, salePrice: e.target.value })} />
+              </SahlField>
+              <SahlField label={rtl ? "أقل سعر بيع" : "Floor price"}>
+                <input type="number" min="0" className={inputCls} value={f.minPrice} onChange={(e) => setF({ ...f, minPrice: e.target.value })} />
+              </SahlField>
+              <SahlField label={rtl ? "خصم ثابت" : "Fixed disc"}>
+                <input type="number" min="0" className={inputCls} value={f.fixedDiscount} onChange={(e) => setF({ ...f, fixedDiscount: e.target.value })} />
               </SahlField>
               <SahlField label={rtl ? "الوحدة" : "Unit"}>
                 <select className={inputCls} value={f.unitId} onChange={(e) => setF({ ...f, unitId: e.target.value })}>

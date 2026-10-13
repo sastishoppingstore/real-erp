@@ -617,6 +617,8 @@ export const products = mysqlTable("products", {
   productType: mysqlEnum("product_type", ["goods", "service", "raw_material", "finished_good"]).default("goods").notNull(),
   purchasePrice: decimal("purchase_price", { precision: 18, scale: 4 }).default("0").notNull(),
   salePrice: decimal("sale_price", { precision: 18, scale: 4 }).default("0").notNull(),
+  minPrice: decimal("min_price", { precision: 18, scale: 4 }).default("0"),
+  fixedDiscount: decimal("fixed_discount", { precision: 18, scale: 4 }).default("0"),
   costMethod: mysqlEnum("cost_method", ["fifo", "lifo", "weighted_average"]).default("fifo").notNull(),
   reorderLevel: int("reorder_level").default(0),
   reorderQuantity: int("reorder_quantity").default(0),

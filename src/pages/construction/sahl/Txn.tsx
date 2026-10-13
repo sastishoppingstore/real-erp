@@ -25,6 +25,49 @@ const TITLES: Record<TxnKind, { ar: string; en: string; color: string }> = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+// F11 settlement: tendered cash -> change calculator. Enter commits.
+function SettlementModal({ T, total, tendered, setTendered, onClose, onCommit }: {
+  T: (a: string, e: string) => string; total: number; tendered: string;
+  setTendered: (v: string) => void; onClose: () => void; onCommit: () => void;
+}) {
+  const change = (Number(tendered) || 0) - total;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="w-full max-w-sm border border-black bg-white p-3" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-2 bg-[#2fae4e] px-2 py-1 text-center text-[14px] font-bold text-white">
+          {T("صفحة السداد (F11)", "Settlement (F11)")}
+        </div>
+        <div className="mb-2 border border-[#2fae4e] bg-[#e8f5e9] px-2 py-2 text-center">
+          <div className="text-[12px] text-[#555]">{T("إجمالي الفاتورة", "Invoice total")}</div>
+          <div className="text-[26px] font-bold tabular-nums">{total.toFixed(2)}</div>
+        </div>
+        <label className="mb-2 block border border-red-600 bg-[#fff5f5] px-2 py-2 text-center">
+          <div className="text-[12px] font-bold text-red-700">{T("المبلغ المستلم من العميل", "Tendered cash")}</div>
+          <input
+            autoFocus value={tendered} onChange={(e) => setTendered(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onCommit(); } }}
+            type="number" min="0" className="w-full bg-transparent text-center text-[24px] font-bold outline-none" />
+        </label>
+        <div className="mb-2 border border-[#1d7a37] bg-[#e8f5e9] px-2 py-2 text-center">
+          <div className="text-[12px] text-[#555]">{T("الفكة / الباقي للعميل", "Change due")}</div>
+          <div className="text-[26px] font-bold tabular-nums" style={{ color: change < 0 ? "#b71c1c" : "#1b5e20" }}>
+            {change.toFixed(2)}
+          </div>
+        </div>
+        <div className="flex justify-between">
+          <button className="border border-[#555] bg-[#f5f5f5] px-3 py-1 text-[12px] text-black" onClick={onClose}>
+            {T("إلغاء", "Cancel")}
+          </button>
+          <button className="border border-[#0a5c2a] px-3 py-1 text-[12px] font-bold text-white"
+            style={{ background: "#0a5c2a" }} onClick={onCommit}>
+            {T("ترحيل (Enter)", "Commit (Enter)")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const { language } = useLanguage();
   const rtl = language === "ar";
@@ -36,6 +79,26 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const [q, setQ] = useState("");
   const [qty, setQty] = useState(1);
+  // 4-step keyboard chain: search -> qty -> price -> add (Enter each step)
+  const [qtyInput, setQtyInput] = useState("1");
+  const [priceInput, setPriceInput] = useState("");
+  const [activeItem, setActiveItem] = useState<any>(null);
+  const qtyRef = useRef<HTMLInputElement>(null);
+  const priceRef = useRef<HTMLInputElement>(null);
+  // Payment mode (sales): cash / credit / card + pin default (الدبوس)
+  const [payMode, setPayMode] = useState<"cash" | "credit" | "card">(() => {
+    try {
+      const p = localStorage.getItem("sahl-paymode");
+      return p === "credit" || p === "card" ? p : "cash";
+    } catch { return "cash"; }
+  });
+  const pinPay = () => {
+    try { localStorage.setItem("sahl-paymode", payMode); } catch { /* ignore */ }
+    setMsg(T("تم تثبيت طريقة السداد", "Payment mode pinned"));
+  };
+  // F11 settlement modal (tendered -> change)
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [tendered, setTendered] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [sel, setSel] = useState(0);
   const [partyId, setPartyId] = useState("");
@@ -64,7 +127,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const [viewNav, setViewNav] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const { data: products } = trpc.inventory.productList.useQuery(q ? { search: q } : undefined);
+  const { data: lookup } = trpc.sahl.lookup.useQuery(
+    { q, limit: 8 }, { enabled: q.trim().length > 0 && viewId === null && kind !== "sales-return" });
   const { data: customers } = trpc.sales.customerList.useQuery(isSales && partyQ ? { search: partyQ } : undefined);
   const { data: suppliers } = trpc.purchase.supplierList.useQuery(!isSales && partyQ ? { search: partyQ } : undefined);
   const { data: warehouses } = trpc.inventory.warehouseList.useQuery();
@@ -95,7 +159,14 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const resetCd = () => setCd({ name: "", nameAr: "", phone: "", email: "", address: "", addressAr: "", vat: "", cr: "" });
   const history: any[] = kind === "sales" ? invoices ?? [] : kind === "purchase" ? pos ?? [] : kind === "quotation" ? quotes ?? [] : kind === "sales-return" ? credits ?? [] : pos ?? [];
-  const results = useMemo(() => (products ?? []).slice(0, 8), [products]);
+  const results = useMemo(() => (lookup ?? []) as any[], [lookup]);
+  const { data: balances } = trpc.inventory.inventoryList.useQuery(
+    (kind === "purchase" || kind === "sales") && wh ? { warehouseId: Number(wh) } : undefined,
+    { enabled: (kind === "purchase" || kind === "sales") && !!wh });
+  const { data: allBalances } = trpc.inventory.inventoryList.useQuery(undefined, { enabled: kind === "sales" });
+  const stockFor = (pid: number) =>
+    (allBalances ?? []).filter((b: any) => b.productId === pid)
+      .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
 
   useEffect(() => {
     setLines([]); setMsg(""); setOrigId(""); setReason(""); setPartyId("");
@@ -147,22 +218,47 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     setPartyId(""); setPartyQ(""); resetCd();
   };
 
-  const addLine = async (p: any) => {
-    if (viewId !== null) return;
-    let price = Number(p.salePrice ?? p.purchasePrice ?? 0);
-    if (priceListId && kind === "sales") {
+  // Step 1 -> 2: pick item, default qty/price, focus qty
+  const chooseItem = (p: any) => {
+    setActiveItem(p);
+    setQ(p.nameAr || p.name);
+    setQtyInput("1");
+    setPriceInput("");
+    setTimeout(() => { qtyRef.current?.focus(); qtyRef.current?.select(); }, 0);
+  };
+
+  // Step 2 -> 3 (Enter in qty) and Step 3 -> add (Enter in price)
+  const commitLine = async () => {
+    const p = activeItem;
+    if (!p || viewId !== null) return;
+    const qn = Number(qtyInput) || 1;
+    let price = priceInput.trim() === "" ? Number(p.salePrice ?? p.purchasePrice ?? 0) : Number(priceInput);
+    if (priceListId && kind === "sales" && priceInput.trim() === "") {
       try {
         const rows: any = await utils.sahl.priceFor.fetch({ productId: p.id });
         const hit = (rows ?? []).find((r: any) => String(r.id) === String(priceListId));
         if (hit && hit.price !== null && Number(hit.price) >= 0) price = Number(hit.price);
       } catch { /* keep base price */ }
     }
+    const floor = Number(p.minPrice ?? 0);
+    if (floor > 0 && price < floor) {
+      const ok = confirm(T(
+        `السعر ${price} أقل من أقل سعر بيع ${floor} — متابعة؟`,
+        `Price ${price} is below floor ${floor} — continue?`));
+      if (!ok) { priceRef.current?.focus(); priceRef.current?.select(); return; }
+    }
+    const autoDisc = Number(p.fixedDiscount ?? 0);
     setLines([...lines, {
       productId: p.id, code: p.sku ?? "", name: p.nameAr || p.name,
-      unit: "", qty: Number(qty) || 1, price, disc: 0,
+      unit: "", qty: qn, price, disc: autoDisc > 0 ? autoDisc * qn : 0,
     }]);
-    setQ("");
+    setQ(""); setQtyInput("1"); setPriceInput(""); setActiveItem(null);
     searchRef.current?.focus();
+  };
+
+  const addLine = async (p: any) => {
+    if (viewId !== null) return;
+    chooseItem(p);
   };
 
   const lineTotal = (l: Line) => l.qty * l.price - (l.disc || 0);
@@ -173,6 +269,15 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const origDoc: any = kind.endsWith("return") ? history.find((h: any) => String(h.id) === String(origId)) : null;
   const origTotal = origDoc ? Number(origDoc.totalAmount ?? origDoc.total ?? 0) : 0;
   const returnAmount = lines.length ? net : origTotal;
+
+  const moveRow = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= lines.length || viewId !== null) return;
+    const next = [...lines];
+    [next[i], next[j]] = [next[j], next[i]];
+    setLines(next);
+    setSel(j);
+  };
 
   const editQty = () => {
     if (viewId !== null) return;
@@ -194,6 +299,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const invCreate = trpc.sales.invoiceCreate.useMutation();
   const invDelete = trpc.sales.invoiceDelete.useMutation();
+  const payCreate = trpc.sales.paymentCreate.useMutation();
+  const prodUpdate = trpc.inventory.productUpdate.useMutation();
   const poCreate = trpc.purchase.poCreate.useMutation();
   const grnCreate = trpc.purchase.grnCreate.useMutation();
   const creditCreate = trpc.sales.creditNoteCreate.useMutation();
@@ -257,13 +364,14 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       const note = [reason || undefined, salesmanSuffix()].filter(Boolean).join(" — ") || undefined;
       if (kind === "sales") {
         const custName = cd.name.trim() || parties.find((a: any) => String(a.id) === String(partyId))?.name;
-        await invCreate.mutateAsync({
+        const inv = await invCreate.mutateAsync({
           invoiceNumber: `INV-${stamp}`,
           ...(partyId ? { customerId: Number(partyId) } : {}),
           date: docDate,
           subTotal: String(subtotal), discountAmount: String(discount),
           taxPercent: String(taxPct), taxAmount: taxAmt.toFixed(2),
           totalAmount: String(grand), notes: note,
+          paymentType: payMode === "card" ? "card" : payMode === "credit" ? "credit" : "cash",
           customerName: custName || undefined,
           customerNameAr: cd.nameAr.trim() || undefined,
           customerPhone: cd.phone.trim() || undefined,
@@ -278,6 +386,25 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           })),
         });
         setMsg(`${T("تم حفظ الفاتورة", "Invoice saved")} — INV-${stamp}`);
+        // Credit invoice down-payment prompt (هل دفع العميل دفعة؟)
+        if (payMode === "credit" && partyId) {
+          const v = prompt(T(
+            `الإجمالي ${grand.toFixed(2)} — هل دفع العميل دفعة الآن؟ أدخل المبلغ (فارغ = لا)`,
+            `Total ${grand.toFixed(2)} — did the customer pay a down payment? Enter amount (empty = no)`));
+          const dp = Number(v);
+          if (v && dp > 0) {
+            try {
+              await payCreate.mutateAsync({
+                paymentNumber: `PAY-${stamp}`, customerId: Number(partyId),
+                invoiceId: (inv as any)?.id, date: docDate, amount: String(Math.min(dp, grand)),
+                paymentMethod: "cash", notes: `INV-${stamp}`,
+              });
+              setMsg(`${T("تم حفظ الفاتورة والدفعة", "Invoice + down payment saved")} — INV-${stamp}`);
+            } catch (e: any) {
+              setMsg(`${T("حُفظت الفاتورة وفشلت الدفعة", "Invoice saved, payment failed")}: ${e.message ?? e}`);
+            }
+          }
+        }
       } else if (kind === "quotation") {
         await quoteCreate.mutateAsync({
           quotationNumber: `Q-${stamp}`, customerId: Number(partyId), date: docDate,
@@ -305,6 +432,23 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             unitPrice: String(l.price), totalAmount: String(lineTotal(l)),
           })),
         });
+        // Weighted-average cost update per product (client-side WAC):
+        // newAvg = (curQty*curCost + qty*price) / (curQty+qty)
+        try {
+          const bals: any = await utils.inventory.inventoryList.fetch({ warehouseId: Number(wh) });
+          for (const l of lines) {
+            if (!l.productId) continue;
+            const cur = (bals ?? []).filter((x: any) => x.productId === l.productId)
+              .reduce((a: number, x: any) => a + Number(x.quantity || 0), 0);
+            const prod: any = await utils.inventory.productGet.fetch({ id: l.productId });
+            const curCost = Number(prod?.product?.purchasePrice ?? l.price);
+            const denom = cur + l.qty;
+            if (denom > 0) {
+              const avg = (cur * curCost + l.qty * l.price) / denom;
+              await prodUpdate.mutateAsync({ id: l.productId, purchasePrice: String(avg) });
+            }
+          }
+        } catch { /* stock posted by GRN; cost avg best-effort */ }
         setMsg(`${T("تم حفظ أمر الشراء والاستلام", "PO + GRN saved")} — PO-${stamp}`);
       } else if (kind === "sales-return") {
         const c = await creditCreate.mutateAsync({
@@ -362,9 +506,10 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       else if (e.key === "F8") { e.preventDefault(); delLine(); }
       else if (e.key === "F9") { e.preventDefault(); save(false, false); }
       else if (e.key === "F10") { e.preventDefault(); newDoc(); }
-      else if (e.key === "F11") { e.preventDefault(); doPrint(); }
+      else if (e.key === "F11") { e.preventDefault(); setTendered(""); setSettleOpen(true); }
       else if (e.key === "F12") { e.preventDefault(); save(true, true); }
-      else if (e.key === "Escape") { newDoc(); }
+      else if (e.key === "F2") { e.preventDefault(); navigate("/app/construction/sahl/vault/archive"); }
+      else if (e.key === "Escape") { if (settleOpen) setSettleOpen(false); else newDoc(); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -445,17 +590,41 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         )}
 
         {viewId === null && kind !== "sales-return" && (
-          <div className="relative flex gap-1 border-b border-[#bbb] p-1.5">
-            <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder={T("ابحث عن الصنف (كود/اسم/باركود)", "Find item (code/name/barcode)")} className={`${inputCls} flex-1`} />
-            <input type="number" min="1" value={qty} onChange={(e) => setQty(Number(e.target.value))}
-              className={`${inputCls} w-[70px]`} />
-            {results.length > 0 && (
-              <div className="absolute start-0 top-full z-10 w-[320px] border border-black bg-white">
+          <div className="relative flex flex-wrap items-end gap-1 border-b border-[#bbb] p-1.5">
+            <label className="flex min-w-[180px] flex-1 flex-col">{T("1. ابحث عن الصنف", "1. Find item")}
+              <input ref={searchRef} value={q}
+                onChange={(e) => { setQ(e.target.value); setActiveItem(null); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (results.length === 1) chooseItem(results[0]);
+                    else if (results.length > 1) chooseItem(results[0]);
+                    else qtyRef.current?.focus();
+                  }
+                }}
+                placeholder={T("باركود / كود / اسم — Enter", "Barcode / code / name — Enter")} className={inputCls} />
+            </label>
+            <label className="flex w-[80px] flex-col">{T("2. الكمية", "2. Qty")}
+              <input ref={qtyRef} value={qtyInput} onChange={(e) => setQtyInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); priceRef.current?.focus(); priceRef.current?.select(); }
+                }}
+                className={`${inputCls} text-center font-bold`} />
+            </label>
+            <label className="flex w-[100px] flex-col">{T("3. السعر", "3. Price")}
+              <input ref={priceRef} value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitLine(); } }}
+                placeholder={activeItem ? String(Number(activeItem.salePrice ?? activeItem.purchasePrice ?? 0)) : ""}
+                className={`${inputCls} text-center font-bold`} />
+            </label>
+            <button className={btnCls} onClick={commitLine}>{T("4. أضف", "4. Add")}</button>
+            {results.length > 0 && !activeItem && (
+              <div className="absolute start-0 top-full z-10 w-[340px] border border-black bg-white">
                 {results.map((p: any) => (
-                  <div key={p.id} onClick={() => addLine(p)}
+                  <div key={p.id} onClick={() => chooseItem(p)}
                     className="flex cursor-pointer justify-between px-2 py-1 hover:bg-[#e8f5e9]">
-                    <span>{p.code ?? p.sku} — {p.nameAr || p.name}</span>
+                    <span>{p.barcode ?? p.code ?? p.sku} — {p.nameAr || p.name}</span>
                     <b>{Number(p.salePrice ?? 0)}</b>
                   </div>
                 ))}
@@ -478,14 +647,20 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           <table className="w-full border-collapse text-[12px]">
             <thead>
               <tr style={{ background: "#2fae4e", color: "#fff" }}>
-                {[T("رقم الصنف", "Code"), T("اسم الصنف", "Item"), T("الكمية", "Qty"), T("السعر", "Price"), T("الخصم", "Disc"), T("الإجمالي", "Total")].map((c, i) => (
+                {[
+                  "#",
+                  T("رقم الصنف", "Code"), T("اسم الصنف", "Item"),
+                  ...(kind === "sales" ? [T("المتاح", "Avail")] : []),
+                  T("الكمية", "Qty"), T("السعر", "Price"), T("الخصم", "Disc"), T("الإجمالي", "Total"),
+                  T("إجراءات", "Actions"),
+                ].map((c, i) => (
                   <th key={i} className="border border-[#1d7a37] px-1 py-1 font-normal">{c}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {lines.length === 0 ? (
-                <tr><td colSpan={6} className="py-6 text-center text-[#888]">
+                <tr><td colSpan={9} className="py-6 text-center text-[#888]">
                   {viewId !== null ? T("عرض", "Viewing") : kind === "sales-return"
                     ? T("اختر المستند الأصلي ثم احفظ", "Select original, then save")
                     : T("فاتورة فارغة — ابحث وأضف صنفاً", "Empty — search and add items")}
@@ -493,9 +668,29 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
               ) : lines.map((l, i) => (
                 <tr key={i} onClick={() => setSel(i)} className="cursor-pointer"
                   style={i === sel ? { background: "#a5d6a7" } : undefined}>
-                  {[l.code, l.name, l.qty, l.price, l.disc || 0, lineTotal(l).toFixed(2)].map((c, j) => (
-                    <td key={j} className="border border-[#ccc] px-1 py-0.5 text-center">{c}</td>
-                  ))}
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{i + 1}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.code}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.name}</td>
+                  {kind === "sales" && (
+                    <td className="border border-[#ccc] px-1 py-0.5 text-center font-bold tabular-nums"
+                      style={{ color: stockFor(l.productId ?? 0) - l.qty < 0 ? "#b71c1c" : "#1b5e20" }}>
+                      {stockFor(l.productId ?? 0) - l.qty}
+                    </td>
+                  )}
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.qty}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.price}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.disc || 0}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{lineTotal(l).toFixed(2)}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <span className="flex items-center justify-center gap-0.5">
+                      <button className="border border-[#999] bg-white px-1" title={T("أعلى", "Up")}
+                        onClick={() => moveRow(i, -1)}>▲</button>
+                      <button className="border border-[#999] bg-white px-1" title={T("أسفل", "Down")}
+                        onClick={() => moveRow(i, 1)}>▼</button>
+                      <button className="border border-[#999] bg-white px-1 text-red-700" title={T("حذف", "Delete")}
+                        onClick={() => { setSel(i); setLines(lines.filter((_, j) => j !== i)); }}>✕</button>
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -509,6 +704,18 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 p-1.5 text-white" style={{ background: "#1d7a37" }}>
+          {kind === "sales" && (
+            <span className="flex items-center gap-1 border border-white/40 px-1 py-0.5">
+              {(["cash", "credit", "card"] as const).map((m) => (
+                <label key={m} className="flex cursor-pointer items-center gap-0.5 text-[12px]">
+                  <input type="radio" checked={payMode === m} onChange={() => setPayMode(m)} disabled={viewId !== null} />
+                  {m === "cash" ? T("نقدي", "Cash") : m === "credit" ? T("آجل", "Credit") : T("شبكة", "Card")}
+                </label>
+              ))}
+              <button title={T("تثبيت طريقة السداد (الدبوس)", "Pin payment mode")} onClick={pinPay}
+                className="px-1 text-[14px]" style={{ color: "#ffeb3b" }}>📌</button>
+            </span>
+          )}
           {kind === "sales" && (
             <label>{T("المندوب", "Rep")}
               <select className="px-1 text-black" value={salesman} onChange={(e) => setSalesman(e.target.value)} disabled={viewId !== null}>
@@ -531,10 +738,19 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           )}
           <b>{T("الصافي", "Net")}: {grand.toFixed(2)}</b>
           <button className={btnCls} onClick={() => save(false, false)} disabled={saving || viewId !== null}>{T("حفظ (F9)", "Save (F9)")}</button>
-          <button className={btnCls} onClick={doPrint}>{T("طباعة (F11)", "Print (F11)")}</button>
+          <button className={btnCls} onClick={() => setSettleOpen(true)} disabled={!lines.length}>{T("سداد (F11)", "Settle (F11)")}</button>
+          <button className={btnCls} onClick={doPrint}>{T("طباعة", "Print")}</button>
           <button className={btnCls} onClick={newDoc}>{T("جديد (F10)", "New (F10)")}</button>
           {msg && <span className="bg-white px-1 text-black">{msg}</span>}
         </div>
+
+        {settleOpen && (
+          <SettlementModal
+            T={T} total={grand} tendered={tendered} setTendered={setTendered}
+            onClose={() => setSettleOpen(false)}
+            onCommit={() => { setSettleOpen(false); save(autoPrint, true); }}
+          />
+        )}
 
         <div className="flex flex-wrap items-center gap-1 bg-[#222] px-1.5 py-1 text-[11px] text-white">
           <button className="border border-[#555] bg-[#333] px-2 py-1 hover:bg-[#444]" onClick={() => navigate("/app/construction")}>{T("إغلاق", "Close")}</button>
@@ -572,6 +788,10 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           <FuncKey k="F6" label={T("تعديل السعر", "Edit price")} onClick={editPrice} color="#455a64" />
           <FuncKey k="F8" label={T("حذف الصنف", "Delete item")} onClick={delLine} color="#6a1b9a" />
           <FuncKey k="F7" label={T("خيارات أخرى", "More options")} onClick={moreOpts} color="#00838f" />
+          <FuncKey k="F9" label={T("حفظ", "Save")} onClick={() => save(false, false)} color="#2fae4e" />
+          <FuncKey k="F10" label={T("جديد", "New")} onClick={newDoc} color="#546e7a" />
+          <FuncKey k="F11" label={T("سداد", "Settle")} onClick={() => { setTendered(""); setSettleOpen(true); }} color="#1565c0" />
+          <FuncKey k="F12" label={T("حفظ+طباعة", "Save+print")} onClick={() => save(true, true)} color="#0d47a1" />
         </div>
         {showOpts && (
           <div className="flex flex-col gap-1 border border-[#888] bg-white p-1 text-[11px]">
@@ -590,8 +810,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
               <button className={btnCls} onClick={() => setShowLookup(false)}>×</button>
             </div>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={T("بحث", "Search")} className={`${inputCls} mb-1`} />
-            {(products ?? []).slice(0, 50).map((p: any) => (
-              <div key={p.id} onClick={() => { addLine(p); setShowLookup(false); }}
+            {(results ?? []).slice(0, 50).map((p: any) => (
+              <div key={p.id} onClick={() => { chooseItem(p); setShowLookup(false); }}
                 className="flex cursor-pointer justify-between border-b border-[#eee] px-1 py-1 text-[12px] hover:bg-[#e8f5e9]">
                 <span>{p.code ?? p.sku} — {p.nameAr || p.name}</span>
                 <b>{Number(p.salePrice ?? 0)}</b>

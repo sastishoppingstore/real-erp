@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/providers/language";
+import { trpc } from "@/providers/trpc";
 import {
   LayoutDashboard, Menu, Building2, FileText, ClipboardList, FileSpreadsheet,
   FileEdit, Handshake, FileBarChart, ScrollText, CalendarCheck,
@@ -161,6 +162,19 @@ function DrawerNav({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
+function CashBalance({ rtl }: { rtl: boolean }) {
+  const bal = trpc.cashbox.currentBalance.useQuery(undefined, {
+    refetchInterval: 60000,
+    retry: false,
+  });
+  const v = Number((bal.data as any)?.balance ?? 0);
+  return (
+    <span className="whitespace-nowrap tabular-nums">
+      {rtl ? "الخزينة" : "Cash"}: <b className="text-white">{v.toFixed(2)}</b>
+    </span>
+  );
+}
+
 export default function ConstructionLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Standalone Sahl shell: expired sessions bounce to login, and the
@@ -265,10 +279,14 @@ export default function ConstructionLayout() {
         </span>
         <span className="text-white/30">|</span>
         <span className="tabular-nums">{now.toLocaleDateString("en-GB")}</span>
+        <span className="text-white/30">|</span>
+        <CashBalance rtl={rtl} />
         <div className="flex-1" />
         <span className="hidden truncate sm:inline">{rtl ? "المقاولات للمقاولات وإدارة المشاريع" : "Construction & project management"}</span>
         <span className="text-white/30">|</span>
         <span className="max-w-28 truncate font-semibold">{userName}</span>
+        <span className="text-white/30">|</span>
+        <span className="text-white/50">Powered by YASCO</span>
       </footer>
     </div>
   );

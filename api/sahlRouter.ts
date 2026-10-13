@@ -359,6 +359,30 @@ export const sahlRouter = createRouter({
       return { success: true };
     }),
 
+  // ---- Barcode / code / name lookup (name, sku, barcode LIKE) ----
+  lookup: authedQuery
+    .input(z.object({ q: z.string().min(1), limit: z.number().default(20) }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const { products } = await import("@db/schema");
+      const pattern = `%${input.q}%`;
+      return db.select({
+        id: products.id, sku: products.sku, name: products.name, nameAr: products.nameAr,
+        barcode: products.barcode, purchasePrice: products.purchasePrice,
+        salePrice: products.salePrice, minPrice: (products as any).minPrice,
+        fixedDiscount: (products as any).fixedDiscount,
+        taxRate: products.taxRate, isActive: products.isActive,
+      }).from(products)
+        .where(and(
+          eq(products.tenantId, ctx.user.tenantId!),
+          or(
+            like(products.name, pattern),
+            like(products.sku, pattern),
+            like(products.barcode, pattern),
+          )!))
+        .limit(Math.min(input.limit, 50));
+    }),
+
   // ---- Users (admin only; scrypt format matches passwordLogin) ----
   userList: adminQuery.query(async ({ ctx }) => {
     const db = getDb();
