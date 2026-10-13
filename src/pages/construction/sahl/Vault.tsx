@@ -480,6 +480,7 @@ function Labels({ T }: { T: (a: string, e: string) => string }) {
 // ---- Print themes (existing invoiceTheme backend) ----
 function Prints({ T }: { T: (a: string, e: string) => string }) {
   const utils = trpc.useUtils();
+  const navigate = useNavigate();
   const { msg, setMsg } = useMsg();
   const { data: themesQ } = trpc.invoiceTheme.list.useQuery();
   const themes: any[] = Array.isArray(themesQ) ? themesQ : [];
@@ -492,6 +493,9 @@ function Prints({ T }: { T: (a: string, e: string) => string }) {
       <div className="mb-1 border border-[#333] bg-[#111] p-1.5">
         <b>{T("تصميم نماذج الطباعة", "Print templates")}</b>
         {msg && <span className="ms-2 bg-white px-1 text-black">{msg}</span>}
+        <button className="ms-2 border border-[#555] bg-[#2fae4e] px-2 py-0.5 text-white" onClick={() => navigate("/app/construction/sahl/prints")}>
+          {T("المصمم الكامل", "Full designer")}
+        </button>
       </div>
       <SahlGrid
         columns={[T("الاسم", "Name"), T("النوع", "Kind"), T("افتراضي", "Default"), ""]}

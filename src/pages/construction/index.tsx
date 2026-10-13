@@ -141,7 +141,7 @@ export default function ConstructionDashboard() {
     { label: "Cheques", labelAr: "الشيكات", icon: Receipt, path: "/app/construction/sahl/vault/cheques", color: C.blue },
     { label: "Installments", labelAr: "الأقساط", icon: Calculator, path: "/app/construction/sahl/vault/inst", color: C.burgundy },
     { label: "Barcode", labelAr: "الباركود", icon: Tags, path: "/app/construction/sahl/vault/labels", color: C.green },
-    { label: "Prints", labelAr: "الطباعة", icon: FileText, path: "/app/construction/sahl/vault/prints", color: C.blue },
+    { label: "Prints", labelAr: "الطباعة", icon: FileText, path: "/app/construction/sahl/prints", color: C.blue },
     { label: "Valuation", labelAr: "التقييم", icon: Calculator, path: "/app/construction/sahl/reports/stock", color: C.green },
     { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/sahl/treasury", color: C.teal },
   ];

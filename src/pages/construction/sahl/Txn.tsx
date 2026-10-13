@@ -3,6 +3,10 @@ import { useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { inputCls, btnCls, FuncKey } from "./ui";
+import {
+  DOC_TITLES, downloadBlob, printHtml, renderXlsx,
+  type DocData, type PrintConfig,
+} from "./printEngine";
 
 // SCR-007 — verified against video frames (inv700 + right/bottom zooms):
 // yellow total under doc-number box, green grid header, gray panel, right
@@ -369,7 +373,108 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     utils.inventory.movementList.invalidate();
   };
 
-  const doPrint = () => window.print();
+  const doPrint = () => setPrintOpen(true);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printTpl, setPrintTpl] = useState("");
+  const { data: themesQ } = trpc.invoiceTheme.list.useQuery();
+  const myTpls: any[] = (Array.isArray(themesQ) ? themesQ : [])
+    .filter((t: any) => t.config?.kind === "sahl-xlsx");
+
+  const docTypeFor = (): "sale" | "quotation" | "purchase" | "sales-return" =>
+    kind === "sales" ? "sale" : kind === "quotation" ? "quotation"
+    : kind === "purchase" ? "purchase" : "sales-return";
+
+  const buildDoc = (): DocData => {
+    if (viewId !== null && viewData) {
+      const inv: any = (viewData as any).invoice;
+      const items: any[] = (viewData as any).items ?? [];
+      const cust: any = (viewData as any).customer;
+      return {
+        no: inv?.invoiceNumber ?? `#${viewId}`,
+        date: String(inv?.date ?? docDate).slice(0, 10),
+        party: cust?.nameAr || cust?.name || inv?.customerName || cd.name,
+        partyTax: cust?.vatNumber ?? cust?.taxNumber ?? cd.vat,
+        partyPhone: cust?.phone ?? cd.phone,
+        branch: "",
+        lines: items.map((it: any) => ({
+          code: it.sku ?? "", name: it.descriptionAr || it.description,
+          unit: it.unit ?? "", qty: Number(it.quantity || 0),
+          price: Number(it.unitPrice || 0), disc: 0,
+          total: Number(it.totalAmount || 0),
+        })),
+        subtotal: Number(inv?.subTotal || subtotal),
+        discount: Number(inv?.discountAmount || discount),
+        tax: Number(inv?.taxAmount || taxAmt),
+        net: Number(inv?.totalAmount || grand),
+        notes: inv?.notes ?? reason ?? undefined,
+        qrText: inv?.zatcaQrCode || inv?.invoiceNumber,
+      };
+    }
+    return {
+      no: `INV-${Date.now()}`, date: docDate,
+      party: cd.name || parties.find((a: any) => String(a.id) === String(partyId))?.name || "",
+      partyTax: cd.vat, partyPhone: cd.phone, branch: "",
+      lines: lines.map((l) => ({
+        code: l.code, name: l.name, unit: l.unit, qty: l.qty,
+        price: l.price, disc: l.disc || 0, total: lineTotal(l),
+      })),
+      subtotal, discount: Number(discount), tax: taxAmt, net: grand,
+      notes: reason || undefined, qrText: undefined,
+    };
+  };
+
+  const tplConfig = (): PrintConfig | null => {
+    const t = myTpls.find((x: any) => String(x.id) === String(printTpl) || x.themeKey === printTpl);
+    if (t?.config) return { ...(t.config as PrintConfig), docType: docTypeFor() };
+    return null;
+  };
+
+  const printDoc = async (mode: "html" | "xlsx" | "both") => {
+    const d = buildDoc();
+    const comp: any = company ?? {};
+    const cfg = tplConfig();
+    const [tar, ten] = DOC_TITLES[docTypeFor()];
+    const body =
+      `<h1>${cfg?.titleAr ?? tar} — ${d.no}</h1>` +
+      `<p>${d.date} · ${d.party ?? ""} · ${d.partyPhone ?? ""}</p>` +
+      `<table><tr>${["الكود", "الصنف", "الكمية", "السعر", "الإجمالي"].map((c) => `<th>${c}</th>`).join("")}</tr>` +
+      d.lines.map((l) => `<tr><td>${l.code ?? ""}</td><td>${l.name}</td><td>${l.qty}</td><td>${l.price}</td><td>${l.total.toFixed(2)}</td></tr>`).join("") +
+      `</table><div class="tot">الصافي: ${d.net.toFixed(2)}</div>`;
+    if (mode === "html" || mode === "both") printHtml(`${tar}-${d.no}`, body);
+    if (mode === "xlsx" || mode === "both") {
+      const mkCfg = (paper: "A4" | "thermal80", narrow: boolean): PrintConfig => {
+        const base: PrintConfig = cfg ?? {
+          kind: "sahl-xlsx", docType: docTypeFor(), paper: "A4",
+          titleAr: tar, titleEn: ten, headerLines: ["", "", ""],
+          showSignatures: true, showTax: true,
+          columns: [
+            { key: "code", ar: "الكود", en: "Code", visible: true },
+            { key: "name", ar: "الصنف", en: "Item", visible: true },
+            { key: "qty", ar: "الكمية", en: "Qty", visible: true },
+            { key: "price", ar: "السعر", en: "Price", visible: true },
+            { key: "total", ar: "الإجمالي", en: "Total", visible: true },
+          ],
+          footerText: "", accent: "#2fae4e",
+        };
+        if (!narrow) return { ...base, paper };
+        return {
+          ...base, paper,
+          showSignatures: false,
+          columns: base.columns.map((c) => ({
+            ...c, visible: ["name", "qty", "price", "total"].includes(c.key),
+          })),
+        };
+      };
+      const full = mkCfg("A4", false);
+      const blob = await renderXlsx(full, d, { nameAr: comp.companyNameAr, name: comp.companyName });
+      downloadBlob(blob, `${d.no}.xlsx`);
+      if (mode === "both") {
+        const therm = await renderXlsx(mkCfg("thermal80", true), d, { nameAr: comp.companyNameAr, name: comp.companyName });
+        downloadBlob(therm, `${d.no}-thermal.xlsx`);
+      }
+    }
+    setPrintOpen(false);
+  };
 
   const exportExcel = () => {
     const rows = [
@@ -886,6 +991,33 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           </div>
         )}
       </div>
+
+      {printOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPrintOpen(false)}>
+          <div className="w-full max-w-sm border border-black bg-white p-3" onClick={(e) => e.stopPropagation()}>
+            <b className="text-[13px]">{T("الطباعة — اختر القالب", "Print — pick template")}</b>
+            <select className={`${inputCls} mt-2`} value={printTpl} onChange={(e) => setPrintTpl(e.target.value)}>
+              <option value="">{T("الافتراضي", "Default")}</option>
+              {myTpls.map((t: any) => <option key={t.id ?? t.themeKey} value={t.id ?? t.themeKey}>{t.name}</option>)}
+            </select>
+            <div className="mt-1 text-[11px]">
+              <button className={btnCls} onClick={() => navigate("/app/construction/sahl/prints")}>
+                {T("مصمم القوالب", "Template designer")}
+              </button>
+            </div>
+            <div className="mt-2 flex justify-between gap-1">
+              <button className={btnCls} onClick={() => printDoc("html")}>🖨 HTML</button>
+              <button className={btnCls} onClick={() => printDoc("xlsx")}>xlsx ↓</button>
+              <button className={btnGreenCls} style={{ background: "#0a5c2a" }} onClick={() => printDoc("both")}>
+                {T("الاثنان (A4 + حراري)", "Both")}
+              </button>
+            </div>
+            <div className="mt-1 text-[11px] text-[#666]">
+              {T("الاثنان: A4 مفصلة + إيصال حراري", "Both: detailed A4 + thermal receipt")}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showLookup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowLookup(false)}>
