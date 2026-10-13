@@ -250,7 +250,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     const autoDisc = Number(p.fixedDiscount ?? 0);
     setLines([...lines, {
       productId: p.id, code: p.sku ?? "", name: p.nameAr || p.name,
-      unit: "", qty: qn, price, disc: autoDisc > 0 ? autoDisc * qn : 0,
+      unit: p.unitName ?? "", qty: qn, price, disc: autoDisc > 0 ? autoDisc * qn : 0,
     }]);
     setQ(""); setQtyInput("1"); setPriceInput(""); setActiveItem(null);
     searchRef.current?.focus();
@@ -351,7 +351,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     if ((kind === "purchase" || kind === "purchase-return") && !partyId) {
       setMsg(T("اختر المورد", "Select supplier")); return;
     }
-    if (kind.endsWith("return") && !origId) { setMsg(T("اختر المستند الأصلي", "Select original document")); return; }
+    // Sales return works WITH original (linked credit note) or WITHOUT
+    // (freestanding/direct return, مرتجع مباشر — backend stores invoiceId 0).
+    if (kind === "purchase-return" && !origId) { setMsg(T("اختر المستند الأصلي", "Select original document")); return; }
     if (kind === "sales-return" && returnAmount <= 0) {
       setMsg(T("لا يوجد مبلغ للمرتجع", "Nothing to return")); return;
     }
@@ -450,10 +452,16 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           }
         } catch { /* stock posted by GRN; cost avg best-effort */ }
         setMsg(`${T("تم حفظ أمر الشراء والاستلام", "PO + GRN saved")} — PO-${stamp}`);
+        if (confirm(T(
+          "هل تريد طباعة ملصقات الباركود لهذه البضاعة؟",
+          "Print barcode labels for these goods?"))) {
+          navigate("/app/construction/sahl/vault/labels");
+        }
       } else if (kind === "sales-return") {
         const c = await creditCreate.mutateAsync({
           creditNoteNumber: `CN-${stamp}`, customerId: Number(partyId),
-          invoiceId: Number(origId), date: docDate, amount: String(returnAmount),
+          ...(origId ? { invoiceId: Number(origId) } : {}),
+          date: docDate, amount: String(returnAmount),
           reason: note,
         });
         setMsg(`${T("تم حفظ المرتجع", "Return saved")} — ${c.id}`);
@@ -649,7 +657,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
               <tr style={{ background: "#2fae4e", color: "#fff" }}>
                 {[
                   "#",
-                  T("رقم الصنف", "Code"), T("اسم الصنف", "Item"),
+                  T("رقم الصنف", "Code"), T("اسم الصنف", "Item"), T("الوحدة", "Unit"),
                   ...(kind === "sales" ? [T("المتاح", "Avail")] : []),
                   T("الكمية", "Qty"), T("السعر", "Price"), T("الخصم", "Disc"), T("الإجمالي", "Total"),
                   T("إجراءات", "Actions"),
@@ -660,9 +668,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             </thead>
             <tbody>
               {lines.length === 0 ? (
-                <tr><td colSpan={9} className="py-6 text-center text-[#888]">
+                <tr><td colSpan={10} className="py-6 text-center text-[#888]">
                   {viewId !== null ? T("عرض", "Viewing") : kind === "sales-return"
-                    ? T("اختر المستند الأصلي ثم احفظ", "Select original, then save")
+                    ? T("مرتجع مرتبط أو مباشر — احفظ", "Linked or direct return — save")
                     : T("فاتورة فارغة — ابحث وأضف صنفاً", "Empty — search and add items")}
                 </td></tr>
               ) : lines.map((l, i) => (
@@ -671,6 +679,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{i + 1}</td>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.code}</td>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.name}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.unit}</td>
                   {kind === "sales" && (
                     <td className="border border-[#ccc] px-1 py-0.5 text-center font-bold tabular-nums"
                       style={{ color: stockFor(l.productId ?? 0) - l.qty < 0 ? "#b71c1c" : "#1b5e20" }}>

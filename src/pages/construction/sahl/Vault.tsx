@@ -76,6 +76,11 @@ function Stocktake({ T }: { T: (a: string, e: string) => string }) {
   const { data: warehouses } = trpc.inventory.warehouseList.useQuery();
   const { data: products } = trpc.inventory.productList.useQuery(q ? { search: q } : undefined);
   const { data: sessions } = trpc.inventory.adjustmentList.useQuery();
+  const { data: bals } = trpc.inventory.inventoryList.useQuery(
+    wh ? { warehouseId: Number(wh) } : undefined, { enabled: !!wh });
+  const sysQty = (pid: number) =>
+    (bals ?? []).filter((b: any) => b.productId === pid)
+      .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
   const post = trpc.inventory.adjustmentCreate.useMutation({
     onSuccess: () => { setLines([]); setMsg(T("تم ترحيل الجرد", "Count posted")); utils.inventory.adjustmentList.invalidate(); utils.inventory.inventoryList.invalidate(); },
     onError: (e) => setMsg(e.message),
@@ -97,6 +102,7 @@ function Stocktake({ T }: { T: (a: string, e: string) => string }) {
       {(products ?? []).slice(0, 6).map((p: any) => (
         <div key={p.id} className="flex items-center gap-1 border-b border-[#333] px-1 py-0.5">
           <span className="flex-1">{p.sku} — {p.nameAr || p.name}</span>
+          <span className="text-[11px] text-white/60">{T("الدفتري", "System")}: {wh ? sysQty(p.id) : "—"}</span>
           <input type="number" min="0" className={inputCls} style={{ width: 90 }} placeholder={T("المجرد", "Counted")}
             onChange={(e) => {
               const v = Number(e.target.value);
@@ -135,6 +141,11 @@ function Transfer({ T }: { T: (a: string, e: string) => string }) {
   const { data: warehouses } = trpc.inventory.warehouseList.useQuery();
   const { data: products } = trpc.inventory.productList.useQuery(f.q ? { search: f.q } : undefined);
   const { data: list } = trpc.inventory.transferList.useQuery();
+  const { data: fromBals } = trpc.inventory.inventoryList.useQuery(
+    f.from ? { warehouseId: Number(f.from) } : undefined, { enabled: !!f.from });
+  const availFor = (pid: number) =>
+    (fromBals ?? []).filter((b: any) => b.productId === pid)
+      .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
   const post = trpc.sahl.transferAtomic.useMutation({
     onSuccess: () => { setF({ from: "", to: "", q: "", lines: [] }); setMsg(T("تم التحويل", "Transferred")); utils.inventory.transferList.invalidate(); utils.inventory.inventoryList.invalidate(); },
     onError: (e) => setMsg(e.message),
@@ -160,6 +171,7 @@ function Transfer({ T }: { T: (a: string, e: string) => string }) {
       {(products ?? []).slice(0, 6).map((p: any) => (
         <div key={p.id} className="flex items-center gap-1 border-b border-[#333] px-1 py-0.5">
           <span className="flex-1">{p.sku} — {p.nameAr || p.name}</span>
+          <span className="text-[11px] text-white/60">{T("المتاح", "Avail")}: {f.from ? availFor(p.id) : "—"}</span>
           <input type="number" min="1" className={inputCls} style={{ width: 80 }}
             onChange={(e) => {
               const v = Number(e.target.value);

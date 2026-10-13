@@ -364,7 +364,7 @@ export const sahlRouter = createRouter({
     .input(z.object({ q: z.string().min(1), limit: z.number().default(20) }))
     .query(async ({ input, ctx }) => {
       const db = getDb();
-      const { products } = await import("@db/schema");
+      const { products, units } = await import("@db/schema");
       const pattern = `%${input.q}%`;
       return db.select({
         id: products.id, sku: products.sku, name: products.name, nameAr: products.nameAr,
@@ -372,7 +372,9 @@ export const sahlRouter = createRouter({
         salePrice: products.salePrice, minPrice: (products as any).minPrice,
         fixedDiscount: (products as any).fixedDiscount,
         taxRate: products.taxRate, isActive: products.isActive,
+        unitName: units.name,
       }).from(products)
+        .leftJoin(units, eq(units.id, (products as any).unitId))
         .where(and(
           eq(products.tenantId, ctx.user.tenantId!),
           or(
