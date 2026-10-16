@@ -5,7 +5,7 @@ import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { inputCls, btnCls, FuncKey } from "./ui";
 import {
-  DOC_TITLES, downloadBlob, printHtml, renderXlsx,
+  DOC_TITLES, downloadBlob, printHtml, renderXlsx, render060,
   type DocData, type PrintConfig,
 } from "./printEngine";
 
@@ -122,6 +122,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const [origId, setOrigId] = useState("");
   const [reason, setReason] = useState("");
   const [docDate, setDocDate] = useState(today());
+  const [dueDate, setDueDate] = useState(today());
+  const userName = (user as any)?.name ?? (user as any)?.username ?? "";
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [priceListId, setPriceListId] = useState("");
@@ -199,6 +201,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const { data: poViewData } = trpc.sahl.poDetail.useQuery(
     { id: poViewId ?? 0 }, { enabled: kind === "purchase" && poViewId !== null });
 
+  const { data: partyInvoices } = trpc.sales.invoiceList.useQuery(
+    partyId && kind === "sales" ? { customerId: Number(partyId) } : { customerId: 0 },
+    { enabled: kind === "sales" && !!partyId });
   const parties: any[] = (isSales ? customers : suppliers) ?? [];
   const pickParty = (id: string) => {
     setPartyId(id);
@@ -226,7 +231,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   useEffect(() => {
     setLines([]); setMsg(""); setOrigId(""); setReason(""); setPartyId("");
-    setPartyQ(""); setDiscount(0); setDocDate(today()); setViewId(null); setPoViewId(null); setViewNav(0); resetCd();
+    setPartyQ(""); setDiscount(0); setDocDate(today()); setDueDate(today()); setViewId(null); setPoViewId(null); setViewNav(0); resetCd();
   }, [kind]);
 
   const isViewing = viewId !== null || poViewId !== null;
@@ -315,7 +320,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const newDoc = () => {
     setLines([]); setDiscount(0); setOrigId(""); setReason(""); setViewId(null); setPoViewId(null); setMsg("");
-    setPartyId(""); setPartyQ(""); resetCd();
+    setPartyId(""); setPartyQ(""); resetCd(); setDueDate(today());
   };
 
   // Step 1 -> 2: pick item, default qty/price, focus qty.
@@ -414,6 +419,12 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const net = Math.max(0, subtotal - Number(discount));
   const taxAmt = net * (Number(taxPct) || 0) / 100;
   const grand = net + taxAmt;
+  const partyRec: any = parties.find((a: any) => String(a.id) === String(partyId));
+  const balBefore = partyId && kind === "sales"
+    ? Number(partyRec?.openingBalance || 0) +
+      ((partyInvoices ?? []) as any[]).reduce((a: number, i: any) => a + Number(i.balanceDue || 0), 0)
+    : 0;
+  const balAfter = balBefore + grand;
   const origDoc: any = kind.endsWith("return") ? history.find((h: any) => String(h.id) === String(origId)) : null;
   const origTotal = origDoc ? Number(origDoc.totalAmount ?? origDoc.total ?? 0) : 0;
   const returnAmount = lines.length ? net : origTotal;
@@ -480,6 +491,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     : kind === "purchase" ? "purchase" : "sales-return";
 
   const buildDoc = (): DocData => {
+    const comp: any = company ?? {};
+    const payLabel = payMode === "card" ? (rtl ? "شبكة" : "Card") : payMode === "credit" ? (rtl ? "آجل" : "Credit") : (rtl ? "نقدي" : "Cash");
+    const contacts = [comp.print1, comp.print2, comp.print3].filter((x: any) => x && String(x).trim());
     if (isViewing && viewData) {
       const inv: any = (viewData as any).invoice;
       const items: any[] = (viewData as any).items ?? [];
@@ -487,6 +501,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       return {
         no: inv?.invoiceNumber ?? `#${viewId}`,
         date: String(inv?.date ?? docDate).slice(0, 10),
+        time: String(inv?.time ?? "").slice(0, 5) || undefined,
         party: cust?.nameAr || cust?.name || inv?.customerName || cd.name,
         partyTax: cust?.vatNumber ?? cust?.taxNumber ?? cd.vat,
         partyPhone: cust?.phone ?? cd.phone,
@@ -503,10 +518,20 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         net: Number(inv?.totalAmount || grand),
         notes: inv?.notes ?? reason ?? undefined,
         qrText: inv?.zatcaQrCode || inv?.invoiceNumber,
+        dueDate: String(inv?.dueDate ?? "").slice(0, 10) || undefined,
+        cashier: inv?.cashier ?? userName ?? undefined,
+        paymentType: inv?.paymentType ?? undefined,
+        taxPct: Number(inv?.taxPercent ?? taxPct),
+        qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
+        balBefore, balAfter, hasAccount: !!partyId,
+        companyTax: comp.taxNumber ?? undefined,
+        companyContacts: contacts.length ? contacts : undefined,
+        accountAddress: cust?.address ?? cd.address ?? undefined,
       };
     }
     return {
       no: `INV-${Date.now()}`, date: docDate,
+      time: `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`,
       party: cd.name || parties.find((a: any) => String(a.id) === String(partyId))?.name || "",
       partyTax: cd.vat, partyPhone: cd.phone, branch: "",
       lines: lines.map((l) => ({
@@ -515,6 +540,13 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       })),
       subtotal, discount: Number(discount), tax: taxAmt, net: grand,
       notes: reason || undefined, qrText: undefined,
+      dueDate: dueDate || undefined, cashier: userName || undefined,
+      paymentType: payLabel, taxPct: Number(taxPct),
+      qtyTotal: lines.reduce((a, l) => a + Number(l.qty || 0), 0),
+      balBefore, balAfter, hasAccount: !!partyId,
+      companyTax: comp.taxNumber ?? undefined,
+      companyContacts: contacts.length ? contacts : undefined,
+      accountAddress: cd.address || undefined,
     };
   };
 
@@ -537,35 +569,49 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       `</table><div class="tot">الصافي: ${d.net.toFixed(2)}</div>`;
     if (mode === "html" || mode === "both") printHtml(`${tar}-${d.no}`, body);
     if (mode === "xlsx" || mode === "both") {
-      const mkCfg = (paper: "A4" | "thermal80", narrow: boolean): PrintConfig => {
-        const base: PrintConfig = cfg ?? {
+      const compInfo = { nameAr: comp.companyNameAr, name: comp.companyName };
+      if (!cfg) {
+        // DEFAULT: form-returnsale-0060 replica (the user's Excel file)
+        const cfg060: PrintConfig = {
           kind: "sahl-xlsx", docType: docTypeFor(), paper: "A4",
-          titleAr: tar, titleEn: ten, headerLines: ["", "", ""],
-          showSignatures: true, showTax: true,
+          titleAr: kind === "sales-return" ? "مرتجع بيع" : tar,
+          titleEn: kind === "sales-return" ? "Sales return" : ten,
+          headerLines: ["", "", ""], contactLines: [],
+          showSignatures: true, showTax: true, showBalances: true,
           columns: [
             { key: "code", ar: "الكود", en: "Code", visible: true },
             { key: "name", ar: "الصنف", en: "Item", visible: true },
+            { key: "unit", ar: "الوحدة", en: "Unit", visible: true },
             { key: "qty", ar: "الكمية", en: "Qty", visible: true },
             { key: "price", ar: "السعر", en: "Price", visible: true },
             { key: "total", ar: "الإجمالي", en: "Total", visible: true },
           ],
           footerText: "", accent: "#2fae4e",
         };
-        if (!narrow) return { ...base, paper };
-        return {
-          ...base, paper,
-          showSignatures: false,
-          columns: base.columns.map((c) => ({
-            ...c, visible: ["name", "qty", "price", "total"].includes(c.key),
-          })),
+        const blob = await render060(cfg060, d, {
+          ...compInfo, tax: comp.taxNumber,
+          logoBase64: comp.logo || undefined,
+        });
+        downloadBlob(blob, `${d.no}-0060.xlsx`);
+      } else {
+        const mkCfg = (paper: "A4" | "thermal80", narrow: boolean): PrintConfig => {
+          const base: PrintConfig = cfg;
+          if (!narrow) return { ...base, paper };
+          return {
+            ...base, paper,
+            showSignatures: false,
+            columns: base.columns.map((c) => ({
+              ...c, visible: ["name", "qty", "price", "total"].includes(c.key),
+            })),
+          };
         };
-      };
-      const full = mkCfg("A4", false);
-      const blob = await renderXlsx(full, d, { nameAr: comp.companyNameAr, name: comp.companyName });
-      downloadBlob(blob, `${d.no}.xlsx`);
-      if (mode === "both") {
-        const therm = await renderXlsx(mkCfg("thermal80", true), d, { nameAr: comp.companyNameAr, name: comp.companyName });
-        downloadBlob(therm, `${d.no}-thermal.xlsx`);
+        const full = mkCfg("A4", false);
+        const blob = await renderXlsx(full, d, compInfo);
+        downloadBlob(blob, `${d.no}.xlsx`);
+        if (mode === "both") {
+          const therm = await renderXlsx(mkCfg("thermal80", true), d, compInfo);
+          downloadBlob(therm, `${d.no}-thermal.xlsx`);
+        }
       }
     }
     setPrintOpen(false);
@@ -631,10 +677,14 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       const note = [reason || undefined, salesmanSuffix()].filter(Boolean).join(" — ") || undefined;
       if (kind === "sales") {
         const custName = cd.name.trim() || parties.find((a: any) => String(a.id) === String(partyId))?.name;
+        const nowT = new Date();
         const inv = await invCreate.mutateAsync({
           invoiceNumber: `INV-${stamp}`,
           ...(partyId ? { customerId: Number(partyId) } : {}),
           date: docDate,
+          dueDate: dueDate || undefined,
+          time: `${String(nowT.getHours()).padStart(2, "0")}:${String(nowT.getMinutes()).padStart(2, "0")}`,
+          cashier: userName || undefined,
           subTotal: String(subtotal), discountAmount: String(discount),
           taxPercent: String(taxPct), taxAmount: taxAmt.toFixed(2),
           totalAmount: String(grand), notes: note,
@@ -822,6 +872,11 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           <label>{T("التاريخ", "Date")}
             <input type="date" className={inputCls} value={docDate} onChange={(e) => setDocDate(e.target.value)} disabled={isViewing} />
           </label>
+          {(kind === "sales" || kind === "quotation") && (
+            <label>{T("الاستحقاق", "Due")}
+              <input type="date" className={inputCls} value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isViewing} />
+            </label>
+          )}
           <span className="border px-1">{T("الأصناف", "Lines")}: {lines.length}</span>
           <span className="border px-1">{T("الكمية", "Qty")}: {lines.reduce((a, l) => a + Number(l.qty), 0)}</span>
           <label>{isSales ? T("العميل", "Customer") : T("المورد", "Supplier")}

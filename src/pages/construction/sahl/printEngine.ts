@@ -16,8 +16,10 @@ export interface PrintConfig {
   titleAr: string;
   titleEn: string;
   headerLines: string[];
+  contactLines: string[];
   showSignatures: boolean;
   showTax: boolean;
+  showBalances: boolean;
   columns: ColDef[];
   footerText: string;
   accent: string;
@@ -41,6 +43,13 @@ export interface DocData {
   subtotal: number; discount: number; tax: number; net: number;
   paid?: number; notes?: string;
   qrText?: string;
+  // 0060-form extras (all optional; missing values hide their rows like <#if>)
+  dueDate?: string; cashier?: string; paymentType?: string;
+  additions?: number; additionType?: string;
+  qtyTotal?: number; taxPct?: number;
+  balBefore?: number; balAfter?: number; hasAccount?: boolean;
+  companyTax?: string; companyContacts?: string[];
+  accountAddress?: string;
 }
 
 export const DOC_TITLES: Record<DocType, [string, string]> = {
@@ -58,51 +67,107 @@ function baseCols(visible: string[]): ColDef[] {
   return ALL_COLUMNS.map((c) => ({ ...c, visible: visible.includes(c.key) }));
 }
 
+function stdCfg(p: Partial<PrintConfig> & { docType: DocType }): PrintConfig {
+  return {
+    kind: "sahl-xlsx", paper: "A4",
+    titleAr: "", titleEn: "",
+    headerLines: ["", "", ""], contactLines: ["", "", ""],
+    showSignatures: true, showTax: true, showBalances: true,
+    columns: baseCols(["code", "name", "unit", "qty", "price", "disc", "total"]),
+    footerText: "", accent: "#2fae4e",
+    ...p,
+  };
+}
+
 export const BUILTINS: { key: string; name: string; nameAr: string; config: PrintConfig }[] = [
   {
-    key: "basic-a4", name: "Basic", nameAr: "أساسي A4",
-    config: {
-      kind: "sahl-xlsx", docType: "sale", paper: "A4",
+    key: "sales-0060", name: "Sales 0060 (default)", nameAr: "الافتراضي 0060",
+    config: stdCfg({
+      docType: "sale",
       titleAr: "فاتورة بيع", titleEn: "Sales invoice",
-      headerLines: ["", "", ""], showSignatures: true, showTax: true,
-      columns: baseCols(["code", "name", "unit", "qty", "price", "disc", "total"]),
-      footerText: "", accent: "#2fae4e",
-    },
+      columns: baseCols(["code", "name", "unit", "qty", "price", "total"]),
+    }),
+  },
+  {
+    key: "basic-a4", name: "Basic", nameAr: "أساسي A4",
+    config: stdCfg({
+      docType: "sale",
+      titleAr: "فاتورة بيع", titleEn: "Sales invoice",
+    }),
   },
   {
     key: "thermal-80", name: "Small Receipt", nameAr: "حراري 80مم",
-    config: {
-      kind: "sahl-xlsx", docType: "sale", paper: "thermal80",
+    config: stdCfg({
+      docType: "sale", paper: "thermal80",
       titleAr: "فاتورة بيع", titleEn: "Sales invoice",
-      headerLines: ["", "", ""], showSignatures: false, showTax: true,
+      showSignatures: false,
       columns: baseCols(["name", "qty", "price", "total"]),
-      footerText: "", accent: "#111111",
-    },
+      accent: "#111111",
+    }),
   },
   {
     key: "corp-01", name: "Template 01", nameAr: "قالب 01",
-    config: {
-      kind: "sahl-xlsx", docType: "sale", paper: "A4",
+    config: stdCfg({
+      docType: "sale",
       titleAr: "فاتورة ضريبية", titleEn: "Tax invoice",
-      headerLines: ["", "", ""], showSignatures: true, showTax: true,
       columns: baseCols(["code", "name", "qty", "price", "disc", "total"]),
-      footerText: "", accent: "#1e40af",
-    },
+      accent: "#1e40af",
+    }),
   },
   {
     key: "indust-02", name: "Template 02", nameAr: "قالب 02",
-    config: {
-      kind: "sahl-xlsx", docType: "sale", paper: "A4",
+    config: stdCfg({
+      docType: "sale",
       titleAr: "فاتورة بيع", titleEn: "Sales invoice",
-      headerLines: ["", "", ""], showSignatures: true, showTax: false,
+      showTax: false,
       columns: baseCols(["code", "name", "unit", "qty", "price", "total"]),
-      footerText: "", accent: "#7b2d4e",
-    },
+      accent: "#7b2d4e",
+    }),
   },
 ];
 
-// English number-to-words for <AmountString> (Arabic tafqeet delegated to
-// printed footer text; engine documents this deviation honestly).
+// Arabic tafqeet for <AmountString>: e.g. "مائة وخمسة ريال وثمانون هللة فقط لا غير"
+const AR_ONES = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة", "عشرة",
+  "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
+const AR_TENS = ["", "", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
+function arTwo(x: number): string {
+  if (x < 20) return AR_ONES[x];
+  const t = Math.floor(x / 10), o = x % 10;
+  return o ? `${AR_ONES[o]} و${AR_TENS[t]}` : AR_TENS[t];
+}
+function arThree(x: number): string {
+  const h = Math.floor(x / 100), r = x % 100;
+  let hStr = "";
+  if (h === 1) hStr = r ? "مائة و" : "مائة";
+  else if (h === 2) hStr = r ? "مائتان و" : "مائتان";
+  else if (h > 2) hStr = `${AR_ONES[h]}مائة` + (r ? " و" : "");
+  const tail = r ? arTwo(r) : "";
+  return `${hStr}${tail}`.replace(/ و$/, "");
+}
+function arGroup(n: number, one: string, two: string, many: string): string {
+  if (n === 1) return one;
+  if (n === 2) return two;
+  if (n <= 10) return `${arThree(n)} ${many}`;
+  return `${arThree(n)} ${one}`;
+}
+function arInt(n: number): string {
+  if (n === 0) return "صفر";
+  const parts: string[] = [];
+  const mil = Math.floor(n / 1e6), tho = Math.floor((n % 1e6) / 1e3), rest = n % 1e3;
+  if (mil) parts.push(arGroup(mil, "مليون", "مليونان", "ملايين"));
+  if (tho) parts.push(arGroup(tho, "ألف", "ألفان", "آلاف"));
+  if (rest) parts.push(arThree(rest));
+  return parts.join(" و");
+}
+export function amountWordsAr(n: number, currency = "ريال", fraction = "هللة"): string {
+  if (!Number.isFinite(n)) return "";
+  const neg = n < 0 ? "سالب " : "";
+  n = Math.abs(Math.round(n * 100) / 100);
+  const int = Math.floor(n), dec = Math.round((n - int) * 100);
+  let s = `${neg}${arInt(int)} ${currency}`;
+  if (dec) s += ` و${arInt(dec)} ${fraction}`;
+  return `${s} فقط لا غير`;
+}
 export function amountWords(n: number): string {
   const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
     "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
@@ -154,7 +219,7 @@ export function resolveTags(cfg: PrintConfig, d: DocData): { rows: string[][]; t
       "<Data:tax_amount>": d.tax.toFixed(2), "<Data:net_price>": d.net.toFixed(2),
       "<Data:paid>": Number(d.paid || 0).toFixed(2),
       "<Data:remaining>": (d.net - Number(d.paid || 0)).toFixed(2),
-      "<AmountString>": amountWords(d.net),
+      "<AmountString>": amountWordsAr(d.net),
     },
   };
 }
@@ -215,8 +280,106 @@ export async function renderXlsx(cfg: PrintConfig, d: DocData, company: { nameAr
   return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
-export function downloadBlob(blob: Blob, name: string) {
-  const a = document.createElement("a");
+// render060: 1:1 replica of form-returnsale-0060 geometry.
+// Grid B7:G31 (+I conditionals): title/company header, Doc/Client/Payment/Date/
+// Time/Due/Cashier/Remarks rows, item table (sn/code/desc/unit/qty/price/total),
+// qty+total row, additions/discount/VAT rows (hidden when zero, like <#if>),
+// Due+amount-words, Paid, Credit (hidden when zero), Bal Prior/After (hidden
+// without account), Thank You + 3 contact lines.
+export async function render060(
+  cfg: PrintConfig, d: DocData,
+  company: { nameAr?: string; name?: string; tax?: string; logoBase64?: string },
+): Promise<Blob> {
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("invoice", { views: [{ rightToLeft: true }] });
+  ws.columns = [
+    { width: 6 }, { width: 14 }, { width: 34 }, { width: 12 },
+    { width: 10 }, { width: 12 }, { width: 14 }, { width: 4 }, { width: 14 },
+  ];
+  const accent = (cfg.accent || "#2fae4e").replace("#", "");
+  const acc = "FF" + accent;
+  const head = (txt: string) => {
+    const r = ws.addRow(["", txt]);
+    r.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+    r.fill = { type: "pattern", pattern: "solid", fgColor: { argb: acc } };
+    ws.mergeCells(`B${r.number}:G${r.number}`);
+    r.alignment = { horizontal: "center" };
+    return r;
+  };
+  const kv = (label: string, value: string, label2 = "", value2 = "") => {
+    const r = ws.addRow(["", label, value, label2, value2]);
+    r.getCell(2).font = { bold: true };
+    return r;
+  };
+
+  head(`${cfg.titleAr} — ${cfg.titleEn}`);
+  const co = company.nameAr || company.name || "";
+  ws.addRow(["", "", co]);
+  if (company.tax) ws.addRow(["", "", "", "", `Tax No. ${company.tax}`]);
+  kv("Doc. No.", d.no, "Client", d.party ?? "");
+  kv("Payment", d.paymentType ?? "", "", "");
+  kv("Date", d.date, d.partyTax ? `Tax No. ${d.partyTax}` : "", "");
+  kv("Time", d.time ?? "", "", d.accountAddress ?? "");
+  kv("Due Date", d.dueDate ?? d.date, "", d.partyPhone ?? "");
+  kv("Cashier", d.cashier ?? "", "", "");
+  kv("Remarks", d.notes ?? "", "", "");
+  const itemHead = ws.addRow(["", "Item No.", "Job Description", "Unit", "Qty", "Price", "Total"]);
+  itemHead.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  itemHead.fill = { type: "pattern", pattern: "solid", fgColor: { argb: acc } };
+  let sn = 0;
+  for (const l of d.lines) {
+    sn++;
+    ws.addRow([sn, l.code ?? "", l.name, l.unit ?? "", l.qty,
+      Number(l.price).toFixed(2), Number(l.total).toFixed(2)]);
+  }
+  const qtyTot = d.qtyTotal ?? d.lines.reduce((a, l) => a + Number(l.qty || 0), 0);
+  ws.addRow(["", "", "", "", qtyTot, "Total", d.subtotal.toFixed(2)]);
+  if ((d.additions ?? 0) !== 0)
+    ws.addRow(["", "", "", "", "", d.additionType ?? "Additions", Number(d.additions).toFixed(2)]);
+  if (d.discount !== 0)
+    ws.addRow(["", "", "", "", "", "Discount", d.discount.toFixed(2)]);
+  if (cfg.showTax)
+    ws.addRow(["", "", "", "", "", `VAT ${d.taxPct ?? 15}%`, d.tax.toFixed(2)]);
+  const due = ws.addRow(["", "Due", amountWordsAr(d.net), "", "", "Due", d.net.toFixed(2)]);
+  due.font = { bold: true };
+  ws.addRow(["", "", "", "", "", "Paid", Number(d.paid || 0).toFixed(2)]);
+  const remaining = d.net - Number(d.paid || 0);
+  if (remaining !== 0)
+    ws.addRow(["", "", "", "", "", "Credit", remaining.toFixed(2)]);
+  if (cfg.showBalances !== false && d.hasAccount) {
+    ws.addRow(["", "", "", "", "", "Bal. Prior", Number(d.balBefore ?? 0).toFixed(2)]);
+    ws.addRow(["", "", "", "", "", "Bal. After", Number(d.balAfter ?? d.balBefore ?? 0).toFixed(2)]);
+  }
+  const th = ws.addRow(["", "Thank You"]);
+  th.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+  th.fill = { type: "pattern", pattern: "solid", fgColor: { argb: acc } };
+  ws.mergeCells(`B${th.number}:G${th.number}`);
+  th.alignment = { horizontal: "center" };
+  const contacts = d.companyContacts?.length ? d.companyContacts : (cfg.contactLines ?? []);
+  for (const c of contacts) if (c && c.trim()) ws.addRow(["", c]);
+  if (cfg.footerText.trim()) ws.addRow(["", cfg.footerText]);
+  if (company.logoBase64) {
+    try {
+      const imgId = wb.addImage({ base64: company.logoBase64, extension: "png" });
+      ws.addImage(imgId, { tl: { col: 6, row: 0 }, ext: { width: 90, height: 60 } });
+    } catch { /* logo optional */ }
+  }
+  if (d.qrText) {
+    try {
+      const QRCode = (await import("qrcode")).default;
+      const url = await QRCode.toDataURL(d.qrText, { width: 100, margin: 1 });
+      const imgId = wb.addImage({ base64: url.split(",")[1], extension: "png" });
+      const anchorRow = ws.rowCount + 1;
+      ws.addImage(imgId, { tl: { col: 0, row: anchorRow }, ext: { width: 100, height: 100 } });
+      ws.addRow(["QR"]);
+    } catch { /* QR optional */ }
+  }
+  const buf = await wb.xlsx.writeBuffer();
+  return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+export function downloadBlob(blob: Blob, name: string) {  const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = name;
   a.click();

@@ -30,9 +30,8 @@ export default function SahlPrints() {
   const utils = trpc.useUtils();
   const T = (ar: string, en: string) => (rtl ? ar : en);
   const [docType, setDocType] = useState<DocType>("sale");
-  const [selKey, setSelKey] = useState<string>("basic-a4");
-  const [cfg, setCfg] = useState<PrintConfig>({ ...BUILTINS[0].config });
-  const [msg, setMsg] = useState("");
+  const [selKey, setSelKey] = useState<string>("sales-0060");
+  const [cfg, setCfg] = useState<PrintConfig>({ ...BUILTINS[0].config });  const [msg, setMsg] = useState("");
   const [myName, setMyName] = useState("");
 
   const { data: themesQ } = trpc.invoiceTheme.list.useQuery();
@@ -236,11 +235,20 @@ export default function SahlPrints() {
                 <input className={inputCls} value={cfg.headerLines[i] ?? ""}
                   onChange={(e) => setCfg({ ...cfg, headerLines: cfg.headerLines.map((h, j) => j === i ? e.target.value : h) })} /></label>
             ))}
+            {[0, 1, 2].map((i) => (
+              <label key={`c${i}`} className="block">{T(`سطر التواصل ${i + 1} (أسفل Thank You)`, `Contact line ${i + 1}`)}
+                <input className={inputCls} value={cfg.contactLines[i] ?? ""}
+                  onChange={(e) => setCfg({ ...cfg, contactLines: [...cfg.contactLines.slice(0, i), e.target.value, ...cfg.contactLines.slice(i + 1)] })} /></label>
+            ))}
             <label className="block">{T("التذييل", "Footer")}
               <input className={inputCls} value={cfg.footerText} onChange={(e) => setCfg({ ...cfg, footerText: e.target.value })} /></label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={cfg.showTax} onChange={(e) => setCfg({ ...cfg, showTax: e.target.checked })} />
               {T("إظهار الضريبة", "Show tax")}
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={cfg.showBalances} onChange={(e) => setCfg({ ...cfg, showBalances: e.target.checked })} />
+              {T("أرصدة العميل (قبل/بعد)", "Customer balances")}
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={cfg.showSignatures} onChange={(e) => setCfg({ ...cfg, showSignatures: e.target.checked })} />

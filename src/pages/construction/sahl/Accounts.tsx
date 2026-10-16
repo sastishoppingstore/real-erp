@@ -17,6 +17,9 @@ export default function SahlAccounts() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(-1);
   const [err, setErr] = useState("");
+  const [remindOnly, setRemindOnly] = useState(false);
+  const [itemized, setItemized] = useState(false);
+  const [reminderDate, setReminderDate] = useState("");
   const [f, setF] = useState<any>({
     name: "", nameAr: "", phone: "", email: "", address: "", addressAr: "",
     taxNumber: "", crNumber: "", openingBalance: "", openingBalanceDate: "", openDir: "debit", notes: "",
@@ -48,9 +51,6 @@ export default function SahlAccounts() {
   };
   const { data: allCustomers } = trpc.sales.customerList.useQuery();
   const { data: allSuppliers } = trpc.purchase.supplierList.useQuery();
-  const [remindOnly, setRemindOnly] = useState(false);
-  const [itemized, setItemized] = useState(false);
-  const [reminderDate, setReminderDate] = useState("");
   const { data: flag } = trpc.sahl.flagGet.useQuery(
     selRow ? { accountKind: kind, accountId: selRow.id } : { accountKind: kind, accountId: 0 },
     { enabled: !!selRow });
