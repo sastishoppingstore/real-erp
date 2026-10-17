@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Eye, Printer, Send, Trash2, Pencil, MessageCircle, Plus, Minus, Search, FileCode2, FileSignature, RefreshCw, QrCode, Package } from "lucide-react";
 import QRCode from "qrcode";
 import ActionButton3D from "@/components/ui/ActionButton3D";
-import { generateInvoiceHtml } from "@/lib/invoiceHtml";
+import { generateInvoiceHtml, zatcaQrPayload } from "@/lib/invoiceHtml";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ImageUpload } from "@/components/ui/ImageUpload";
@@ -19,8 +19,22 @@ type InvoiceMode = "product" | "service" | "construction";
 
 // Sub-component to render invoice preview (WYSIWYG - same HTML as print)
 function InvoicePreview({ detail, companyData }: { detail: any; companyData: any }) {
-  if (!detail?.invoice) return null;
-  const dInv = detail.invoice;
+  const dInv = detail?.invoice;
+  const [qrImg, setQrImg] = useState("");
+  useEffect(() => {
+    if (!dInv) { setQrImg(""); return; }
+    try {
+      const payload = zatcaQrPayload({
+        seller: companyData.companyNameAr || companyData.companyName || "",
+        vat: companyData.companyVat || "",
+        iso: `${dInv.date || new Date().toISOString().slice(0, 10)}T${dInv.time || "00:00"}:00`,
+        total: Number(dInv.totalAmount || 0).toFixed(2),
+        vatAmt: Number(dInv.taxAmount || 0).toFixed(2),
+      });
+      QRCode.toDataURL(payload, { width: 240, margin: 1 }).then(setQrImg).catch(() => setQrImg(""));
+    } catch { setQrImg(""); }
+  }, [detail, companyData]);
+  if (!dInv) return null;
   const dItems = (detail.items || []).map((it: any, i: number) => ({
     no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
     qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
@@ -42,6 +56,7 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
   const printItemsWithAr = (detail.items || []).map((it: any, i: number) => ({
     no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
     nameAr: it.descriptionAr || "", productId: it.productId ?? null,
+    unit: it.unit || it.unitName || "",
     qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
   }));
   const pBalAfter = dCust?.currentBalance != null ? Number(dCust.currentBalance) : null;
@@ -78,6 +93,7 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
     dueDate: dInv.dueDate,
     poNumber: dInv.poNumber,
     dueInWords: dInv.dueInWords,
+    qrBase64: qrImg,
     printItems: printItemsWithAr.map((i: any) => ({ ...i, totalHour: i.qty, vat: i.total * 0.15, grandTotal: i.total * 1.15 }))
   });
   return (
@@ -455,7 +471,7 @@ export default function InvoicesPage() {
   };
 
   // A4 Print handler - uses shared HTML generator
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const useDetail = !!viewInvoiceId && !!invoiceDetail.data;
     const detailInvoice = useDetail ? invoiceDetail.data!.invoice : null;
     const detailItems = useDetail ? (invoiceDetail.data!.items || []) : [];
@@ -465,9 +481,10 @@ export default function InvoicesPage() {
       ? detailItems.map((it: any, i: number) => ({
           no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
           nameAr: it.descriptionAr || "", productId: it.productId ?? null,
+          unit: it.unit || it.unitName || "",
           qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
         }))
-      : cart.map((item, i) => ({ no: i + 1, name: item.name, nameAr: item.nameAr, productId: (item as any).sku || null, qty: item.qty, rate: item.price, total: item.price * item.qty }));
+      : cart.map((item, i) => ({ no: i + 1, name: item.name, nameAr: item.nameAr, productId: (item as any).sku || null, unit: item.unit || "", qty: item.qty, rate: item.price, total: item.price * item.qty }));
     if (printItems.length === 0) { toast.error("Add items to cart before printing"); return; }
 
     const pSub = useDetail ? Number(detailInvoice?.subTotal || 0) : subtotal;
@@ -484,6 +501,21 @@ export default function InvoicesPage() {
     const pCustEmail = useDetail ? (detailCustomer?.email || "") : customerEmail;
     const pCustPo = useDetail ? detailInvoice?.poNumber : poNo;
     const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
+
+    // Real ZATCA e-invoice QR (TLV base64) — no external image API any more
+    let qrBase64 = "";
+    try {
+      const pDate = useDetail ? detailInvoice?.date : new Date().toISOString().slice(0, 10);
+      const pTime = useDetail ? (detailInvoice?.time || "00:00") : new Date().toTimeString().slice(0, 5);
+      const payload = zatcaQrPayload({
+        seller: companyNameAr || companyName || "YAFCO AL ARABIAH EST.",
+        vat: companyVat || "300995897900003",
+        iso: `${pDate || new Date().toISOString().slice(0, 10)}T${String(pTime).slice(0, 5)}:00`,
+        total: pTotal.toFixed(2),
+        vatAmt: pVat.toFixed(2),
+      });
+      qrBase64 = await QRCode.toDataURL(payload, { width: 240, margin: 1 });
+    } catch { /* qr optional */ }
 
     const html = generateInvoiceHtml({
       companyName: companyName || "YAFCO AL ARABIAH EST.",
@@ -519,6 +551,7 @@ export default function InvoicesPage() {
       dueDate: useDetail ? detailInvoice?.dueDate : (dueDate || undefined),
       poNumber: useDetail ? detailInvoice?.poNumber : (poNo || undefined),
       dueInWords: undefined,
+      qrBase64,
       printItems: printItems.map((i: any) => ({ ...i, totalHour: i.qty, vat: (i.total || 0) * 0.15, grandTotal: (i.total || 0) * 1.15 }))
     });
 

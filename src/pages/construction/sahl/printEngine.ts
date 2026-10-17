@@ -727,12 +727,31 @@ function invoice060Html(
     `<tr><td colspan="5"></td><td class="lbl"${size ? ` style="font-size:${size}"` : ""}>${label}</td>` +
     `<td class="c bd ${bold ? "bold" : ""}"${size ? ` style="font-size:${size}"` : ""}>${val}</td></tr>`;
 
-  return `<!doctype html><html dir="ltr"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+  // Time shown like the .xlsx does (h:mm AM/PM instead of 24h "18:09").
+  const t12 = (() => {
+    const t = String(d.time ?? "").trim();
+    const m = t.match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return t;
+    let h = Number(m[1]);
+    const ap = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return `${h}:${m[2]} ${ap}`;
+  })();
+
+  return `<!doctype html><html dir="ltr"><head><meta charset="utf-8"><title>${esc(title)}${d.no ? " — " + esc(d.no) : ""}</title><style>
   @page { size: A4 portrait; margin: 8mm; }
   html,body { margin:0; padding:0; }
   body { font-family: Vazir, Tahoma, "Segoe UI", Arial, sans-serif; font-size:8pt; color:#000;
-         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .sheet { width:194mm; margin:0 auto; padding:3mm 0; }
+         -webkit-print-color-adjust: exact; print-color-adjust: exact;
+         background:#e9ecef; padding:10mm 0; }
+  /* On screen: white A4 paper on a gray desk (looks exactly like the printed PDF).
+     In print: the page itself is the paper — backdrop & shadow are dropped. */
+  .sheet { width:210mm; min-height:297mm; margin:0 auto; padding:8mm; background:#fff;
+           box-shadow:0 2px 14px rgba(0,0,0,.28); box-sizing:border-box; }
+  @media print {
+    body { background:#fff; padding:0; }
+    .sheet { width:auto; min-height:0; margin:0; padding:0; box-shadow:none; }
+  }
   table { width:100%; border-collapse:collapse; table-layout:fixed; }
   td { vertical-align:middle; padding:1pt 2pt; overflow:hidden; }
   .lh { display:flex; align-items:center; margin-bottom:4pt; }
@@ -779,7 +798,7 @@ function invoice060Html(
     <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(d.no)}</td><td class="lbl">Client</td><td colspan="3"></td></tr>
     <tr><td></td><td class="lbl">Payment</td><td>${esc(d.paymentType ?? "")}</td><td></td><td colspan="3">${esc(d.party ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Date</td><td>${esc(d.date)}</td><td></td><td colspan="3">${d.partyTax ? `Tax No. ${esc(d.partyTax)}` : ""}</td></tr>
-    <tr><td></td><td class="lbl">Time</td><td>${esc(d.time ?? "")}</td><td></td><td colspan="3">${esc(d.accountAddress ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td></td><td colspan="3">${esc(d.accountAddress ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Due Date</td><td>${esc(d.dueDate ?? d.date)}</td><td></td><td colspan="3">${esc(d.partyPhone ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Cashier</td><td>${esc(d.cashier ?? "")}</td><td colspan="4"></td></tr>
     ${d.notes ? `<tr><td></td><td class="lbl">Remarks</td><td colspan="5">${esc(d.notes)}</td></tr>` : ""}

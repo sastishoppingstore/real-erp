@@ -1,10 +1,27 @@
 // Shared invoice HTML generator for both View (WYSIWYG) and Print.
-// Replicates the official sales-return form template 1:1 (narrow A5 receipt):
-// bilingual header blocks + logo, title band, meta + client card, 7-column
-// items table (SN / Item No. / Job Description / Unit / Qty / Price / Total),
+// Replicates the official YAFCO invoice design 1:1 (same as the Sahl
+// form-returnsale-0060 A4 print): bilingual letterhead blocks + logo,
+// gray title band, meta + client grid, 7-column items table
+// (SN / Item No. / Job Description / Unit / Qty / Price / Total),
 // conditional additions/discount/credit/balance rows, Thank-You band,
-// contact footer, QR block. Extra params are optional so Word/email
+// contact footer, floating QR block. Extra params are optional so other
 // callers keep working unchanged.
+
+// --- ZATCA simplified e-invoice QR (TLV fields 1-5, base64) --------------
+export function zatcaQrPayload(o: { seller: string; vat: string; iso: string; total: string; vatAmt: string }): string {
+  const enc = (s: string) => {
+    const b = new TextEncoder().encode(s);
+    let out = "";
+    for (let i = 0; i < b.length; i++) out += String.fromCharCode(b[i]);
+    return out;
+  };
+  const f = (tag: number, val: string) => {
+    const v = enc(val);
+    return String.fromCharCode(tag, v.length) + v;
+  };
+  const tlv = f(1, o.seller) + f(2, o.vat) + f(3, o.iso) + f(4, o.total) + f(5, o.vatAmt);
+  return btoa(tlv);
+}
 
 export function generateInvoiceHtml(params: {
   companyName: string;
@@ -57,9 +74,9 @@ export function generateInvoiceHtml(params: {
 }) {
   const {
     companyName = 'YAFCO AL ARABIAH EST.', companyNameAr = 'مؤسسة يافكو العربية',
-    companyLogo, companyAddress = 'Saudi Arabia - Yanbu Al Bahr - P.O.Box: 2326',
+    companyLogo, companyAddress = '', companyAddressAr = '',
     companyPhone = '', companyVat = '300995897900003', companyCr = '4700012896',
-    companyEmail = 'info@yafco.com.sa', companyWebsite = 'www.yafco.com.sa',
+    companyEmail = '', companyWebsite = '',
     currency = 'SAR', taxPercent = '15', note, noteAr,
     pSub = 0, pDisc = 0, pVat = 0, pTotal = 0,
     pCustName = 'Walk-in Customer', pCustNameAr = '', pCustPhone = '',
@@ -73,128 +90,130 @@ export function generateInvoiceHtml(params: {
     hasAccount = false, printItems = []
   } = params;
 
+  const esc = (x: any) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const fmt = (n: number) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const docTitle = title || (pType === 'zatca' ? 'TAX INVOICE' : 'SALES INVOICE');
   const docTitleAr = titleAr || (pType === 'zatca' ? 'فاتورة ضريبية' : 'فاتورة مبيعات');
 
-  const qrSrc = qrBase64 || `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify({ seller: companyNameAr || companyName, vat: companyVat, total: pTotal.toFixed(2), tax: pVat.toFixed(2), date: new Date().toISOString() })))))}`;
+  // Same 12h time as the xlsx (h:mm AM/PM)
+  const t12 = (() => {
+    const t = String(time || '').trim();
+    const m = t.match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return t;
+    let h = Number(m[1]);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m[2]} ${ap}`;
+  })();
 
-  const totalQty = printItems.reduce((s, i) => s + (i.qty ?? i.totalHour ?? 0), 0);
-  const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const showDiscount = pDisc > 0;
-  const showCredit = creditDue > 0;
-  const showBal = hasAccount && Number(balAfter || 0) !== 0;
+  const qtyTotal = printItems.reduce((s, i) => s + Number(i.qty ?? i.totalHour ?? 0), 0);
+  const coAr = companyNameAr || companyName;
+  const custLine = pCustNameAr ? `${pCustName} / ${pCustNameAr}` : pCustName;
 
-  return `<!DOCTYPE html>
-<html dir="ltr"><head><meta charset="UTF-8"><title>${docTitle} - ${invoiceNo}</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Calibri,Arial,sans-serif;background:#f5f5f5;padding:8mm;font-size:10pt}
-.invoice{max-width:560px;margin:0 auto;background:#fff;padding:8mm;box-shadow:0 0 10px rgba(0,0,0,.1)}
-.hdr{display:table;width:100%;margin-bottom:8px}
-.hdr-en{display:table-cell;width:32%;vertical-align:middle;font-size:12pt;font-weight:bold;line-height:1.5}
-.hdr-logo{display:table-cell;width:36%;text-align:center;vertical-align:middle}
-.hdr-logo img{max-width:190px;max-height:120px;object-fit:contain}
-.hdr-ar{display:table-cell;width:32%;vertical-align:middle;font-size:11pt;font-weight:bold;text-align:right;line-height:1.6}
-.title-band{text-align:center;background:#E7E7E7;padding:6pt;margin:6pt 0;font-size:16pt;font-weight:bold;border-top:1pt solid #000;border-bottom:1pt solid #000}
-.meta{width:100%;border-collapse:collapse;margin:6pt 0}
-.meta td{font-size:8.5pt;padding:3pt 6pt;border:0.5pt solid #000}
-.meta .lab{font-weight:bold}
-.client{width:100%;border-collapse:collapse;margin:0 0 6pt 30%}
-.client td{font-size:8.5pt;padding:3pt 6pt;border:0.5pt solid #000;vertical-align:top}
-.client .lab{font-weight:bold}
-.items{width:100%;margin:6pt 0;border-collapse:collapse}
-.items th{font-size:8pt;font-weight:bold;text-align:center;padding:4pt 3pt;border:0.5pt solid #000}
-.items td{font-size:8.5pt;text-align:center;padding:3pt 3pt;border:0.5pt solid #000}
-.items td.name{text-align:left}
-.tots{width:100%;border-collapse:collapse;margin-top:0}
-.tots td{font-size:9pt;padding:3pt 6pt;border:0.5pt solid #000;text-align:right}
-.tots td.lab{font-weight:bold;text-align:left}
-.tots tr.grand td{font-weight:bold;font-size:10pt}
-.words{margin-top:6pt;border-top:0.5pt solid #000;padding-top:4pt;font-size:9pt}
-.thanks{text-align:center;background:#E7E7E7;padding:5pt;margin:8pt 0 4pt 0;font-size:14pt;font-weight:bold}
-.contacts{text-align:center;font-size:8.5pt;color:#333;margin:2pt 0}
-.qrrow{display:table;width:100%;margin-top:6pt}
-.qrrow .qr{display:table-cell;width:150px;text-align:center;vertical-align:middle}
-.qrrow .qr img{width:140px;height:140px;object-fit:contain}
-@media print{
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
-  body{background:#fff;padding:0;margin:0}
-  .invoice{box-shadow:none;margin:0;padding:6mm;max-width:none}
-  table,th,td{border:1px solid black!important}
-  .title-band,.thanks{background-color:#E7E7E7!important}
-  .no-print,.action-buttons,.sidebar,.buttons,button,nav,.dialog-header,.action-bar{display:none!important}
-  @page{size:A5 portrait;margin:0}
-}
-</style></head><body>
-<div class="invoice">
+  const valRow = (label: string, val: string) =>
+    `<tr><td colspan="5"></td><td class="lbl">${esc(label)}</td><td class="c bd">${esc(val)}</td></tr>`;
 
-<!-- HEADER -->
-<div class="hdr">
-  <div class="hdr-en">Kingdom Saudi Arabia<br/>${companyName}<br/>C.R. No: ${companyCr}<br/>Tax No:${companyVat}</div>
-  <div class="hdr-logo">${companyLogo ? `<img src="${companyLogo}" alt="Logo"/>` : ''}</div>
-  <div class="hdr-ar" dir="rtl">${companyNameAr}<br/>الرقم الموحد : ${companyCr}<br/>الرقم الضريبي : ${companyVat}</div>
-</div>
+  const itRows = (printItems.length ? printItems : [{ no: 1, name: '', rate: 0, total: 0 }]).map((l, i) =>
+    `<tr><td class="sn">${i + 1}</td><td class="c bd">${esc(l.productId ?? l.sku ?? '')}</td>` +
+    `<td class="l bd">${esc(l.name)}${l.nameAr ? ` <span dir="rtl">${esc(l.nameAr)}</span>` : ''}</td>` +
+    `<td class="c bd">${esc(l.unit ?? '')}</td><td class="c bd">${Number(l.qty ?? l.totalHour ?? 0)}</td>` +
+    `<td class="c bd">${fmt(l.rate)}</td><td class="c bd">${fmt(l.total)}</td></tr>`).join('');
 
-<!-- TITLE -->
-<div class="title-band" dir="ltr">${docTitle}${docTitleAr ? ` <span dir="rtl">${docTitleAr}</span>` : ''}</div>
-
-<!-- META + CLIENT -->
-<table class="meta">
-  <tr><td class="lab" style="width:14%">Doc. No.</td><td style="width:30%">${invoiceNo || '—'}</td><td class="lab" style="width:12%">Client</td><td style="width:44%" colspan="3"><strong>${pCustName}${pCustNameAr ? ' / ' + pCustNameAr : ''}</strong></td></tr>
-  <tr><td class="lab">Payment</td><td>${paymentType}</td><td class="lab" colspan="4" style="text-align:right" dir="rtl">اسم العميل</td></tr>
-  <tr><td class="lab">Date</td><td>${date || '—'}</td>${pCustVat ? `<td class="lab">Tax No.</td><td colspan="3">${pCustVat}</td>` : `<td colspan="4"></td>`}</tr>
-  <tr><td class="lab">Time</td><td>${time || '—'}</td><td colspan="4">${pCustAddr}${pCustAddrAr ? ' / ' + pCustAddrAr : ''}</td></tr>
-  <tr><td class="lab">Due Date</td><td>${dueDate || '—'}</td><td colspan="4">${pCustPhone}</td></tr>
-  <tr><td class="lab">Cashier</td><td>${cashier || 'مدير النظام'}</td><td class="lab">PO No</td><td colspan="3">${poNumber || pCustPo || '—'}</td></tr>
-  ${note || noteAr ? `<tr><td class="lab">Remarks</td><td colspan="5">${note || ''}${noteAr ? ' / ' + noteAr : ''}</td></tr>` : ''}
-</table>
-
-<!-- ITEMS -->
-<table class="items">
-  <thead><tr>
-    <th style="width:6%">SN</th>
-    <th style="width:10%">Item No.</th>
-    <th style="width:28%">Job Description</th>
-    <th style="width:9%">Unit</th>
-    <th style="width:9%">Qty</th>
-    <th style="width:12%">Price</th>
-    <th style="width:16%">Total</th>
-  </tr></thead>
-  <tbody>
-    ${printItems.map(i => `<tr>
-      <td>${i.no}</td>
-      <td>${i.productId ?? i.sku ?? '—'}</td>
-      <td class="name">${i.name}${i.nameAr ? `<br/><span style="direction:rtl;font-size:10px;color:#555">${i.nameAr}</span>` : ''}</td>
-      <td>${i.unit || ''}</td>
-      <td>${i.qty ?? i.totalHour ?? 0}</td>
-      <td>${fmt(i.rate)}</td>
-      <td>${fmt(i.total)}</td>
-    </tr>`).join('')}
-    <tr>
-      <td colspan="4" style="font-weight:bold;text-align:right">Total</td>
-      <td style="font-weight:bold">${totalQty}</td>
-      <td></td>
-      <td style="font-weight:bold">${fmt(pSub)}</td>
+  return `<!doctype html><html dir="ltr"><head><meta charset="UTF-8">
+<title>${esc(docTitle)}${invoiceNo ? ' - ' + esc(invoiceNo) : ''}</title><style>
+  @page { size: A4 portrait; margin: 8mm; }
+  html,body { margin:0; padding:0; }
+  body { font-family: Vazir, Tahoma, "Segoe UI", Arial, sans-serif; font-size:8pt; color:#000;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact;
+         background:#e9ecef; padding:10mm 0; }
+  /* On screen: white A4 paper on a gray desk (same look as the printed PDF).
+     In print: the page itself is the paper — backdrop & shadow are dropped. */
+  .sheet { width:210mm; min-height:297mm; margin:0 auto; padding:8mm; background:#fff;
+           box-shadow:0 2px 14px rgba(0,0,0,.28); box-sizing:border-box; }
+  table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  td { vertical-align:middle; padding:1pt 2pt; overflow:hidden; }
+  .lh { display:flex; align-items:center; margin-bottom:4pt; }
+  .lh-l { width:38%; text-align:center; font-family:Calibri,Arial,sans-serif; font-size:10.5pt; line-height:1.35; }
+  .lh-l .t1 { font-size:12pt; font-weight:700; }
+  .lh-l .red, .lh-r .red { color:#FF0000; font-weight:700; font-size:11pt; }
+  .lh-c { width:24%; text-align:center; }
+  .lh-c img { max-height:23mm; max-width:95%; }
+  .lh-r { width:38%; text-align:center; font-family:Arial,Tahoma,sans-serif; direction:rtl; font-size:10.5pt; line-height:1.35; }
+  .lh-r .t1 { font-weight:700; font-size:11pt; }
+  .gray { background:#D9D9D9; }
+  .bd { border:1px solid #808080; }
+  .c { text-align:center; } .l { text-align:left; }
+  .sn { text-align:center; }
+  .lbl { font-weight:700; text-align:left; white-space:nowrap; }
+  .bold { font-weight:700; }
+  @media print {
+    body { background:#fff; padding:0; }
+    .sheet { width:auto; min-height:0; margin:0; padding:0; box-shadow:none; }
+  }
+  </style></head><body><div class="sheet">
+  <div class="lh">
+    <div class="lh-l">
+      <div class="t1">Kingdom Saudi Arabia</div>
+      <div class="red">${esc(companyName)}</div>
+      <div>C . R . No: ${esc(companyCr)}</div>
+      <div>Tax No:${esc(companyVat)}</div>
+    </div>
+    <div class="lh-c">${companyLogo ? `<img src="${esc(companyLogo)}" alt="">` : ''}</div>
+    <div class="lh-r">
+      <div class="t1">المملكة العربية السعودية</div>
+      <div class="red">${esc(companyNameAr || '')}</div>
+      <div>س . ت : ${esc(companyCr)}</div>
+      <div>الرقم الضريبي : ${esc(companyVat)}</div>
+    </div>
+  </div>
+  <table><colgroup>
+    <col style="width:4.3%"><col style="width:10.3%"><col style="width:34%">
+    <col style="width:7.7%"><col style="width:7.7%"><col style="width:15.4%"><col style="width:20.6%">
+  </colgroup><tbody>
+    <tr class="gray" style="height:26.25pt">
+      <td></td><td style="font-size:10pt" dir="rtl">${esc(docTitleAr)}</td>
+      <td colspan="5" class="c" style="font-size:16pt">${esc(coAr)}</td>
     </tr>
-  </tbody>
-</table>
-
-<!-- TOTALS -->
-<table class="tots">
-  ${showDiscount ? `<tr><td class="lab">Discount</td><td>${fmt(pDisc)}</td></tr>` : ''}
-  <tr><td class="lab">VAT ${taxPercent}%</td><td>${fmt(pVat)}</td></tr>
-  <tr class="grand"><td class="lab">Due &nbsp;&nbsp;${dueInWords || ''} ${currency}</td><td>${fmt(pTotal)}</td></tr>
-  <tr><td class="lab">Paid</td><td>${fmt(paid)}</td></tr>
-  ${showCredit ? `<tr><td class="lab">Credit</td><td>${fmt(creditDue)}</td></tr>` : ''}
-  ${showBal ? `<tr><td class="lab">Bal. Prior</td><td>${balPrior !== null ? fmt(balPrior) : '—'}</td></tr><tr><td class="lab">Bal. After</td><td>${balAfter !== null ? fmt(balAfter) : '—'}</td></tr>` : ''}
-</table>
-
-<div class="thanks">Thank You</div>
-<div class="contacts">${companyAddress}</div>
-<div class="contacts">${companyPhone ? 'Phone: ' + companyPhone + ' &nbsp; ' : ''}${companyEmail}</div>
-<div class="contacts">${companyWebsite}</div>
-<div class="qrrow"><div class="qr"><img src="${qrSrc}" alt="QR"/></div></div>
-
-</div>
-<script>(function(){function fit(){try{var h=document.documentElement.scrollHeight||document.body.scrollHeight;var avail=780;if(h>avail){document.body.style.zoom=(avail/h);}}catch(e){}}function go(){fit();setTimeout(function(){fit();try{window.print();}catch(e){}},80);}function ready(fn){try{var imgs=Array.prototype.slice.call(document.images||[]);var pending=imgs.filter(function(i){return !i.complete;}).length;if(!pending){fn();return;}var done=false;var to=setTimeout(function(){if(!done){done=true;fn();}},2500);var check=function(){if(done)return;pending--;if(pending<=0){done=true;clearTimeout(to);fn();}};imgs.forEach(function(i){i.addEventListener('load',check);i.addEventListener('error',check);});}catch(e){fn();}}if(document.readyState==='complete'){ready(go);}else{window.addEventListener('load',function(){ready(go);});}})();</script></body></html>`;
+    <tr><td></td><td></td><td></td><td></td><td colspan="3">${companyVat ? `Tax No. ${esc(companyVat)}` : ''}</td></tr>
+    <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(invoiceNo || '')}</td><td class="lbl">Client</td><td colspan="3"><b>${esc(custLine)}</b></td></tr>
+    <tr><td></td><td class="lbl">Payment</td><td>${esc(paymentType)}</td><td class="lbl">Tax No.</td><td colspan="3">${esc(pCustVat || '')}</td></tr>
+    <tr><td></td><td class="lbl">Date</td><td>${esc(date || '')}</td><td></td><td colspan="3">${esc([pCustAddr, pCustAddrAr].filter(Boolean).join(' / '))}</td></tr>
+    <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td></td><td colspan="3">${esc(pCustPhone || '')}</td></tr>
+    <tr><td></td><td class="lbl">Due Date</td><td>${esc(dueDate || date || '')}</td><td></td><td colspan="3">${esc(pCustCr ? `CR: ${pCustCr}` : '')}${pCustEmail ? ` ${esc(pCustEmail)}` : ''}</td></tr>
+    <tr><td></td><td class="lbl">Cashier</td><td>${esc(cashier)}</td><td class="lbl">PO No</td><td colspan="3">${esc(poNumber || pCustPo || '')}</td></tr>
+    ${workedMonth ? `<tr><td></td><td class="lbl">Worked Month</td><td colspan="5">${esc(workedMonth)}</td></tr>` : ''}
+    ${(note || noteAr) ? `<tr><td></td><td class="lbl">Remarks</td><td colspan="5">${esc(note || '')}${noteAr ? ` — ${esc(noteAr)}` : ''}</td></tr>` : ''}
+    <tr style="height:30pt;font-weight:700" class="c">
+      <td></td><td class="bd">Item No.</td><td class="bd">Job Description</td><td class="bd">Unit</td>
+      <td class="bd">Qty</td><td class="bd">Price</td><td class="bd">Total</td>
+    </tr>
+    ${itRows}
+    <tr><td></td><td></td><td></td><td></td><td class="c bd">${qtyTotal}</td><td class="lbl">Total</td><td class="c bd">${fmt(pSub)}</td></tr>
+    ${pDisc ? valRow('Discount', fmt(pDisc)) : ''}
+    <tr><td colspan="5"></td><td class="lbl">VAT ${esc(taxPercent)}%</td><td class="c bd">${fmt(pVat)}</td></tr>
+    <tr style="height:17.25pt">
+      <td></td><td class="lbl">Due</td><td class="l">${esc(dueInWords || '')}</td><td colspan="2"></td>
+      <td class="lbl" style="font-size:10pt">Due</td><td class="c bd bold" style="font-size:10pt">${fmt(pTotal)}</td>
+    </tr>
+    ${valRow('Paid', fmt(paid))}
+    ${creditDue > 0 ? valRow('Credit', fmt(creditDue)) : ''}
+    ${hasAccount ? valRow('Bal. Prior', balPrior != null ? fmt(balPrior) : '—') + valRow('Bal. After', balAfter != null ? fmt(balAfter) : '—') : ''}
+    <tr style="height:8pt"><td colspan="7"></td></tr>
+    <tr class="gray" style="height:26.25pt">
+      <td></td><td colspan="6" class="c" style="font-size:16pt">Thank You</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td colspan="2" style="vertical-align:top;font-size:8pt;line-height:1.4">
+        ${companyAddress ? `<div>${esc(companyAddress)}</div>` : ''}
+        ${companyPhone ? `<div>${esc(companyPhone)}</div>` : ''}
+        ${companyEmail ? `<div>${esc(companyEmail)}</div>` : ''}
+        ${companyWebsite ? `<div>${esc(companyWebsite)}</div>` : ''}
+      </td>
+      <td colspan="3" class="c">${qrBase64 ? `<img src="${esc(qrBase64)}" style="width:26mm;height:26mm" alt="">` : ''}</td>
+      <td></td>
+    </tr>
+  </tbody></table>
+  </div>
+  <script>(function(){function ready(fn){try{var imgs=Array.prototype.slice.call(document.images||[]);var pending=imgs.filter(function(i){return !i.complete;}).length;if(!pending){fn();return;}var done=false;var to=setTimeout(function(){if(!done){done=true;fn();}},2500);var check=function(){if(done)return;pending--;if(pending<=0){done=true;clearTimeout(to);fn();}};imgs.forEach(function(i){i.addEventListener('load',check);i.addEventListener('error',check);});}catch(e){fn();}}function go(){try{window.print();}catch(e){}}if(document.readyState==='complete'){ready(go);}else{window.addEventListener('load',function(){ready(go);});}})();</script></body></html>`;
 }

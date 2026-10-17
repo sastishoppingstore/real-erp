@@ -936,7 +936,7 @@ export default function App() {
         <Route path="transfers" element={<StockTransfersPage />} />
         <Route path="progress-billing" element={<ConstructionProgressBilling />} />
         <Route path="invoices" element={<ConstructionInvoicePage />} />
-        <Route path="sales-invoices" element={<InvoicesPage />} />
+        <Route path="sales-invoices" element={<Navigate to="/app/construction/sahl/sales" replace />} />
         <Route path="sahl/settings" element={<SahlSettings />} />
         <Route path="sahl/products" element={<SahlProducts />} />
         <Route path="sahl/accounts" element={<SahlAccounts />} />

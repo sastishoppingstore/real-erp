@@ -38,7 +38,7 @@ const navSections = [
       { label: "Subcontractors", path: "/app/construction/subcontractors", icon: Users },
       { label: "Sub Payments", path: "/app/construction/sub-payments", icon: Users },
       { label: "Tax Invoices", path: "/app/construction/invoices", icon: Receipt },
-      { label: "Sales Invoices", path: "/app/construction/sales-invoices", icon: ShoppingCart },
+      { label: "Sales Invoices", path: "/app/construction/sahl/sales", icon: ShoppingCart },
     ],
   },
   {
@@ -96,7 +96,7 @@ const quickMenu = [
   { label: "Goods", labelAr: "البضاعة", path: "/app/construction/materials" },
   { label: "Accounts", labelAr: "الحسابات", path: "/app/construction/subcontractors" },
   { label: "Treasury", labelAr: "الخزينة", path: "/app/construction/advance-payments" },
-  { label: "Invoices", labelAr: "الفواتير", path: "/app/construction/sales-invoices" },
+  { label: "Invoices", labelAr: "الفواتير", path: "/app/construction/sahl/sales" },
   { label: "Reports", labelAr: "التقارير", path: "/app/construction/cvr" },
   { label: "Warehouse", labelAr: "المخازن", path: "/app/construction/warehouses" },
 ];
@@ -442,7 +442,7 @@ export default function ConstructionLayout() {
           ))}
         </div>
         <button
-          onClick={() => navigate("/app/construction/sales-invoices")}
+          onClick={() => navigate("/app/construction/sahl/sales")}
           className="flex shrink-0 items-center gap-1 bg-[#2fae4e] px-3 py-2 text-[13px] font-bold text-white hover:brightness-110 lg:px-5"
         >
           <Plus className="h-4 w-4" />

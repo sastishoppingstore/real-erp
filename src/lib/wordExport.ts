@@ -72,7 +72,7 @@ td,th{border:0.5pt solid #000;padding:4pt 6pt}
     <div class="address">${data.companyEmail || ''}</div>
     <div class="address">VAT: ${data.companyVat || ''} | CR: ${data.companyCr || ''}</div>
   </div>
-  <div style="width:100px;text-align:right"><img src="${qrUrl}" width="90" height="90" style="float:right"/></div>
+  <div style="width:100px;text-align:right"></div>
 </div>
 
 <div class="title-bar">فاتورة ضريبية - TAX INVOICE</div>
@@ -111,7 +111,7 @@ export function downloadWordDoc(data: WordExportData) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Invoice-${data.invoiceNo}.doc`;
+  a.download = `Invoice-${(data as any).invoiceNo || Date.now()}.doc`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

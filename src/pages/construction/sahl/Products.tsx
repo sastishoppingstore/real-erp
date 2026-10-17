@@ -74,6 +74,28 @@ export default function SahlProducts() {
     onSuccess: () => refresh(),
     onError: (e) => setErr(e.message),
   });
+  // Quick-add: create a Category / Unit straight from the product form when
+  // the list is still empty (matches the supplier-style quick entry).
+  const [catOpen, setCatOpen] = useState(false);
+  const [catNew, setCatNew] = useState("");
+  const [unitOpen, setUnitOpen] = useState(false);
+  const [unitNew, setUnitNew] = useState("");
+  const catAdd = trpc.inventory.categoryCreate.useMutation({
+    onSuccess: (res: any) => {
+      utils.inventory.categoryList.invalidate();
+      if (res?.id) setF((p: any) => ({ ...p, categoryId: String(res.id) }));
+      setCatNew(""); setCatOpen(false);
+    },
+    onError: (e) => setErr(e.message),
+  });
+  const baseUnitAdd = trpc.inventory.unitCreate.useMutation({
+    onSuccess: (res: any) => {
+      utils.inventory.unitList.invalidate();
+      if (res?.id) setF((p: any) => ({ ...p, unitId: String(res.id) }));
+      setUnitNew(""); setUnitOpen(false);
+    },
+    onError: (e) => setErr(e.message),
+  });
 
   const pick = (i: number) => {
     const r = (rows ?? [])[i];
@@ -263,10 +285,25 @@ export default function SahlProducts() {
                 <input className={inputCls} value={f.sku} onChange={(e) => setF({ ...f, sku: e.target.value })} />
               </SahlField>
               <SahlField label={rtl ? "التصنيف" : "Category"}>
-                <select className={inputCls} value={f.categoryId} onChange={(e) => setF({ ...f, categoryId: e.target.value })}>
-                  <option value="">—</option>
-                  {(cats ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.nameAr || c.name}</option>)}
-                </select>
+                <div className="flex gap-1">
+                  <select className={inputCls} value={f.categoryId} onChange={(e) => setF({ ...f, categoryId: e.target.value })}>
+                    <option value="">—</option>
+                    {(cats ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.nameAr || c.name}</option>)}
+                  </select>
+                  <button type="button" title={rtl ? "تصنيف جديد" : "New category"}
+                    className={btnCls} onClick={() => setCatOpen((o) => !o)}>＋</button>
+                </div>
+                {catOpen && (
+                  <div className="mt-1 flex gap-1">
+                    <input autoFocus className={inputCls} value={catNew} onChange={(e) => setCatNew(e.target.value)}
+                      placeholder={rtl ? "اسم التصنيف" : "Category name"} />
+                    <button type="button" className={btnGreenCls} style={{ background: "#0a5c2a" }}
+                      disabled={!catNew.trim() || catAdd.isPending}
+                      onClick={() => catNew.trim() && catAdd.mutate({ name: catNew.trim() })}>
+                      {rtl ? "إضافة" : "Add"}
+                    </button>
+                  </div>
+                )}
               </SahlField>
               <SahlField label={rtl ? "الباركود" : "Barcode"}>
                 <input className={inputCls} value={f.barcode} onChange={(e) => setF({ ...f, barcode: e.target.value })} />
@@ -305,10 +342,25 @@ export default function SahlProducts() {
                 <input type="number" min="0" className={inputCls} value={f.fixedDiscount} onChange={(e) => setF({ ...f, fixedDiscount: e.target.value })} />
               </SahlField>
               <SahlField label={rtl ? "الوحدة" : "Unit"}>
-                <select className={inputCls} value={f.unitId} onChange={(e) => setF({ ...f, unitId: e.target.value })}>
-                  <option value="">—</option>
-                  {(units ?? []).map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
+                <div className="flex gap-1">
+                  <select className={inputCls} value={f.unitId} onChange={(e) => setF({ ...f, unitId: e.target.value })}>
+                    <option value="">—</option>
+                    {(units ?? []).map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </select>
+                  <button type="button" title={rtl ? "وحدة جديدة" : "New unit"}
+                    className={btnCls} onClick={() => setUnitOpen((o) => !o)}>＋</button>
+                </div>
+                {unitOpen && (
+                  <div className="mt-1 flex gap-1">
+                    <input autoFocus className={inputCls} value={unitNew} onChange={(e) => setUnitNew(e.target.value)}
+                      placeholder={rtl ? "اسم الوحدة" : "Unit name"} />
+                    <button type="button" className={btnGreenCls} style={{ background: "#0a5c2a" }}
+                      disabled={!unitNew.trim() || baseUnitAdd.isPending}
+                      onClick={() => unitNew.trim() && baseUnitAdd.mutate({ name: unitNew.trim() })}>
+                      {rtl ? "إضافة" : "Add"}
+                    </button>
+                  </div>
+                )}
               </SahlField>
               <SahlField label={rtl ? "حد الطلب" : "Reorder"}>
                 <input type="number" min="0" className={inputCls} value={f.reorderLevel} onChange={(e) => setF({ ...f, reorderLevel: e.target.value })} />

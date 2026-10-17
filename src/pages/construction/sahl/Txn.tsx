@@ -661,8 +661,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       });
       setMsg(`${T("تم حفظ الفاتورة والسند", "Invoice + receipt saved")}`);
       setROpen(false); setCreditAsk(null);
-      if (autoPrint) doPrint();
-      newDoc();
+      if (autoPrint) { setQueueNew(true); doPrint(); } else { newDoc(); }
       refreshAll();
     } catch (e: any) {
       setMsg(e.message ?? String(e));
@@ -671,13 +670,19 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const finishCreditNo = () => {
     setCreditAsk(null);
-    if (autoPrint) doPrint();
-    newDoc();
+    if (autoPrint) { setQueueNew(true); doPrint(); } else { newDoc(); }
     refreshAll();
   };
 
   const doPrint = () => setPrintOpen(true);
   const [printOpen, setPrintOpen] = useState(false);
+  // Keep the doc intact while the print dialog is open (buildDoc reads live
+  // state); reset to a new doc only after printing finishes or the dialog closes.
+  const [queueNew, setQueueNew] = useState(false);
+  const closePrint = () => {
+    setPrintOpen(false);
+    if (queueNew) { setQueueNew(false); newDoc(); refreshAll(); }
+  };
   const [printTpl, setPrintTpl] = useState("");
   const { data: themesQ } = trpc.invoiceTheme.list.useQuery();
   const myTpls: any[] = (Array.isArray(themesQ) ? themesQ : [])
@@ -774,7 +779,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       await printInvoice060(
         d,
         { nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber },
-        `${cfg?.titleAr ?? tar} — ${d.no}`,
+        cfg?.titleAr ?? tar,
       );
     if (mode === "xlsx" || mode === "both") {
       const compInfo = { nameAr: comp.companyNameAr, name: comp.companyName };
@@ -822,7 +827,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         }
       }
     }
-    setPrintOpen(false);
+    closePrint();
   };
 
   const exportExcel = () => {
@@ -1017,9 +1022,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         } as any);
         setMsg(T("تم ترحيل مرتجع الشراء", "Purchase return posted"));
       }
-      if (andPrint || autoPrint) doPrint();
-      if (andNew) newDoc(); else refreshAll();
-      if (andNew) refreshAll();
+      if (andPrint || autoPrint) { setQueueNew(andNew); doPrint(); }
+      else if (andNew) newDoc();
+      refreshAll();
     } catch (e: any) {
       setMsg(e.message ?? String(e));
     } finally {
@@ -1534,7 +1539,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       </div>
 
       {printOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPrintOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={closePrint}>
           <div className="w-full max-w-sm border border-black bg-white p-3" onClick={(e) => e.stopPropagation()}>
             <b className="text-[13px]">{T("الطباعة — اختر القالب", "Print — pick template")}</b>
             <select className={`${inputCls} mt-2`} value={printTpl} onChange={(e) => setPrintTpl(e.target.value)}>

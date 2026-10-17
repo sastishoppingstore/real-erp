@@ -105,20 +105,34 @@ export default function SuppliersPage() {
     e.preventDefault();
     const payload = {
       name: form.name,
-      nameAr: form.nameAr,
-      taxNumber: form.vatNumber || form.crNumber,
-      email: form.email,
-      phone: form.phone,
-      mobile: form.whatsapp,
-      address: form.address,
-      city: form.city,
-      creditLimit: form.creditLimit,
+      nameAr: form.nameAr || undefined,
+      legalNameEn: form.legalNameEn || undefined,
+      legalNameAr: form.legalNameAr || undefined,
+      crNumber: form.crNumber || undefined,
+      vatNumber: form.vatNumber || undefined,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      mobile: form.whatsapp || undefined,
+      buildingNumber: form.buildingNumber || undefined,
+      streetName: form.streetName || undefined,
+      district: form.district || undefined,
+      city: form.city || undefined,
+      postalCode: form.postalCode || undefined,
+      additionalNumber: form.additionalNumber || undefined,
+      address: form.address || undefined,
+      contactPerson: form.contactPerson || undefined,
+      contactTitle: form.contactTitle || undefined,
+      bankName: form.bankName || undefined,
+      bankIban: form.bankIban || undefined,
+      bankAccountNumber: form.bankAccountNumber || undefined,
+      creditLimit: form.creditLimit || "0",
+      openingBalance: form.openingBalance || "0",
       paymentTerms: form.paymentTerms,
     };
     if (editingId) {
       updateSupplier.mutate({ id: editingId, ...payload });
     } else {
-      createSupplier.mutate(payload);
+      createSupplier.mutate({ ...payload, code: `SUP-${Date.now().toString().slice(-8)}` });
     }
     setOpen(false);
     resetForm();
