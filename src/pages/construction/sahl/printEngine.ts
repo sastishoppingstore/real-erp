@@ -282,125 +282,258 @@ export async function renderXlsx(cfg: PrintConfig, d: DocData, company: { nameAr
   return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
-// render060: 1:1 replica of form-returnsale-0060 geometry.
-// Grid B7:G31 (+I conditionals): title/company header, Doc/Client/Payment/Date/
-// Time/Due/Cashier/Remarks rows, item table (sn/code/desc/unit/qty/price/total),
-// qty+total row, additions/discount/VAT rows (hidden when zero, like <#if>),
-// Due+amount-words, Paid, Credit (hidden when zero), Bal Prior/After (hidden
-// without account), Thank You + 3 contact lines.
-// render060: loads the ORIGINAL form-returnsale-0060 template (embedded base64)
-// and patches the data cells -> 100% layout fidelity (styles, merges, images,
-// config sheet, printer ranges all preserved as-is). Falls back to the scratch
-// builder below if the template fails to load.
-const toDate = (s?: string): Date | undefined => {
-  if (!s) return undefined;
-  const dt = new Date(String(s).slice(0, 10) + "T00:00:00");
-  return isNaN(dt.getTime()) ? undefined : dt;
+// ---------------------------------------------------------------------------
+// 0060 ZIP-level patcher — 100% template fidelity.
+// The original form-returnsale-0060 file is kept byte-identical EXCEPT:
+//  1. sheet1.xml: cell values patched (inline strings / numbers), item row
+//     repeated for every line, rows below re-numbered, conditional rows
+//     deleted exactly like <#delete row>, merges + dimension updated.
+//  2. media/image1.png: the sample QR placeholder is replaced with the real
+//     ZATCA QR from the document.
+//  3. drawing1.xml: the floating QR anchor follows the Thank-You row.
+// Everything else (letterhead text-boxes, YAFCO logo image, fonts, colors,
+// A5 page setup, printer settings, sheet2 config) stays untouched — so the
+// printed sheet matches the reference file exactly.
+// ---------------------------------------------------------------------------
+const b64ToBytes = (b64: string): Uint8Array => {
+  const bin = atob(b64);
+  const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return u;
 };
+export const bytesToB64 = (u8: Uint8Array): string => {
+  let s = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < u8.length; i += chunk)
+    s += String.fromCharCode.apply(null, Array.from(u8.subarray(i, i + chunk)) as any);
+  return btoa(s);
+};
+const escX = (s: any): string =>
+  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const r2 = (x: any): number => Math.round((Number(x) || 0) * 100) / 100;
+
+// Excel 1900 date-system serial (works for dates after 1900-02-28).
+const xlSerial = (dateStr?: string): number | undefined => {
+  const m = String(dateStr ?? "").slice(0, 10).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return undefined;
+  return Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 86400000);
+};
+const xlTime = (t?: string): number | undefined => {
+  const m = String(t ?? "").match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return undefined;
+  return (Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3] ?? 0)) / 86400;
+};
+
+function setCell(rowXml: string, row: number, col: string, val?: string | number | null): string {
+  const re = new RegExp(`<c r="${col}${row}"([^>]*?)(?:/>|>([\\s\\S]*?)</c>)`);
+  return rowXml.replace(re, (_m, attrs: string) => {
+    const sAttr = (String(attrs).match(/\ss="\d+"/) || [""])[0];
+    if (val === undefined || val === null || val === "" || (typeof val === "number" && !isFinite(val)))
+      return `<c r="${col}${row}"${sAttr}/>`;
+    if (typeof val === "number") return `<c r="${col}${row}"${sAttr}><v>${val}</v></c>`;
+    return `<c r="${col}${row}"${sAttr} t="inlineStr"><is><t xml:space="preserve">${escX(val)}</t></is></c>`;
+  });
+}
+function renumRow(rowXml: string, oldRow: number, newRow: number): string {
+  if (oldRow === newRow) return rowXml;
+  return rowXml
+    .replace(new RegExp(`<row r="${oldRow}"`), `<row r="${newRow}"`)
+    .replace(new RegExp(`(r="[A-I]{1,2})${oldRow}(")`, "g"), `$1${newRow}$2`);
+}
+
+function patchSheet060(
+  sheet: string, cfg: PrintConfig, d: DocData,
+  company: { nameAr?: string; name?: string; tax?: string },
+): { xml: string; thankRow: number } {
+  const rows = new Map<number, string>();
+  const rowRe = /<row r="(\d+)"[^>]*(?:\/>|>[\s\S]*?<\/row>)/g;
+  let mm: RegExpExecArray | null;
+  while ((mm = rowRe.exec(sheet))) rows.set(Number(mm[1]), mm[0]);
+
+  const note = String(d.notes ?? "").trim();
+  const addl = r2(d.additions ?? 0);
+  const disc = r2(d.discount ?? 0);
+  const net = r2(d.net ?? 0);
+  const taxPct = Number(d.taxPct ?? 15);
+  const isCreditType = /آجل|credit|deferred|ذمم/i.test(String(d.paymentType || ""));
+  const paid = d.paid != null ? r2(d.paid) : (isCreditType ? 0 : net);
+  const creditDue = r2(net - paid);
+  const lines = d.lines ?? [];
+  const qtyTotal = d.qtyTotal ?? lines.reduce((a, l) => a + Number(l.qty || 0), 0);
+  const companyName = company.nameAr || company.name || "";
+  const contacts = (d.companyContacts?.length ? d.companyContacts : (cfg.contactLines ?? []))
+    .map((x) => String(x ?? "")).filter((x) => x.trim());
+
+  // Output row plan (template row numbers, item row repeated per line).
+  type Step = { old: number; itemIdx?: number };
+  const plan: Step[] = [];
+  for (let r = 7; r <= 14; r++) plan.push({ old: r });
+  if (note) plan.push({ old: 15 });
+  plan.push({ old: 16 });
+  const nItems = Math.max(1, lines.length);
+  for (let i = 0; i < nItems; i++) plan.push({ old: 17, itemIdx: i });
+  plan.push({ old: 18 });
+  if (addl !== 0) plan.push({ old: 19 });
+  if (disc !== 0) plan.push({ old: 20 });
+  plan.push({ old: 21 });
+  plan.push({ old: 22 });
+  plan.push({ old: 23 });
+  if (creditDue !== 0) plan.push({ old: 24 });
+  if (d.hasAccount) { plan.push({ old: 25 }); plan.push({ old: 26 }); }
+  plan.push({ old: 28 });
+  plan.push({ old: 29 }); plan.push({ old: 30 }); plan.push({ old: 31 });
+
+  const out: string[] = [];
+  let r = 7;
+  let thankRow = 28;
+  for (const step of plan) {
+    const tpl = rows.get(step.old);
+    if (!tpl) continue;
+    let xml = renumRow(tpl, step.old, r);
+    if (step.itemIdx != null) {
+      const l = lines[step.itemIdx];
+      if (l) {
+        xml = setCell(xml, r, "A", step.itemIdx + 1);
+        xml = setCell(xml, r, "B", l.code || null);
+        xml = setCell(xml, r, "C", l.name || null);
+        xml = setCell(xml, r, "D", l.unit || null);
+        xml = setCell(xml, r, "E", Number(l.qty || 0));
+        xml = setCell(xml, r, "F", r2(l.price));
+        xml = setCell(xml, r, "G", r2(l.total));
+      } else {
+        for (const c of ["A", "B", "C", "D", "E", "F", "G"]) xml = setCell(xml, r, c, null);
+      }
+    } else {
+      switch (step.old) {
+        case 7:
+          xml = setCell(xml, r, "B", cfg.titleAr || "");
+          xml = setCell(xml, r, "C", companyName);
+          break;
+        case 8:
+          xml = setCell(xml, r, "E", company.tax ? `Tax No. ${company.tax}` : null);
+          break;
+        case 9: xml = setCell(xml, r, "C", d.no); break;
+        case 10:
+          xml = setCell(xml, r, "C", d.paymentType ?? null);
+          xml = setCell(xml, r, "D", d.party ?? null);
+          break;
+        case 11:
+          xml = setCell(xml, r, "C", xlSerial(d.date) ?? null);
+          xml = setCell(xml, r, "D", d.partyTax ? `Tax No. ${d.partyTax}` : null);
+          break;
+        case 12:
+          xml = setCell(xml, r, "C", xlTime(d.time) ?? null);
+          xml = setCell(xml, r, "D", d.accountAddress ?? null);
+          break;
+        case 13:
+          xml = setCell(xml, r, "C", xlSerial(d.dueDate || d.date) ?? null);
+          xml = setCell(xml, r, "D", d.partyPhone ?? null);
+          break;
+        case 14: xml = setCell(xml, r, "C", d.cashier ?? null); break;
+        case 15: xml = setCell(xml, r, "C", note); break;
+        case 18:
+          xml = setCell(xml, r, "E", qtyTotal);
+          xml = setCell(xml, r, "G", r2(d.subtotal));
+          break;
+        case 19:
+          xml = setCell(xml, r, "F", d.additionType || "الإضافات");
+          xml = setCell(xml, r, "G", addl);
+          break;
+        case 20: xml = setCell(xml, r, "G", disc); break;
+        case 21:
+          xml = setCell(xml, r, "F", `VAT ${taxPct}%`);
+          xml = setCell(xml, r, "G", r2(d.tax));
+          break;
+        case 22:
+          xml = setCell(xml, r, "C", amountWordsAr(net));
+          xml = setCell(xml, r, "G", net);
+          break;
+        case 23: xml = setCell(xml, r, "G", paid); break;
+        case 24: xml = setCell(xml, r, "G", creditDue); break;
+        case 25: xml = setCell(xml, r, "G", r2(d.balBefore ?? 0)); break;
+        case 26: xml = setCell(xml, r, "G", r2(d.balAfter ?? d.balBefore ?? 0)); break;
+        case 28: thankRow = r; break;
+        case 29: case 30: case 31:
+          xml = setCell(xml, r, "B", contacts[step.old - 29] ?? null);
+          break;
+      }
+    }
+    // strip leftover column-I control cells (<#if ... delete row>)
+    xml = xml.replace(/<c r="I\d+"[^>]*(?:\/>|>[\s\S]*?<\/c>)/g, "");
+    out.push(xml);
+    r++;
+  }
+
+  const s0 = sheet.indexOf("<sheetData>");
+  const s1 = sheet.indexOf("</sheetData>");
+  if (s0 < 0 || s1 < 0) return { xml: sheet, thankRow };
+  let xml = sheet.slice(0, s0) + "<sheetData>" + out.join("") + "</sheetData>" + sheet.slice(s1 + "</sheetData>".length);
+  xml = xml.replace(/<dimension ref="[^"]*"[^>]*\/>/, `<dimension ref="A7:I${r - 1}"/>`);
+  xml = xml.replace(/<mergeCell ref="B28:G28"[^>]*\/>/, `<mergeCell ref="B${thankRow}:G${thankRow}"/>`);
+  return { xml, thankRow };
+}
 
 export async function render060(
   cfg: PrintConfig, d: DocData,
   company: { nameAr?: string; name?: string; tax?: string; logoBase64?: string },
 ): Promise<Blob> {
   try {
-    const ExcelJS = (await import("exceljs")).default;
-    const bin = atob(FORM0060_B64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(bytes.buffer as any);
-    const ws: any = wb.worksheets[0];
-    const put = (addr: string, v: any) => {
-      const c = ws.getCell(addr);
-      if (v === undefined || v === null || v === "" || (typeof v === "number" && Number.isNaN(v))) { c.value = null; return; }
-      c.value = v;
-    };
-    const hide = (r: number) => { try { ws.getRow(r).hidden = true; } catch { /* ignore */ } };
+    const JSZip = (await import("jszip")).default;
+    const zip = await JSZip.loadAsync(FORM0060_B64, { base64: true });
+    const sheetFile = zip.file("xl/worksheets/sheet1.xml");
+    if (!sheetFile) throw new Error("0060 template: sheet1 missing");
+    const { xml: patchedSheet, thankRow } = patchSheet060(await sheetFile.async("string"), cfg, d, company);
+    zip.file("xl/worksheets/sheet1.xml", patchedSheet);
 
-    // --- header block (rows 7..15) ---
-    put("B7", cfg.titleAr || "");
-    put("C7", company.nameAr || company.name || "");
-    put("B8", null);
-    put("C9", d.no);
-    put("C10", d.paymentType ?? "");
-    put("D10", d.party ?? "");
-    put("C11", toDate(d.date) ?? d.date);
-    put("D11", d.partyTax ? `Tax No. ${d.partyTax}` : null);
-    put("C12", d.time ?? "");
-    put("D12", d.accountAddress ?? "");
-    put("C13", toDate(d.dueDate ?? d.date) ?? (d.dueDate ?? d.date));
-    put("D13", d.partyPhone ?? "");
-    put("C14", d.cashier ?? "");
-    put("C15", d.notes ?? "");
-
-    // --- items (template row 17 is the item row) ---
-    const lines = d.lines ?? [];
-    if (lines.length > 1) ws.duplicateRow(17, lines.length - 1, true);
-    for (let i = 0; i < lines.length; i++) {
-      const r = 17 + i, l = lines[i];
-      put(`A${r}`, i + 1);
-      put(`B${r}`, l.code ?? "");
-      put(`C${r}`, l.name);
-      put(`D${r}`, l.unit ?? "");
-      put(`E${r}`, Number(l.qty || 0));
-      put(`F${r}`, Number(l.price || 0));
-      put(`G${r}`, Number(l.total || 0));
+    // real ZATCA QR replaces the sample QR placeholder (media/image1.png)
+    if (d.qrText) {
+      try {
+        const QRCode = (await import("qrcode")).default;
+        const url = await QRCode.toDataURL(d.qrText, { width: 260, margin: 0, errorCorrectionLevel: "M" });
+        zip.file("xl/media/image1.png", b64ToBytes(url.split(",")[1]));
+      } catch { /* keep placeholder */ }
     }
-    if (!lines.length) ["A", "B", "C", "D", "E", "F", "G"].forEach((c) => put(`${c}17`, null));
-
-    // --- summary block (template rows 18..26, shifted by item count) ---
-    const n = Math.max(1, lines.length);
-    const base = 18 + (n - 1);
-    put(`B${base}`, d.qtyTotal ?? lines.reduce((a, l) => a + Number(l.qty || 0), 0));
-    put(`G${base}`, Number(d.subtotal || 0));
-    const addl = Number(d.additions ?? 0);
-    if (addl !== 0) { put(`F${base + 1}`, d.additionType || "إضافات"); put(`G${base + 1}`, addl); }
-    else hide(base + 1);
-    if (Number(d.discount || 0) !== 0) put(`G${base + 2}`, Number(d.discount));
-    else hide(base + 2);
-    put(`F${base + 3}`, `VAT ${d.taxPct ?? 15}%`);
-    put(`G${base + 3}`, Number(d.tax || 0));
-    put(`C${base + 4}`, amountWordsAr(d.net));
-    put(`G${base + 4}`, Number(d.net || 0));
-    const isCreditType = /آجل|credit|deferred|ذمم/i.test(String(d.paymentType || ""));
-    const paid = d.paid != null ? Number(d.paid) : (isCreditType ? 0 : Number(d.net || 0));
-    put(`G${base + 5}`, paid);
-    const creditDue = d.net - paid;
-    if (creditDue !== 0) put(`G${base + 6}`, creditDue);
-    else hide(base + 6);
-    if (d.hasAccount) {
-      put(`G${base + 7}`, Number(d.balBefore ?? 0));
-      put(`G${base + 8}`, Number(d.balAfter ?? d.balBefore ?? 0));
-    } else { hide(base + 7); hide(base + 8); }
-
-    // --- thank-you + contacts (template rows 28..31) ---
-    const contacts = (d.companyContacts?.length ? d.companyContacts : (cfg.contactLines ?? []))
-      .filter((x) => x && String(x).trim());
-    for (let i = 0; i < 3; i++) put(`B${base + 11 + i}`, contacts[i] ?? null);
-
-    // Re-apply the Thank-You merge (row inserts drop it) and clean stray copies.
-    const tyRow = base + 10;
-    try { ws.unMergeCells("B28:G28"); } catch { /* may not exist */ }
-    try { ws.unMergeCells(`B${tyRow}:G${tyRow}`); } catch { /* may not exist */ }
-    ["C", "D", "E", "F", "G"].forEach((c) => put(`${c}${tyRow}`, null));
-    put(`B${tyRow}`, "Thank You");
+    // floating QR anchor follows the Thank-You row (template: rows 28..33)
     try {
-      ws.mergeCells(`B${tyRow}:G${tyRow}`);
-      ws.getCell(`B${tyRow}`).alignment = { horizontal: "center", vertical: "middle" };
-    } catch { /* keep text if merge fails */ }
+      const drawFile = zip.file("xl/drawings/drawing1.xml");
+      if (drawFile) {
+        const drw = await drawFile.async("string");
+        const m = drw.match(/<xdr:twoCellAnchor[^>]*>[\s\S]*?<\/xdr:twoCellAnchor>/);
+        if (m) {
+          let a = m[0];
+          a = a.replace(/(<xdr:from>[\s\S]*?<xdr:row>)\d+(<\/xdr:row>)/, `$1${thankRow - 1}$2`);
+          a = a.replace(/(<xdr:to>[\s\S]*?<xdr:row>)\d+(<\/xdr:row>)/, `$1${thankRow - 1 + 5}$2`);
+          zip.file("xl/drawings/drawing1.xml", drw.replace(m[0], a));
+        }
+      }
+    } catch { /* keep original anchors */ }
 
-    // --- wipe any leftover template directives (<#...>) ---
-    ws.eachRow({ includeEmpty: true }, (row: any) => {
-      row.eachCell({ includeEmpty: true }, (cell: any) => {
-        if (typeof cell.value === "string" && cell.value.includes("<#")) cell.value = null;
-      });
+    const out = await zip.generateAsync({
+      type: "uint8array", compression: "DEFLATE", compressionOptions: { level: 6 },
     });
-
-    const buf = await wb.xlsx.writeBuffer();
-    return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    return new Blob([out as any], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   } catch {
     return render060Scratch(cfg, d, company as any);
   }
+}
+
+// ZATCA Phase-2 TLV base64 (fields 1-5) — used when an invoice has no
+// stored zatcaQrCode so the QR slot still shows a valid e-invoice QR.
+export function zatcaQrTlv(f: { seller: string; vat: string; timestamp: string; total: string | number; tax: string | number }): string {
+  const enc = (tag: number, val: string): Uint8Array => {
+    const b = new TextEncoder().encode(val);
+    const out = new Uint8Array(2 + b.length);
+    out[0] = tag; out[1] = b.length; out.set(b, 2);
+    return out;
+  };
+  const parts = [
+    enc(1, f.seller), enc(2, f.vat), enc(3, f.timestamp),
+    enc(4, Number(f.total || 0).toFixed(2)), enc(5, Number(f.tax || 0).toFixed(2)),
+  ];
+  const all = new Uint8Array(parts.reduce((a, p) => a + p.length, 0));
+  let o = 0;
+  for (const p of parts) { all.set(p, o); o += p.length; }
+  return bytesToB64(all);
 }
 
 // render060Scratch: original from-scratch builder (kept as fallback).
@@ -557,4 +690,167 @@ export function printHtml(title: string, bodyHtml: string) {
   </style></head><body>${bodyHtml}</body></html>`);
   doc.close();
   setTimeout(() => { f.contentWindow!.print(); setTimeout(() => f.remove(), 2000); }, 300);
+}
+
+// ---------------------------------------------------------------------------
+// A4 print view of form-returnsale-0060: same design as the .xlsx output
+// (letterhead boxes + YAFCO logo, gray title/thanks banners, items grid,
+// totals block, contacts + floating ZATCA QR) rendered as a real A4 document
+// so "Save as PDF" produces the invoice itself — not a screenshot of the app.
+// ---------------------------------------------------------------------------
+function invoice060Html(
+  d: DocData, company: { nameAr?: string; name?: string; tax?: string },
+  title: string, logoUrl: string, qrUrl: string,
+): string {
+  const esc = (x: any) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const n2 = (x: any) => (Number(x) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const addl = Number(d.additions ?? 0);
+  const disc = Number(d.discount ?? 0);
+  const net = Number(d.net || 0);
+  const isCreditType = /آجل|credit|deferred|ذمم/i.test(String(d.paymentType || ""));
+  const paid = d.paid != null ? Number(d.paid) : (isCreditType ? 0 : net);
+  const creditDue = Math.round((net - paid) * 100) / 100;
+  const lines = d.lines ?? [];
+  const qtyTotal = d.qtyTotal ?? lines.reduce((a, l) => a + Number(l.qty || 0), 0);
+  const contacts = (d.companyContacts ?? []).map((x) => String(x ?? "")).filter((x) => x.trim());
+  const co = company.nameAr || company.name || "";
+  const words = amountWordsAr(net);
+
+  const itRows = lines.length
+    ? lines.map((l, i) =>
+        `<tr><td class="sn">${i + 1}</td><td class="c bd">${esc(l.code ?? "")}</td><td class="l bd">${esc(l.name)}</td>` +
+        `<td class="c bd">${esc(l.unit ?? "")}</td><td class="c bd">${Number(l.qty || 0)}</td>` +
+        `<td class="c bd">${n2(l.price)}</td><td class="c bd">${n2(l.total)}</td></tr>`).join("")
+    : `<tr><td class="sn">1</td><td class="c bd"></td><td class="l bd"></td><td class="c bd"></td><td class="c bd"></td><td class="c bd"></td><td class="c bd"></td></tr>`;
+
+  const valRow = (label: string, val: string, bold = false, size = "") =>
+    `<tr><td colspan="5"></td><td class="lbl"${size ? ` style="font-size:${size}"` : ""}>${label}</td>` +
+    `<td class="c bd ${bold ? "bold" : ""}"${size ? ` style="font-size:${size}"` : ""}>${val}</td></tr>`;
+
+  return `<!doctype html><html dir="ltr"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+  @page { size: A4 portrait; margin: 8mm; }
+  html,body { margin:0; padding:0; }
+  body { font-family: Vazir, Tahoma, "Segoe UI", Arial, sans-serif; font-size:8pt; color:#000;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet { width:194mm; margin:0 auto; padding:3mm 0; }
+  table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  td { vertical-align:middle; padding:1pt 2pt; overflow:hidden; }
+  .lh { display:flex; align-items:center; margin-bottom:4pt; }
+  .lh-l { width:38%; text-align:center; font-family:Calibri,Arial,sans-serif; font-size:10.5pt; line-height:1.35; }
+  .lh-l .t1 { font-size:12pt; font-weight:700; }
+  .lh-l .red, .lh-r .red { color:#FF0000; font-weight:700; font-size:11pt; }
+  .lh-c { width:24%; text-align:center; }
+  .lh-c img { max-height:23mm; max-width:95%; }
+  .lh-r { width:38%; text-align:center; font-family:Arial,Tahoma,sans-serif; direction:rtl; font-size:10.5pt; line-height:1.35; }
+  .lh-r .t1 { font-weight:700; font-size:11pt; }
+  .gray { background:#D9D9D9; }
+  .bd { border:1px solid #808080; }
+  .c { text-align:center; } .l { text-align:left; }
+  .sn { text-align:center; }
+  .lbl { font-weight:700; text-align:left; white-space:nowrap; }
+  .bold { font-weight:700; }
+  </style></head><body><div class="sheet">
+  <div class="lh">
+    <div class="lh-l">
+      <div class="t1">Kingdom Saudi Arabia</div>
+      <div class="red">Yousef Jameel Al-Juhani</div>
+      <div class="red">Contracting Est.</div>
+      <div>C . R . No: 4700012896</div>
+      <div>Tax No:300995897900003</div>
+    </div>
+    <div class="lh-c">${logoUrl ? `<img src="${logoUrl}" alt="">` : ""}</div>
+    <div class="lh-r">
+      <div class="t1">المملكة العربية السعودية</div>
+      <div class="red">مؤسسة يوســف جميـــل الجهني</div>
+      <div class="red">للمقاولات</div>
+      <div>س . ت : 4700012896</div>
+      <div>الرقم الضريبي : 300995897900003</div>
+    </div>
+  </div>
+  <table><colgroup>
+    <col style="width:4.3%"><col style="width:10.3%"><col style="width:34%">
+    <col style="width:7.7%"><col style="width:7.7%"><col style="width:15.4%"><col style="width:20.6%">
+  </colgroup><tbody>
+    <tr class="gray" style="height:26.25pt">
+      <td></td><td style="font-size:10pt">${esc(title)}</td>
+      <td colspan="5" class="c" style="font-size:16pt">${esc(co)}</td>
+    </tr>
+    <tr><td></td><td></td><td></td><td></td><td colspan="3">${company.tax ? `Tax No. ${esc(company.tax)}` : ""}</td></tr>
+    <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(d.no)}</td><td class="lbl">Client</td><td colspan="3"></td></tr>
+    <tr><td></td><td class="lbl">Payment</td><td>${esc(d.paymentType ?? "")}</td><td></td><td colspan="3">${esc(d.party ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Date</td><td>${esc(d.date)}</td><td></td><td colspan="3">${d.partyTax ? `Tax No. ${esc(d.partyTax)}` : ""}</td></tr>
+    <tr><td></td><td class="lbl">Time</td><td>${esc(d.time ?? "")}</td><td></td><td colspan="3">${esc(d.accountAddress ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Due Date</td><td>${esc(d.dueDate ?? d.date)}</td><td></td><td colspan="3">${esc(d.partyPhone ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Cashier</td><td>${esc(d.cashier ?? "")}</td><td colspan="4"></td></tr>
+    ${d.notes ? `<tr><td></td><td class="lbl">Remarks</td><td colspan="5">${esc(d.notes)}</td></tr>` : ""}
+    <tr style="height:30pt;font-weight:700" class="c">
+      <td></td><td class="bd">Item No.</td><td class="bd">Job Description</td><td class="bd">Unit</td>
+      <td class="bd">Qty</td><td class="bd">Price</td><td class="bd">Total</td>
+    </tr>
+    ${itRows}
+    <tr><td></td><td></td><td></td><td></td><td class="c bd">${qtyTotal}</td><td class="lbl">Total</td><td class="c bd">${n2(d.subtotal)}</td></tr>
+    ${addl ? valRow(esc(d.additionType || "الإضافات"), n2(addl)) : ""}
+    ${disc ? valRow("Discount", n2(disc)) : ""}
+    <tr><td colspan="5"></td><td class="lbl">VAT ${Number(d.taxPct ?? 15)}%</td><td class="c bd">${n2(d.tax)}</td></tr>
+    <tr style="height:17.25pt">
+      <td></td><td class="lbl">Due</td><td class="l">${esc(words)}</td><td colspan="2"></td>
+      <td class="lbl" style="font-size:10pt">Due</td><td class="c bd bold" style="font-size:10pt">${n2(net)}</td>
+    </tr>
+    ${valRow("Paid", n2(paid))}
+    ${creditDue ? valRow("Credit", n2(creditDue)) : ""}
+    ${d.hasAccount ? valRow("Bal. Prior", n2(d.balBefore)) + valRow("Bal. After", n2(d.balAfter ?? d.balBefore)) : ""}
+    <tr style="height:8pt"><td colspan="7"></td></tr>
+    <tr class="gray" style="height:26.25pt">
+      <td></td><td colspan="6" class="c" style="font-size:16pt">Thank You</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td colspan="2" style="vertical-align:top;font-size:8pt;line-height:1.4">${contacts.map((c) => `<div>${esc(c)}</div>`).join("")}</td>
+      <td colspan="3" class="c">${qrUrl ? `<img src="${qrUrl}" style="width:26mm;height:26mm" alt="">` : ""}</td>
+      <td></td>
+    </tr>
+  </tbody></table>
+  </div></body></html>`;
+}
+
+// Opens the invoice as a real A4 print document in a new window/tab.
+// Printing (or "Save as PDF") yields the invoice document itself.
+export async function printInvoice060(
+  d: DocData,
+  company: { nameAr?: string; name?: string; tax?: string },
+  title?: string,
+): Promise<void> {
+  const w = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;
+  let logoUrl = "";
+  try {
+    const JSZip = (await import("jszip")).default;
+    const zip = await JSZip.loadAsync(FORM0060_B64, { base64: true });
+    const img = zip.file("xl/media/image2.jpeg");
+    if (img) logoUrl = "data:image/jpeg;base64," + bytesToB64(await img.async("uint8array"));
+  } catch { /* logo optional */ }
+  let qrUrl = "";
+  if (d.qrText) {
+    try {
+      const QRCode = (await import("qrcode")).default;
+      qrUrl = await QRCode.toDataURL(d.qrText, { width: 240, margin: 0 });
+    } catch { /* qr optional */ }
+  }
+  const html = invoice060Html(d, company, title ?? "invoice", logoUrl, qrUrl);
+  if (w) {
+    try {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      if (!(window as any).__NO_AUTOPRINT)
+        setTimeout(() => { try { w.focus(); w.print(); } catch { /* ignore */ } }, 700);
+      return;
+    } catch { /* fall through to iframe */ }
+  }
+  const f = document.createElement("iframe");
+  f.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(f);
+  f.contentDocument!.open();
+  f.contentDocument!.write(html);
+  f.contentDocument!.close();
+  setTimeout(() => { try { f.contentWindow!.print(); } catch { /* ignore */ } setTimeout(() => f.remove(), 1500); }, 700);
 }

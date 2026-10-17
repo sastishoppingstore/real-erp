@@ -5,7 +5,7 @@ import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { inputCls, btnCls, btnGreenCls, FuncKey } from "./ui";
 import {
-  DOC_TITLES, downloadBlob, printHtml, renderXlsx, render060,
+  DOC_TITLES, downloadBlob, printInvoice060, renderXlsx, render060, zatcaQrTlv,
   type DocData, type PrintConfig,
 } from "./printEngine";
 
@@ -467,9 +467,16 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const grand = net + taxAmt;
   const profit = net - totalCost;
   const partyRec: any = parties.find((a: any) => String(a.id) === String(partyId));
+  // Just-saved invoice already appears in partyInvoices (list refreshes after
+  // save) — exclude it here so Bal. Prior stays "before this invoice" and
+  // Bal. After = Prior + this invoice (no double counting on print).
+  const skipNo = savedNo || LAST_SAVED_NO;
   const balBefore = partyId && kind === "sales"
     ? Number(partyRec?.openingBalance || 0) +
-      ((partyInvoices ?? []) as any[]).reduce((a: number, i: any) => a + Number(i.balanceDue || 0), 0)
+      ((partyInvoices ?? []) as any[]).reduce((a: number, i: any) => {
+        if (skipNo && String(i.invoiceNumber ?? "") === String(skipNo)) return a;
+        return a + Number(i.balanceDue || 0);
+      }, 0)
     : 0;
   const balAfter = balBefore + grand;
   const origDoc: any = kind.endsWith("return") ? history.find((h: any) => String(h.id) === String(origId)) : null;
@@ -751,13 +758,24 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     const comp: any = company ?? {};
     const cfg = tplConfig();
     const [tar, ten] = DOC_TITLES[docTypeFor()];
-    const body =
-      `<h1>${cfg?.titleAr ?? tar} — ${d.no}</h1>` +
-      `<p>${d.date} · ${d.party ?? ""} · ${d.partyPhone ?? ""}</p>` +
-      `<table><tr>${["الكود", "الصنف", "الكمية", "السعر", "الإجمالي"].map((c) => `<th>${c}</th>`).join("")}</tr>` +
-      d.lines.map((l) => `<tr><td>${l.code ?? ""}</td><td>${l.name}</td><td>${l.qty}</td><td>${l.price}</td><td>${l.total.toFixed(2)}</td></tr>`).join("") +
-      `</table><div class="tot">الصافي: ${d.net.toFixed(2)}</div>`;
-    if (mode === "html" || mode === "both") printHtml(`${tar}-${d.no}`, body);
+    // ZATCA QR: keep the stored code when viewing a saved invoice, else build
+    // the TLV so the 0060 QR slot always carries a real e-invoice QR.
+    if (!d.qrText && comp.taxNumber) {
+      try {
+        d.qrText = zatcaQrTlv({
+          seller: comp.companyNameAr || comp.companyName || "",
+          vat: comp.taxNumber,
+          timestamp: `${d.date}T${d.time || "00:00"}:00`,
+          total: d.net, tax: d.tax,
+        });
+      } catch { /* qr optional */ }
+    }
+    if (mode === "html" || mode === "both")
+      await printInvoice060(
+        d,
+        { nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber },
+        `${cfg?.titleAr ?? tar} — ${d.no}`,
+      );
     if (mode === "xlsx" || mode === "both") {
       const compInfo = { nameAr: comp.companyNameAr, name: comp.companyName };
       if (!cfg) {
