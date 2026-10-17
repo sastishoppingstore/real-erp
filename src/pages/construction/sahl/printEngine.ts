@@ -4,6 +4,8 @@
 // cleaner: <<delete:row>> (blank rows removed) | totals: <Data:total_price|discount|
 // <Data:tax_amount|net_price|paid|remaining> <AmountString> | QR: <ZATCA:QR_TLV>
 
+import { FORM0060_B64 } from "./form0060";
+
 export type DocType =
   | "sale" | "quotation" | "purchase" | "sales-return"
   | "payment" | "receipt" | "stocktake" | "transfer";
@@ -286,7 +288,123 @@ export async function renderXlsx(cfg: PrintConfig, d: DocData, company: { nameAr
 // qty+total row, additions/discount/VAT rows (hidden when zero, like <#if>),
 // Due+amount-words, Paid, Credit (hidden when zero), Bal Prior/After (hidden
 // without account), Thank You + 3 contact lines.
+// render060: loads the ORIGINAL form-returnsale-0060 template (embedded base64)
+// and patches the data cells -> 100% layout fidelity (styles, merges, images,
+// config sheet, printer ranges all preserved as-is). Falls back to the scratch
+// builder below if the template fails to load.
+const toDate = (s?: string): Date | undefined => {
+  if (!s) return undefined;
+  const dt = new Date(String(s).slice(0, 10) + "T00:00:00");
+  return isNaN(dt.getTime()) ? undefined : dt;
+};
+
 export async function render060(
+  cfg: PrintConfig, d: DocData,
+  company: { nameAr?: string; name?: string; tax?: string; logoBase64?: string },
+): Promise<Blob> {
+  try {
+    const ExcelJS = (await import("exceljs")).default;
+    const bin = atob(FORM0060_B64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(bytes.buffer as any);
+    const ws: any = wb.worksheets[0];
+    const put = (addr: string, v: any) => {
+      const c = ws.getCell(addr);
+      if (v === undefined || v === null || v === "" || (typeof v === "number" && Number.isNaN(v))) { c.value = null; return; }
+      c.value = v;
+    };
+    const hide = (r: number) => { try { ws.getRow(r).hidden = true; } catch { /* ignore */ } };
+
+    // --- header block (rows 7..15) ---
+    put("B7", cfg.titleAr || "");
+    put("C7", company.nameAr || company.name || "");
+    put("B8", null);
+    put("C9", d.no);
+    put("C10", d.paymentType ?? "");
+    put("D10", d.party ?? "");
+    put("C11", toDate(d.date) ?? d.date);
+    put("D11", d.partyTax ? `Tax No. ${d.partyTax}` : null);
+    put("C12", d.time ?? "");
+    put("D12", d.accountAddress ?? "");
+    put("C13", toDate(d.dueDate ?? d.date) ?? (d.dueDate ?? d.date));
+    put("D13", d.partyPhone ?? "");
+    put("C14", d.cashier ?? "");
+    put("C15", d.notes ?? "");
+
+    // --- items (template row 17 is the item row) ---
+    const lines = d.lines ?? [];
+    if (lines.length > 1) ws.duplicateRow(17, lines.length - 1, true);
+    for (let i = 0; i < lines.length; i++) {
+      const r = 17 + i, l = lines[i];
+      put(`A${r}`, i + 1);
+      put(`B${r}`, l.code ?? "");
+      put(`C${r}`, l.name);
+      put(`D${r}`, l.unit ?? "");
+      put(`E${r}`, Number(l.qty || 0));
+      put(`F${r}`, Number(l.price || 0));
+      put(`G${r}`, Number(l.total || 0));
+    }
+    if (!lines.length) ["A", "B", "C", "D", "E", "F", "G"].forEach((c) => put(`${c}17`, null));
+
+    // --- summary block (template rows 18..26, shifted by item count) ---
+    const n = Math.max(1, lines.length);
+    const base = 18 + (n - 1);
+    put(`B${base}`, d.qtyTotal ?? lines.reduce((a, l) => a + Number(l.qty || 0), 0));
+    put(`G${base}`, Number(d.subtotal || 0));
+    const addl = Number(d.additions ?? 0);
+    if (addl !== 0) { put(`F${base + 1}`, d.additionType || "إضافات"); put(`G${base + 1}`, addl); }
+    else hide(base + 1);
+    if (Number(d.discount || 0) !== 0) put(`G${base + 2}`, Number(d.discount));
+    else hide(base + 2);
+    put(`F${base + 3}`, `VAT ${d.taxPct ?? 15}%`);
+    put(`G${base + 3}`, Number(d.tax || 0));
+    put(`C${base + 4}`, amountWordsAr(d.net));
+    put(`G${base + 4}`, Number(d.net || 0));
+    const isCreditType = /آجل|credit|deferred|ذمم/i.test(String(d.paymentType || ""));
+    const paid = d.paid != null ? Number(d.paid) : (isCreditType ? 0 : Number(d.net || 0));
+    put(`G${base + 5}`, paid);
+    const creditDue = d.net - paid;
+    if (creditDue !== 0) put(`G${base + 6}`, creditDue);
+    else hide(base + 6);
+    if (d.hasAccount) {
+      put(`G${base + 7}`, Number(d.balBefore ?? 0));
+      put(`G${base + 8}`, Number(d.balAfter ?? d.balBefore ?? 0));
+    } else { hide(base + 7); hide(base + 8); }
+
+    // --- thank-you + contacts (template rows 28..31) ---
+    const contacts = (d.companyContacts?.length ? d.companyContacts : (cfg.contactLines ?? []))
+      .filter((x) => x && String(x).trim());
+    for (let i = 0; i < 3; i++) put(`B${base + 11 + i}`, contacts[i] ?? null);
+
+    // Re-apply the Thank-You merge (row inserts drop it) and clean stray copies.
+    const tyRow = base + 10;
+    try { ws.unMergeCells("B28:G28"); } catch { /* may not exist */ }
+    try { ws.unMergeCells(`B${tyRow}:G${tyRow}`); } catch { /* may not exist */ }
+    ["C", "D", "E", "F", "G"].forEach((c) => put(`${c}${tyRow}`, null));
+    put(`B${tyRow}`, "Thank You");
+    try {
+      ws.mergeCells(`B${tyRow}:G${tyRow}`);
+      ws.getCell(`B${tyRow}`).alignment = { horizontal: "center", vertical: "middle" };
+    } catch { /* keep text if merge fails */ }
+
+    // --- wipe any leftover template directives (<#...>) ---
+    ws.eachRow({ includeEmpty: true }, (row: any) => {
+      row.eachCell({ includeEmpty: true }, (cell: any) => {
+        if (typeof cell.value === "string" && cell.value.includes("<#")) cell.value = null;
+      });
+    });
+
+    const buf = await wb.xlsx.writeBuffer();
+    return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  } catch {
+    return render060Scratch(cfg, d, company as any);
+  }
+}
+
+// render060Scratch: original from-scratch builder (kept as fallback).
+async function render060Scratch(
   cfg: PrintConfig, d: DocData,
   company: { nameAr?: string; name?: string; tax?: string; logoBase64?: string },
 ): Promise<Blob> {

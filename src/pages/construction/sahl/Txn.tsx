@@ -9,6 +9,10 @@ import {
   type DocData, type PrintConfig,
 } from "./printEngine";
 
+// Survives component remounts within the SPA session: last saved invoice no
+// so a print/xlsx right after save carries the SAVED number (Sahl behavior).
+let LAST_SAVED_NO = "";
+
 // SCR-007 — verified against video frames (inv700 + right/bottom zooms):
 // yellow total under doc-number box, green grid header, gray panel, right
 // toolbar (mode, Q/K/navigate, big F12 checkmark, print checkbox,
@@ -210,6 +214,11 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const [rDate, setRDate] = useState(today());
   const [rTime, setRTime] = useState("");
   const [savedNo, setSavedNo] = useState("");
+  // quick-add from invoice page (design unchanged: white/green Sahl dialog)
+  const [pOpen, setPOpen] = useState(false);
+  const [pForm, setPForm] = useState({ name: "", nameAr: "", sku: "", cost: "", price: "", unitId: "" });
+  const [cOpen, setCOpen] = useState(false);
+  const [cForm, setCForm] = useState({ name: "", nameAr: "", phone: "" });
   const numAr = (v: number | string) => (rtl
     ? String(v).replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)])
     : String(v));
@@ -358,7 +367,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const newDoc = () => {
     setLines([]); setDiscount(0); setOrigId(""); setReason(""); setViewId(null); setPoViewId(null); setMsg("");
-    setPartyId(""); setPartyQ(""); resetCd(); setDueDate(today()); setSavedNo("");
+    setPartyId(""); setPartyQ(""); resetCd(); setDueDate(today()); setSavedNo(""); LAST_SAVED_NO = "";
   };
 
   // Step 1 -> 2: pick item, default qty/price, focus qty.
@@ -507,6 +516,54 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const adjustCreate = trpc.inventory.adjustmentCreate.useMutation();
   const serialIssueM = trpc.sahl.serialIssue.useMutation();
   const serialReceiveM = trpc.sahl.serialReceive.useMutation();
+  const prodQuickCreate = trpc.inventory.productCreate.useMutation();
+  const custQuickCreate = trpc.sales.customerCreate.useMutation();
+
+  // ==== Quick-add from the invoice page (product + customer) — same Sahl design ====
+  const saveQuickProduct = async () => {
+    if (!pForm.name.trim()) { setMsg(T("اسم الصنف مطلوب", "Product name required")); return; }
+    try {
+      const res: any = await prodQuickCreate.mutateAsync({
+        sku: pForm.sku.trim() || `AUTO-${String(Date.now()).slice(-6)}`,
+        name: pForm.name.trim(), nameAr: pForm.nameAr.trim() || undefined,
+        purchasePrice: String(Number(pForm.cost) || 0), salePrice: String(Number(pForm.price) || 0),
+        ...(pForm.unitId ? { unitId: Number(pForm.unitId) } : {}),
+        isTaxable: true, taxRate: "15",
+      });
+      const created = {
+        id: res?.id, sku: pForm.sku.trim(), name: pForm.name.trim(),
+        nameAr: pForm.nameAr.trim() || pForm.name.trim(),
+        salePrice: Number(pForm.price) || 0, purchasePrice: Number(pForm.cost) || 0,
+        unitName: (unitsQ ?? []).find((x: any) => String(x.id) === String(pForm.unitId))?.name ?? "",
+        fixedDiscount: 0, isSerialTracked: false,
+      };
+      utils.inventory.productList.invalidate();
+      utils.sahl.lookup.invalidate();
+      setPOpen(false);
+      setPForm({ name: "", nameAr: "", sku: "", cost: "", price: "", unitId: "" });
+      setMsg(`${T("تم إضافة الصنف", "Item added")} — ${created.nameAr}`);
+      chooseItem(created);
+    } catch (e: any) { setMsg(e.message ?? String(e)); }
+  };
+
+  const saveQuickCustomer = async () => {
+    if (!cForm.name.trim()) { setMsg(T("اسم العميل مطلوب", "Customer name required")); return; }
+    try {
+      const res: any = await custQuickCreate.mutateAsync({
+        name: cForm.name.trim(), nameAr: cForm.nameAr.trim() || undefined,
+        phone: cForm.phone.trim() || undefined, customerType: "b2c",
+      });
+      utils.sales.customerList.invalidate();
+      setCOpen(false);
+      if (res?.id) {
+        setPartyId(String(res.id));
+        setPartyQ(cForm.name.trim());
+        setCd((c) => ({ ...c, name: cForm.name.trim(), nameAr: cForm.nameAr.trim(), phone: cForm.phone.trim() }));
+      }
+      setCForm({ name: "", nameAr: "", phone: "" });
+      setMsg(T("تم إضافة العميل", "Customer added"));
+    } catch (e: any) { setMsg(e.message ?? String(e)); }
+  };
 
   const refreshAll = () => {
     utils.sales.invoiceList.invalidate();
@@ -663,7 +720,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       };
     }
     return {
-      no: savedNo || `INV-${Date.now()}`, date: docDate,
+      no: savedNo || LAST_SAVED_NO || `INV-${Date.now()}`, date: docDate,
       time: `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`,
       party: cd.name || parties.find((a: any) => String(a.id) === String(partyId))?.name || "",
       partyTax: cd.vat, partyPhone: cd.phone, branch: "",
@@ -837,6 +894,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         });
         setMsg(`${T("تم حفظ الفاتورة", "Invoice saved")} — INV-${stamp}`);
         setSavedNo(`INV-${stamp}`);
+        LAST_SAVED_NO = `INV-${stamp}`;
         // Issue serials for tracked lines
         try {
           for (const l of lines.filter((x) => x.tracked && (x.serials ?? []).length)) {
@@ -1011,6 +1069,44 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           {/* Center: numbered entry chain */}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-end gap-1">
+              <button onClick={commitLine}
+                className="flex h-[52px] w-[64px] flex-col items-center justify-center border border-[#1565c0] pb-1 text-white"
+                style={{ background: "#2B7DE9" }}
+                title={T("إضافة (4)", "Add (4)")}>
+                <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>4</i>
+                <b className="text-[11px]">{T("إضافة", "Add")}</b>
+                <span className="text-[18px] leading-none">⬇</span>
+              </button>
+              <label className="flex w-[92px] flex-col">
+                <span className="mb-0.5 flex items-center gap-1">
+                  <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>3</i>
+                  <b className="text-[11px]">{T("سعر البيع", "Selling Price")}</b>
+                </span>
+                <input ref={priceRef} value={priceInput}
+                  onChange={(e) => setPriceInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitLine(); } }}
+                  placeholder={activeItem ? String(Number(activeItem.salePrice ?? activeItem.purchasePrice ?? 0)) : "•"}
+                  className="h-9 w-full border border-[#888] bg-[#2fae4e]/10 text-center text-[16px] font-bold" />
+              </label>
+              <label className="flex w-[92px] flex-col">
+                <span className="mb-0.5 flex items-center gap-1">
+                  <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>2</i>
+                  <b className="text-[11px]">{T("الكمية", "Quantity")}</b>
+                </span>
+                <input ref={qtyRef} value={qtyInput} onChange={(e) => setQtyInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); priceRef.current?.focus(); priceRef.current?.select(); }
+                  }}
+                  className="h-9 w-full border border-[#888] text-center text-[16px] font-bold" />
+              </label>
+              <button
+                onClick={() => openInquiry()}
+                className="flex h-9 items-center gap-1 border border-[#2f7a3d] px-2 text-[12px] font-bold text-white"
+                style={{ background: "#2fae4e" }}
+                title={T("استعلام: أسعار البيع، الكميات في المخازن، أسعار الشراء", "Inquiry: selling prices, warehouse qty, purchase history")}>
+                {T("استعلام", "Inquiry")}
+                <span className="inline-flex h-[16px] w-[16px] items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#1d7a37]">؟</span>
+              </button>
               <label className="flex min-w-[220px] flex-1 flex-col">
                 <span className="mb-0.5 flex items-center gap-1">
                   <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>1</i>
@@ -1031,46 +1127,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                     if (e.key === "Escape") setGridOpen(false);
                   }}
                   placeholder={T("باركود / كود / اسم الصنف", "Barcode / code / item name")}
-                  className="h-9 flex-1 border-2 border-[#c62828] px-2 text-[15px] font-bold text-white outline-none placeholder:text-white/70"
-                  style={{ background: "#e53935" }} />
+                  className={`h-9 flex-1 border-2 px-2 text-[15px] font-bold text-white outline-none placeholder:text-white/70 ${activeItem ? "border-[#1d7a37]" : "border-[#c62828]"}`}
+                  style={{ background: activeItem ? "#2fae4e" : "#e53935" }} />
               </label>
-              <button
-                onClick={() => openInquiry()}
-                className="flex h-9 items-center gap-1 border border-[#2f7a3d] px-2 text-[12px] font-bold text-white"
-                style={{ background: "#2fae4e" }}
-                title={T("استعلام: أسعار البيع، الكميات في المخازن، أسعار الشراء", "Inquiry: selling prices, warehouse qty, purchase history")}>
-                {T("استعلام", "Inquiry")}
-                <span className="inline-flex h-[16px] w-[16px] items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#1d7a37]">؟</span>
-              </button>
-              <label className="flex w-[92px] flex-col">
-                <span className="mb-0.5 flex items-center gap-1">
-                  <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>2</i>
-                  <b className="text-[11px]">{T("الكمية", "Quantity")}</b>
-                </span>
-                <input ref={qtyRef} value={qtyInput} onChange={(e) => setQtyInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { e.preventDefault(); priceRef.current?.focus(); priceRef.current?.select(); }
-                  }}
-                  className="h-9 w-full border border-[#888] text-center text-[16px] font-bold" />
-              </label>
-              <label className="flex w-[92px] flex-col">
-                <span className="mb-0.5 flex items-center gap-1">
-                  <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>3</i>
-                  <b className="text-[11px]">{T("سعر البيع", "Selling Price")}</b>
-                </span>
-                <input ref={priceRef} value={priceInput}
-                  onChange={(e) => setPriceInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitLine(); } }}
-                  placeholder={activeItem ? String(Number(activeItem.salePrice ?? activeItem.purchasePrice ?? 0)) : "•"}
-                  className="h-9 w-full border border-[#888] bg-[#2fae4e]/10 text-center text-[16px] font-bold" />
-              </label>
-              <button onClick={commitLine}
-                className="flex h-[52px] w-[64px] flex-col items-center justify-center border border-[#1565c0] bg-[#e3f0fb] pb-1 text-[#1565c0]"
-                title={T("إضافة (4)", "Add (4)")}>
-                <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>4</i>
-                <b className="text-[11px]">{T("إضافة", "Add")}</b>
-                <span className="text-[18px] leading-none">⬇</span>
-              </button>
             </div>
             {/* Account / payment / notes row */}
             <div className="flex flex-wrap items-center gap-1">
@@ -1085,6 +1144,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
               </select>
               <button className="border border-[#888] bg-white px-1" title={T("بحث في الحسابات", "Browse accounts")} onClick={() => document.activeElement?.blur()}>
                 🔍
+              </button>
+              <button className="border border-[#2f7a3d] bg-[#2fae4e] px-2 py-1 text-[12px] font-bold text-white" title={T("عميل جديد", "New customer")} onClick={() => setCOpen(true)}>
+                ＋
               </button>
               <label className="flex cursor-pointer items-center gap-0.5 text-[12px]" title={T("نقدي", "Cash")}>
                 <input type="checkbox" checked={payMode === "cash"} onChange={() => setPayMode("cash")} disabled={isViewing} />
@@ -1125,6 +1187,12 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                 </label>
               )}
               <span className="flex gap-1 text-[10px] text-[#555]">
+                {kind === "sales" && partyId && (
+                  <>
+                    <span className="border border-[#c8a419] bg-[#fff8e1] px-1 font-bold">{T("الرصيد السابق", "Prev. Balance")}: {numAr(balBefore.toFixed(2))}</span>
+                    <span className="border border-[#c8a419] bg-[#fff8e1] px-1 font-bold">{T("الرصيد الحالي", "Current Balance")}: {numAr(balAfter.toFixed(2))}</span>
+                  </>
+                )}
                 <span className="border border-[#ccc] bg-white px-1">{T("أصناف", "Lines")}: {lines.length}</span>
                 <span className="border border-[#ccc] bg-white px-1">{T("كمية", "Qty")}: {lines.reduce((a, l) => a + Number(l.qty), 0)}</span>
               </span>
@@ -1197,9 +1265,17 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                       <td className="border border-[#ddd] px-1 py-0.5 text-center tabular-nums">{numAr(Number(p.purchasePrice ?? 0).toFixed(2))}</td>
                     </tr>
                   ))}
+                  {!(q.trim() ? results : (allProducts ?? []).slice(0, 40)).length && (
+                    <tr><td colSpan={12} className="border border-[#ddd] p-2 text-center">
+                      <button className="border border-[#1d7a37] bg-[#2fae4e] px-3 py-1 text-[12px] font-bold text-white" onClick={() => setPOpen(true)}>
+                        ＋ {T("لا توجد نتائج — إضافة صنف جديد", "No results — add new item")}
+                      </button>
+                    </td></tr>
+                  )}
                 </tbody>
               </table>
               <div className="flex items-center justify-end gap-1 border-t-2 border-[#2fae4e] bg-[#e8f5e9] px-1 py-1">
+                <button className="border border-[#1d7a37] bg-[#2fae4e] px-3 py-0.5 text-[11px] font-bold text-white" onClick={() => setPOpen(true)}>＋ {T("صنف جديد", "New Item")}</button>
                 <button className="border border-[#888] bg-white px-3 py-0.5 text-[11px] font-bold" onClick={() => setQ("")}>{T("الكل", "All")}</button>
                 <button className="border border-[#888] bg-white px-3 py-0.5 text-[11px] font-bold" onClick={() => navigate("/app/construction/sahl/products")}>{T("تعديل", "Edit")}</button>
                 <button className="border border-[#888] bg-white px-3 py-0.5 text-[11px] font-bold" onClick={() => { setGridOpen(false); setQ(""); }}>{T("إخفاء", "Hide")}</button>
@@ -1540,6 +1616,88 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         </div>
       )}
 
+      {/* ===== Quick-add product (from invoice search grid / empty state) ===== */}
+      {pOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPOpen(false)}>
+          <div className="w-full max-w-md border border-black bg-white" onClick={(e) => e.stopPropagation()}>
+            <div className="px-3 py-1.5 text-[13px] font-bold text-white" style={{ background: "#006d34" }}>
+              {T("إضافة صنف جديد", "New Product")}
+            </div>
+            <div className="p-3">
+              <label className="mb-1.5 flex items-center gap-2 text-[12px]">
+                <span className="w-28 shrink-0">{T("اسم الصنف", "Name")} *</span>
+                <input autoFocus className={inputCls} value={pForm.name} onChange={(e) => setPForm({ ...pForm, name: e.target.value })} />
+              </label>
+              <label className="mb-1.5 flex items-center gap-2 text-[12px]">
+                <span className="w-28 shrink-0">{T("الاسم عربي", "Arabic")}</span>
+                <input className={inputCls} value={pForm.nameAr} onChange={(e) => setPForm({ ...pForm, nameAr: e.target.value })} />
+              </label>
+              <label className="mb-1.5 flex items-center gap-2 text-[12px]">
+                <span className="w-28 shrink-0">{T("كود الصنف", "SKU")}</span>
+                <input className={inputCls} value={pForm.sku} onChange={(e) => setPForm({ ...pForm, sku: e.target.value })} dir="ltr" placeholder={T("تلقائي", "auto")} />
+              </label>
+              <div className="mb-1.5 grid grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 text-[12px]">
+                  <span className="shrink-0">{T("سعر الشراء", "Cost")}</span>
+                  <input type="number" className={inputCls} value={pForm.cost} onChange={(e) => setPForm({ ...pForm, cost: e.target.value })} />
+                </label>
+                <label className="flex items-center gap-2 text-[12px]">
+                  <span className="shrink-0">{T("سعر البيع", "Price")}</span>
+                  <input type="number" className={inputCls} value={pForm.price} onChange={(e) => setPForm({ ...pForm, price: e.target.value })} />
+                </label>
+              </div>
+              <label className="mb-1.5 flex items-center gap-2 text-[12px]">
+                <span className="w-28 shrink-0">{T("الوحدة", "Unit")}</span>
+                <select className={inputCls} value={pForm.unitId} onChange={(e) => setPForm({ ...pForm, unitId: e.target.value })}>
+                  <option value="">—</option>
+                  {(unitsQ ?? []).map((un: any) => <option key={un.id} value={un.id}>{un.name}</option>)}
+                </select>
+              </label>
+              <div className="mt-3 flex justify-end gap-2">
+                <button className={btnCls} onClick={() => setPOpen(false)}>{T("إلغاء", "Cancel")}</button>
+                <button className={btnGreenCls} style={{ background: "#0a5c2a" }} disabled={prodQuickCreate.isPending} onClick={saveQuickProduct}>
+                  {T("حفظ", "Save")}
+                </button>
+              </div>
+              <div className="mt-1 text-[10px] text-[#777]">
+                {T("الحفظ يضيف الصنف مباشرة إلى الفاتورة", "Saving adds the item to the invoice directly")}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Quick-add customer (＋ next to Account) ===== */}
+      {cOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setCOpen(false)}>
+          <div className="w-full max-w-md border border-black bg-white" onClick={(e) => e.stopPropagation()}>
+            <div className="px-3 py-1.5 text-[13px] font-bold text-white" style={{ background: "#006d34" }}>
+              {T("عميل جديد", "New Customer")}
+            </div>
+            <div className="p-3">
+              <label className="mb-1.5 flex items-center gap-2 text-[12px]">
+                <span className="w-28 shrink-0">{T("الاسم", "Name")} *</span>
+                <input autoFocus className={inputCls} value={cForm.name} onChange={(e) => setCForm({ ...cForm, name: e.target.value })} />
+              </label>
+              <label className="mb-1.5 flex items-center gap-2 text-[12px]">
+                <span className="w-28 shrink-0">{T("الاسم عربي", "Arabic")}</span>
+                <input className={inputCls} value={cForm.nameAr} onChange={(e) => setCForm({ ...cForm, nameAr: e.target.value })} />
+              </label>
+              <label className="mb-1.5 flex items-center gap-2 text-[12px]">
+                <span className="w-28 shrink-0">{T("الهاتف", "Phone")}</span>
+                <input className={inputCls} value={cForm.phone} onChange={(e) => setCForm({ ...cForm, phone: e.target.value })} dir="ltr" />
+              </label>
+              <div className="mt-3 flex justify-end gap-2">
+                <button className={btnCls} onClick={() => setCOpen(false)}>{T("إلغاء", "Cancel")}</button>
+                <button className={btnGreenCls} style={{ background: "#0a5c2a" }} disabled={custQuickCreate.isPending} onClick={saveQuickCustomer}>
+                  {T("حفظ", "Save")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===== Inquiry modal (?): prices — warehouse qty — purchase history ===== */}
       {inqOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setInqOpen(false)}>
@@ -1735,7 +1893,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                 {T("الإجمالي", "Total")}: {numAr(creditAsk.total.toFixed(2))}
               </div>
             </div>
-            <div className="flex items-center justify-center gap-8 px-6 pb-8" dir="ltr">
+            <div className="flex items-center justify-center gap-8 px-6 pb-8" dir="rtl">
               <button className="flex w-[150px] flex-col items-center border border-[#c9c9c9] bg-white py-3 hover:bg-[#fff3f2]"
                 onClick={() => { setROpen(true); }}>
                 <span className="flex items-center gap-2 text-[16px] font-bold text-black">
