@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
-import { inputCls, btnCls, FuncKey } from "./ui";
+import { inputCls, btnCls, btnGreenCls, FuncKey } from "./ui";
 import {
   DOC_TITLES, downloadBlob, printHtml, renderXlsx, render060,
   type DocData, type PrintConfig,
@@ -18,7 +18,7 @@ import {
 // purchase-return|quotation. All saves hit real MySQL tRPC mutations.
 export type TxnKind = "sales" | "purchase" | "sales-return" | "purchase-return" | "quotation";
 
-interface Line { productId?: number; code: string; name: string; unit: string; qty: number; price: number; disc: number; cost: number; serials: string[]; tracked: boolean; }
+interface Line { productId?: number; code: string; name: string; unit: string; qty: number; price: number; disc: number; cost: number; serials: string[]; tracked: boolean; ship?: string; }
 
 const TITLES: Record<TxnKind, { ar: string; en: string; color: string }> = {
   sales: { ar: "فاتورة بيع", en: "Sales invoice", color: "#2fae4e" },
@@ -180,7 +180,39 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   // view mode: loaded read-only invoice via « »
   const [viewId, setViewId] = useState<number | null>(null);
   const [viewNav, setViewNav] = useState(0);
+  const [poViewId, setPoViewId] = useState<number | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  // view mode flag (must exist BEFORE the queries below read it)
+  const isViewing = viewId !== null || poViewId !== null;
+
+  // ==== Sahl 5-zone POS additions ====
+  const [reference, setReference] = useState("");
+  const [gridOpen, setGridOpen] = useState(false);          // multi-column search overlay
+  const [touchOpen, setTouchOpen] = useState(false);        // bottom touch item grid
+  const [inqOpen, setInqOpen] = useState(false);
+  const [inqProd, setInqProd] = useState<any>(null);
+  const [inqData, setInqData] = useState<{ prices: any[]; whs: any[]; buys: any[] }>({ prices: [], whs: [], buys: [] });
+  const [discOpen, setDiscOpen] = useState(false);
+  const [discVal, setDiscVal] = useState("");
+  const [f7Open, setF7Open] = useState(false);              // Item "other options" modal
+  const [f7Val, setF7Val] = useState("");
+  const [f7Pct, setF7Pct] = useState("");
+  const [f7Serial, setF7Serial] = useState("");
+  const [f7Ship, setF7Ship] = useState("");
+  // coral partial-payment flow (credit save) + receipt voucher
+  const [creditAsk, setCreditAsk] = useState<{ id: number; total: number } | null>(null);
+  const [rOpen, setROpen] = useState(false);
+  const [rAmt, setRAmt] = useState("");
+  const [rCat, setRCat] = useState("مبيعات");
+  const [rNotes, setRNotes] = useState("");
+  const [rSafe, setRSafe] = useState("الخزينة العامة");
+  const [rRef, setRRef] = useState("");
+  const [rDate, setRDate] = useState(today());
+  const [rTime, setRTime] = useState("");
+  const [savedNo, setSavedNo] = useState("");
+  const numAr = (v: number | string) => (rtl
+    ? String(v).replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)])
+    : String(v));
 
   const { data: lookup } = trpc.sahl.lookup.useQuery(
     { q, limit: 8 }, { enabled: q.trim().length > 0 && viewId === null && kind !== "sales-return" });
@@ -197,13 +229,20 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const { data: priceLists } = trpc.sahl.priceListList.useQuery(undefined, { enabled: kind === "sales" });
   const { data: viewData } = trpc.sales.invoiceGet.useQuery(
     { id: viewId ?? 0 }, { enabled: kind === "sales" && isViewing });
-  const [poViewId, setPoViewId] = useState<number | null>(null);
   const { data: poViewData } = trpc.sahl.poDetail.useQuery(
     { id: poViewId ?? 0 }, { enabled: kind === "purchase" && poViewId !== null });
 
   const { data: partyInvoices } = trpc.sales.invoiceList.useQuery(
     partyId && kind === "sales" ? { customerId: Number(partyId) } : { customerId: 0 },
     { enabled: kind === "sales" && !!partyId });
+  // Sahl search-grid + touch-grid data (categories/brands/units for label columns)
+  const { data: allProducts } = trpc.inventory.productList.useQuery(undefined, { enabled: !isViewing });
+  const { data: cats } = trpc.inventory.categoryList.useQuery(undefined, { enabled: !isViewing });
+  const { data: brandsQ } = trpc.inventory.brandList.useQuery(undefined, { enabled: !isViewing });
+  const { data: unitsQ } = trpc.inventory.unitList.useQuery(undefined, { enabled: !isViewing });
+  const catName = (id: any) => { const c = (cats ?? []).find((x: any) => x.id === id); return c?.nameAr || c?.name || ""; };
+  const brandName = (id: any) => { const b = (brandsQ ?? []).find((x: any) => x.id === id); return (b?.nameAr || b?.name || ""); };
+  const unitNameFor = (p: any) => (unitsQ ?? []).find((x: any) => x.id === p?.unitId)?.name ?? p?.unitName ?? "";
   const parties: any[] = (isSales ? customers : suppliers) ?? [];
   const pickParty = (id: string) => {
     setPartyId(id);
@@ -234,7 +273,6 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     setPartyQ(""); setDiscount(0); setDocDate(today()); setDueDate(today()); setViewId(null); setPoViewId(null); setViewNav(0); resetCd();
   }, [kind]);
 
-  const isViewing = viewId !== null || poViewId !== null;
   // Draft persistence per document kind: switching tabs keeps uncommitted lines
   useEffect(() => {
     if (viewId !== null || poViewId !== null) return;
@@ -320,7 +358,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const newDoc = () => {
     setLines([]); setDiscount(0); setOrigId(""); setReason(""); setViewId(null); setPoViewId(null); setMsg("");
-    setPartyId(""); setPartyQ(""); resetCd(); setDueDate(today());
+    setPartyId(""); setPartyQ(""); resetCd(); setDueDate(today()); setSavedNo("");
   };
 
   // Step 1 -> 2: pick item, default qty/price, focus qty.
@@ -407,7 +445,6 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   };
 
   const totalCost = lines.reduce((a, l) => a + l.qty * (l.cost || 0), 0);
-  const profit = net - totalCost;
 
   const addLine = async (p: any) => {
     if (isViewing) return;
@@ -419,6 +456,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const net = Math.max(0, subtotal - Number(discount));
   const taxAmt = net * (Number(taxPct) || 0) / 100;
   const grand = net + taxAmt;
+  const profit = net - totalCost;
   const partyRec: any = parties.find((a: any) => String(a.id) === String(partyId));
   const balBefore = partyId && kind === "sales"
     ? Number(partyRec?.openingBalance || 0) +
@@ -449,7 +487,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     if (v && Number(v) >= 0) setLines(lines.map((l, i) => (i === sel ? { ...l, price: Number(v) } : l)));
   };
   const delLine = () => { if (viewId === null) gate(() => setLines(lines.filter((_, i) => i !== sel))); };
-  const moreOpts = () => setShowOpts((s) => !s);
+  const moreOpts = () => setF7Open(true);
   const applyLineDisc = () => {
     gate(() => {
       const v = prompt(T("خصم السطر المحدد", "Selected line discount"));
@@ -477,6 +515,101 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     utils.purchase.poList.invalidate();
     utils.inventory.inventoryList.invalidate();
     utils.inventory.movementList.invalidate();
+  };
+
+  // ==== Sahl modals: inquiry (?), F7 other-options, invoice discount, receipt ====
+  const openInquiry = async (target?: any) => {
+    const prod = target ?? activeItem ?? results[0]
+      ?? (lines[sel] ? { id: lines[sel]!.productId, name: lines[sel].name, salePrice: lines[sel].price, purchasePrice: lines[sel].cost, unitName: lines[sel].unit } : null);
+    if (!prod || !prod.id) { setMsg(T("اختر صنفاً أولاً (بحث أو جدول)", "Select an item first (search or grid)")); return; }
+    setInqProd(prod);
+    setInqData({ prices: [], whs: [], buys: [] });
+    setInqOpen(true);
+    try {
+      let priceRows: any[] = [];
+      if (kind === "sales") {
+        const rows: any = await utils.sahl.priceFor.fetch({ productId: prod.id });
+        priceRows = [...(rows ?? [])];
+      }
+      const base: any[] = [{ id: 0, code: "P0", name: T("أساسي", "Base"), nameAr: T("أساسي", "Base"), price: Number(prod.salePrice ?? 0) }];
+      const whs = (allBalances ?? []).filter((b: any) => b.productId === prod.id).map((b: any) => ({
+        name: (warehouses ?? []).find((w: any) => String(w.id) === String(b.warehouseId))?.name ?? "؟",
+        qty: Number(b.quantity || 0),
+      }));
+      // purchase price history: scan recent POs for this product (best effort)
+      const buys: any[] = [];
+      try {
+        const posAll: any[] = ((await utils.purchase.poList.fetch(undefined)) as any[]) ?? [];
+        const supAll: any[] = ((await utils.purchase.supplierList.fetch(undefined)) as any[]) ?? [];
+        const want = String(prod.name ?? "").toLowerCase();
+        for (const po of posAll.slice(0, 30)) {
+          const det: any = await utils.sahl.poDetail.fetch({ id: po.id }).catch(() => null);
+          const it = (det?.items ?? []).find((x: any) =>
+            String(x.productId ?? "") === String(prod.id) ||
+            String(x.productName ?? x.description ?? "").toLowerCase() === want);
+          if (it) {
+            buys.push({
+              supplier: (supAll ?? []).find((s: any) => String(s.id) === String(po.supplierId))?.name ?? po.supplierName ?? "",
+              date: String(po.date ?? "").slice(0, 10),
+              price: Number(it.unitPrice ?? 0), unit: "",
+            });
+            if (buys.length >= 6) break;
+          }
+        }
+      } catch { /* best effort */ }
+      setInqData({ prices: [...base, ...priceRows], whs, buys });
+    } catch { /* modal renders with whatever loaded */ }
+  };
+
+  const applyF7 = () => {
+    gate(() => {
+      setLines(lines.map((l, i) => {
+        if (i !== sel) return l;
+        let disc = l.disc;
+        if (f7Val.trim() !== "" && Number(f7Val) >= 0) disc = Number(f7Val);
+        else if (f7Pct.trim() !== "" && Number(f7Pct) >= 0) disc = (l.qty * l.price * Number(f7Pct)) / 100;
+        const ser = l.tracked && f7Serial.trim()
+          ? Array.from(new Set([...(l.serials ?? []), ...f7Serial.split(/[\n,]/).map((s) => s.trim()).filter(Boolean)]))
+          : l.serials;
+        return { ...l, disc, serials: ser, ship: f7Ship.trim() || l.ship };
+      }));
+      setF7Open(false); setF7Val(""); setF7Pct(""); setF7Serial("");
+      setMsg(T("تم تطبيق خيارات الصنف", "Item options applied"));
+    });
+  };
+
+  const applyInvDisc = () => {
+    const v = discVal.trim(); const pc = discPct.trim();
+    if (v !== "") setDiscount(Math.max(0, Number(v) || 0));
+    else if (pc !== "") setDiscount(Math.max(0, (subtotal * (Number(pc) || 0)) / 100));
+    setDiscOpen(false); setDiscVal(""); setDiscPct("");
+    setMsg(T("تم تحديث الخصم", "Discount updated"));
+  };
+
+  const saveReceipt = async () => {
+    if (!creditAsk) return;
+    try {
+      await payCreate.mutateAsync({
+        paymentNumber: `RC-${creditAsk.id}-${String(Date.now()).slice(-6)}`,
+        customerId: Number(partyId), invoiceId: creditAsk.id,
+        date: rDate, amount: String(Number(rAmt) || 0),
+        paymentMethod: "cash", notes: [rCat, rNotes, rRef ? `مرجع: ${rRef}` : "", rSafe].filter(Boolean).join(" — "),
+      });
+      setMsg(`${T("تم حفظ الفاتورة والسند", "Invoice + receipt saved")}`);
+      setROpen(false); setCreditAsk(null);
+      if (autoPrint) doPrint();
+      newDoc();
+      refreshAll();
+    } catch (e: any) {
+      setMsg(e.message ?? String(e));
+    }
+  };
+
+  const finishCreditNo = () => {
+    setCreditAsk(null);
+    if (autoPrint) doPrint();
+    newDoc();
+    refreshAll();
   };
 
   const doPrint = () => setPrintOpen(true);
@@ -530,7 +663,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       };
     }
     return {
-      no: `INV-${Date.now()}`, date: docDate,
+      no: savedNo || `INV-${Date.now()}`, date: docDate,
       time: `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`,
       party: cd.name || parties.find((a: any) => String(a.id) === String(partyId))?.name || "",
       partyTax: cd.vat, partyPhone: cd.phone, branch: "",
@@ -674,7 +807,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     setSaving(true);
     try {
       const stamp = Date.now();
-      const note = [reason || undefined, salesmanSuffix()].filter(Boolean).join(" — ") || undefined;
+      const note = [reason || undefined, reference.trim() ? `${T("مرجع", "Ref")}: ${reference.trim()}` : undefined, salesmanSuffix()].filter(Boolean).join(" — ") || undefined;
       if (kind === "sales") {
         const custName = cd.name.trim() || parties.find((a: any) => String(a.id) === String(partyId))?.name;
         const nowT = new Date();
@@ -703,6 +836,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           })),
         });
         setMsg(`${T("تم حفظ الفاتورة", "Invoice saved")} — INV-${stamp}`);
+        setSavedNo(`INV-${stamp}`);
         // Issue serials for tracked lines
         try {
           for (const l of lines.filter((x) => x.tracked && (x.serials ?? []).length)) {
@@ -714,24 +848,13 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         } catch (e: any) {
           setMsg(`${T("حُفظت الفاتورة وفشل السيريال", "Invoice saved, serials failed")}: ${e.message ?? e}`);
         }
-        // Credit invoice down-payment prompt (هل دفع العميل دفعة؟)
+        // Credit invoice down-payment prompt (هل دفع العميل دفعة؟) — coral modal
         if (payMode === "credit" && partyId) {
-          const v = prompt(T(
-            `الإجمالي ${grand.toFixed(2)} — هل دفع العميل دفعة الآن؟ أدخل المبلغ (فارغ = لا)`,
-            `Total ${grand.toFixed(2)} — did the customer pay a down payment? Enter amount (empty = no)`));
-          const dp = Number(v);
-          if (v && dp > 0) {
-            try {
-              await payCreate.mutateAsync({
-                paymentNumber: `PAY-${stamp}`, customerId: Number(partyId),
-                invoiceId: (inv as any)?.id, date: docDate, amount: String(Math.min(dp, grand)),
-                paymentMethod: "cash", notes: `INV-${stamp}`,
-              });
-              setMsg(`${T("تم حفظ الفاتورة والدفعة", "Invoice + down payment saved")} — INV-${stamp}`);
-            } catch (e: any) {
-              setMsg(`${T("حُفظت الفاتورة وفشلت الدفعة", "Invoice saved, payment failed")}: ${e.message ?? e}`);
-            }
-          }
+          setCreditAsk({ id: (inv as any)?.id, total: grand });
+          setRAmt(""); setRNotes(""); setRRef(""); setRDate(today());
+          const n2 = new Date();
+          setRTime(`${String(n2.getHours()).padStart(2, "0")}:${String(n2.getMinutes()).padStart(2, "0")}`);
+          return;
         }
       } else if (kind === "quotation") {
         await quoteCreate.mutateAsync({
@@ -859,62 +982,154 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   });
 
   return (
-    <div className={`flex min-h-full text-black ${touch ? "text-[15px]" : "text-[12px]"}`}>
+    <div dir="ltr" className={`flex min-h-full text-black ${touch ? "text-[15px]" : "text-[12px]"}`}>
       <div className="flex min-w-0 flex-1 flex-col bg-white">
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#bbb] p-1.5">
-          <div className="border border-[#2f7a3d] p-1 text-center" style={{ background: "#2fae4e", color: "#fff" }}>
-            <div className="font-mono text-[13px] font-bold">#{history.length + 1}</div>
-            <div className="text-[10px]">{docDate}</div>
-            <div className="mt-0.5 px-2 py-0.5 font-bold text-black tabular-nums" style={{ background: "#ffeb3b" }}>
-              {grand.toFixed(2)}
+        {/* ===== Zone 2: header — left summary green/yellow boxes + center entry form ===== */}
+        <div className="flex items-start gap-2 border-b border-[#bbb] bg-[#f4f4f4] p-1.5" dir="ltr">
+          {/* Left: invoice number + grand total */}
+          <div className="flex w-[150px] shrink-0 flex-col">
+            <div className="border border-[#1d7a37] p-1 text-center" style={{ background: "#2fae4e" }}>
+              <div className="text-[10px] text-white/90">#</div>
+              <div className="font-mono text-[22px] font-bold leading-tight text-white tabular-nums"
+                title={isViewing ? T("فاتورة معروضة", "Viewing") : T("رقم الفاتورة الجديد", "New invoice number")}>
+                {isViewing && viewData ? (String((viewData as any)?.invoice?.invoiceNumber ?? "").replace(/^\D+/, "") || String(viewId)) : history.length + 1}
+              </div>
+              <div className="text-[11px] text-white/95"><input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} disabled={isViewing}
+                className="w-full bg-transparent text-[10px] font-bold text-white outline-none [color-scheme:dark]" /></div>
+              {(kind === "sales" || kind === "quotation") && (
+                <div className="text-[9px] text-white/80"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isViewing}
+                  className="w-full bg-transparent text-[9px] text-white/90 outline-none [color-scheme:dark]" title={T("الاستحقاق", "Due date")} /></div>
+              )}
+            </div>
+            <div className="mt-1 border border-[#c8a419] px-1 py-1 text-center" style={{ background: "#f7c631" }}>
+              <div className="text-[22px] font-bold leading-tight text-black tabular-nums">{numAr(grand.toFixed(2))}</div>
+              {kind === "sales" && lines.length > 0 && (
+                <div className="text-[9px] font-bold text-[#7a6100]">{T("مكسب", "Profit")}: {numAr(profit.toFixed(2))}</div>
+              )}
             </div>
           </div>
-          <label>{T("التاريخ", "Date")}
-            <input type="date" className={inputCls} value={docDate} onChange={(e) => setDocDate(e.target.value)} disabled={isViewing} />
-          </label>
-          {(kind === "sales" || kind === "quotation") && (
-            <label>{T("الاستحقاق", "Due")}
-              <input type="date" className={inputCls} value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isViewing} />
-            </label>
-          )}
-          <span className="border px-1">{T("الأصناف", "Lines")}: {lines.length}</span>
-          <span className="border px-1">{T("الكمية", "Qty")}: {lines.reduce((a, l) => a + Number(l.qty), 0)}</span>
-          <label>{isSales ? T("العميل", "Customer") : T("المورد", "Supplier")}
-            <span className="flex gap-1">
-              <input value={partyQ} onChange={(e) => { setPartyQ(e.target.value); if (kind === "sales" && e.target.value.length >= 2 && !partyId) setCd((c) => ({ ...c, name: c.name || e.target.value })); }}
-                placeholder={T("بحث (حرفان للتعبئة)", "Search (2 letters)")} className={`${inputCls} w-[110px]`} disabled={isViewing} />
-              <select className={`${inputCls} w-[130px]`} value={partyId} onChange={(e) => pickParty(e.target.value)} disabled={isViewing}>
+          {/* Center: numbered entry chain */}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex items-end gap-1">
+              <label className="flex min-w-[220px] flex-1 flex-col">
+                <span className="mb-0.5 flex items-center gap-1">
+                  <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>1</i>
+                  <b className="text-[11px]">{T("ابحث عن الصنف", "Search for Item")}</b>
+                  {activeItem && (
+                    <span className="rounded-sm px-1 text-[9px] font-bold" style={{ background: "#2fae4e", color: "#fff" }}>{unitNameFor(activeItem)}</span>
+                  )}
+                </span>
+                <input
+                  ref={searchRef} value={q}
+                  onChange={(e) => { setQ(e.target.value); setActiveItem(null); setGridOpen(e.target.value.trim().length > 0); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (results.length) chooseItem(results[0]);
+                      else qtyRef.current?.focus();
+                    }
+                    if (e.key === "Escape") setGridOpen(false);
+                  }}
+                  placeholder={T("باركود / كود / اسم الصنف", "Barcode / code / item name")}
+                  className="h-9 flex-1 border-2 border-[#c62828] px-2 text-[15px] font-bold text-white outline-none placeholder:text-white/70"
+                  style={{ background: "#e53935" }} />
+              </label>
+              <button
+                onClick={() => openInquiry()}
+                className="flex h-9 items-center gap-1 border border-[#2f7a3d] px-2 text-[12px] font-bold text-white"
+                style={{ background: "#2fae4e" }}
+                title={T("استعلام: أسعار البيع، الكميات في المخازن، أسعار الشراء", "Inquiry: selling prices, warehouse qty, purchase history")}>
+                {T("استعلام", "Inquiry")}
+                <span className="inline-flex h-[16px] w-[16px] items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#1d7a37]">؟</span>
+              </button>
+              <label className="flex w-[92px] flex-col">
+                <span className="mb-0.5 flex items-center gap-1">
+                  <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>2</i>
+                  <b className="text-[11px]">{T("الكمية", "Quantity")}</b>
+                </span>
+                <input ref={qtyRef} value={qtyInput} onChange={(e) => setQtyInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); priceRef.current?.focus(); priceRef.current?.select(); }
+                  }}
+                  className="h-9 w-full border border-[#888] text-center text-[16px] font-bold" />
+              </label>
+              <label className="flex w-[92px] flex-col">
+                <span className="mb-0.5 flex items-center gap-1">
+                  <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>3</i>
+                  <b className="text-[11px]">{T("سعر البيع", "Selling Price")}</b>
+                </span>
+                <input ref={priceRef} value={priceInput}
+                  onChange={(e) => setPriceInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitLine(); } }}
+                  placeholder={activeItem ? String(Number(activeItem.salePrice ?? activeItem.purchasePrice ?? 0)) : "•"}
+                  className="h-9 w-full border border-[#888] bg-[#2fae4e]/10 text-center text-[16px] font-bold" />
+              </label>
+              <button onClick={commitLine}
+                className="flex h-[52px] w-[64px] flex-col items-center justify-center border border-[#1565c0] bg-[#e3f0fb] pb-1 text-[#1565c0]"
+                title={T("إضافة (4)", "Add (4)")}>
+                <i className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: "#e53935" }}>4</i>
+                <b className="text-[11px]">{T("إضافة", "Add")}</b>
+                <span className="text-[18px] leading-none">⬇</span>
+              </button>
+            </div>
+            {/* Account / payment / notes row */}
+            <div className="flex flex-wrap items-center gap-1">
+              <label className="flex items-center gap-1">
+                <b className="text-[11px]">{isSales ? T("الحساب", "Account") : T("المورد", "Supplier")}</b>
+                <input value={partyQ} onChange={(e) => { setPartyQ(e.target.value); if (kind === "sales" && e.target.value.length >= 2 && !partyId) setCd((c) => ({ ...c, name: c.name || e.target.value })); }}
+                  placeholder={T("بحث…", "Search…")} className={`${inputCls} h-8 w-[180px]`} disabled={isViewing} />
+              </label>
+              <select className={`${inputCls} h-8 w-[150px]`} value={partyId} onChange={(e) => pickParty(e.target.value)} disabled={isViewing}>
                 <option value="">—</option>
                 {parties.map((a: any) => <option key={a.id} value={a.id}>{a.nameAr || a.name}</option>)}
               </select>
-            </span>
-          </label>
-          {kind === "sales" && (
-            <label>{T("قائمة الأسعار", "Price list")}
-              <select className={`${inputCls} w-[110px]`} value={priceListId} onChange={(e) => setPriceListId(e.target.value)} disabled={isViewing}>
-                <option value="">{T("الأساسي", "Base")}</option>
-                {((priceLists ?? []) as any[]).map((l: any) => <option key={l.id} value={l.id}>{l.nameAr || l.name}</option>)}
-              </select>
-            </label>
-          )}
-          {(kind === "purchase" || kind === "purchase-return") && (
-            <label>{T("المخزن", "Warehouse")}
-              <select className={inputCls} value={wh} onChange={(e) => setWh(e.target.value)} disabled={isViewing}>
-                <option value="">—</option>
-                {(warehouses ?? []).map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
-            </label>
-          )}
-          {kind.endsWith("return") && (
-            <label>{T("الأصلي", "Original")}
-              <select className={`${inputCls} w-[120px]`} value={origId} onChange={(e) => setOrigId(e.target.value)} disabled={isViewing}>
-                <option value="">—</option>
-                {history.map((hh: any) => (
-                  <option key={hh.id} value={hh.id}>{hh.invoiceNumber ?? hh.poNumber ?? hh.creditNoteNumber ?? hh.id}</option>
-                ))}
-              </select>
-            </label>
-          )}
+              <button className="border border-[#888] bg-white px-1" title={T("بحث في الحسابات", "Browse accounts")} onClick={() => document.activeElement?.blur()}>
+                🔍
+              </button>
+              <label className="flex cursor-pointer items-center gap-0.5 text-[12px]" title={T("نقدي", "Cash")}>
+                <input type="checkbox" checked={payMode === "cash"} onChange={() => setPayMode("cash")} disabled={isViewing} />
+                {T("نقدي", "Cash")}
+              </label>
+              <label className="flex cursor-pointer items-center gap-0.5 text-[12px]" title={T("آجل", "Credit/Deferred")}>
+                <input type="checkbox" checked={payMode === "credit"} onChange={() => setPayMode("credit")} disabled={isViewing} />
+                {payMode === "credit" ? T("آجل", "Deferred") : T("آجل", "Credit")}
+              </label>
+              {kind === "sales" && (
+                <label className="flex cursor-pointer items-center gap-0.5 text-[12px]" title={T("شبكة", "Card")}>
+                  <input type="checkbox" checked={payMode === "card"} onChange={() => setPayMode("card")} disabled={isViewing} />
+                  {T("شبكة", "Card")}
+                </label>
+              )}
+              <label className="ms-auto flex items-center gap-1">
+                <b className="text-[11px]">{T("المرجع", "Reference")}</b>
+                <input value={reference} onChange={(e) => setReference(e.target.value)} disabled={isViewing}
+                  className={`${inputCls} h-8 w-[110px]`} />
+              </label>
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              <label className="flex min-w-[240px] flex-1 items-center gap-1">
+                <b className="text-[11px]">{T("ملاحظات", "Notes")}</b>
+                <input value={reason} onChange={(e) => setReason(e.target.value)} disabled={isViewing}
+                  placeholder={T("سبب / ملاحظة الفاتورة", "Invoice note / reason")} className={`${inputCls} h-8 flex-1`} />
+              </label>
+              {kind.endsWith("return") && (
+                <label className="flex items-center gap-1">
+                  <b className="text-[11px]">{T("الأصلي", "Original")}</b>
+                  <select className={`${inputCls} h-8 w-[120px]`} value={origId} onChange={(e) => setOrigId(e.target.value)} disabled={isViewing}>
+                    <option value="">—</option>
+                    {history.map((hh: any) => (
+                      <option key={hh.id} value={hh.id}>{hh.invoiceNumber ?? hh.poNumber ?? hh.creditNoteNumber ?? hh.id}</option>
+                    ))}
+                  </select>
+                  {origDoc && <span className="border px-1 text-[10px]">{T("إجمالي الأصل", "Orig. total")}: {numAr(origTotal.toFixed(2))}</span>}
+                </label>
+              )}
+              <span className="flex gap-1 text-[10px] text-[#555]">
+                <span className="border border-[#ccc] bg-white px-1">{T("أصناف", "Lines")}: {lines.length}</span>
+                <span className="border border-[#ccc] bg-white px-1">{T("كمية", "Qty")}: {lines.reduce((a, l) => a + Number(l.qty), 0)}</span>
+              </span>
+            </div>
+          </div>
         </div>
 
         {kind === "sales" && viewId === null && (
@@ -937,68 +1152,60 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           </details>
         )}
 
-        {viewId === null && kind !== "sales-return" && (
-          <div className="relative flex flex-wrap items-end gap-1 border-b border-[#bbb] p-1.5">
-            <label className="flex min-w-[180px] flex-1 flex-col">{T("1. ابحث عن الصنف", "1. Find item")}
-              <input ref={searchRef} value={q}
-                onChange={(e) => { setQ(e.target.value); setActiveItem(null); }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    if (results.length === 1) chooseItem(results[0]);
-                    else if (results.length > 1) chooseItem(results[0]);
-                    else qtyRef.current?.focus();
-                  }
-                }}
-                placeholder={T("باركود / كود / اسم — Enter", "Barcode / code / name — Enter")} className={inputCls} />
-            </label>
-            <label className="flex w-[80px] flex-col">{T("2. الكمية", "2. Qty")}
-              <input ref={qtyRef} value={qtyInput} onChange={(e) => setQtyInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); priceRef.current?.focus(); priceRef.current?.select(); }
-                }}
-                className={`${inputCls} text-center font-bold`} />
-            </label>
-            <label className="flex w-[100px] flex-col">{T("3. السعر", "3. Price")}
-              <input ref={priceRef} value={priceInput}
-                onChange={(e) => setPriceInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitLine(); } }}
-                placeholder={activeItem ? String(Number(activeItem.salePrice ?? activeItem.purchasePrice ?? 0)) : ""}
-                className={`${inputCls} text-center font-bold`} />
-            </label>
-            <button className={btnCls} onClick={commitLine}>{T("4. أضف", "4. Add")}</button>
-            <label className="flex items-center gap-1 border border-yellow-600 bg-[#fff8e1] px-1 py-0.5 text-[11px] text-black" title={T("إعدادات", "Settings")}>
-              ⚙
-              <input type="checkbox" checked={autoAdd} onChange={(e) => setAuto(e.target.checked)} />
-              {T("إضافة تلقائية", "Auto-add")}
-              <input type="checkbox" checked={allowDup} onChange={(e) => setDup(e.target.checked)} />
-              {T("تكرار الصنف", "Dup rows")}
-            </label>
-            {results.length > 0 && !activeItem && (
-              <div className="absolute start-0 top-full z-10 w-[340px] border border-black bg-white">
-                {results.map((p: any) => (
-                  <div key={p.id} onClick={() => chooseItem(p)}
-                    className="flex cursor-pointer justify-between px-2 py-1 hover:bg-[#e8f5e9]">
-                    <span>{p.barcode ?? p.code ?? p.sku} — {p.nameAr || p.name}</span>
-                    <b>{Number(p.salePrice ?? 0)}</b>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        {(kind === "sales-return" || kind === "purchase-return") && (
-          <div className="flex gap-1 border-b border-[#bbb] p-1.5">
-            <input value={reason} onChange={(e) => setReason(e.target.value)} disabled={isViewing}
-              placeholder={kind === "sales-return" ? T("سبب المرتجع", "Return reason") : T("ملاحظة المرتجع", "Return note")}
-              className={`${inputCls} flex-1`} />
-            {kind === "sales-return" && origDoc && (
-              <span className="border px-1">{T("الأصلية", "Original")}: {Number(origTotal).toFixed(2)}</span>
-            )}
+        {kind === "sales-return" && origDoc && !isViewing && (
+          <div className="flex gap-1 border-b border-[#bbb] bg-[#fff8e1] px-1.5 py-1 text-[11px]">
+            <span className="font-bold text-[#7a6100]">
+              {T("مرتجع من الفاتورة", "Return from invoice")}: {origDoc.invoiceNumber ?? origDoc.id} — {T("الإجمالي", "Total")}: {numAr(origTotal.toFixed(2))} — {T("المبلغ المرتجع", "Return amount")}: {numAr(returnAmount.toFixed(2))}
+            </span>
           </div>
         )}
 
-        <div className="min-h-[140px] flex-1 overflow-auto">
+        {/* ===== Zone 4: workspace (table + search grid overlay + touch grid) ===== */}
+        <div className="relative flex min-h-[140px] flex-1 flex-col overflow-visible">
+          {/* 4b. Live multi-column search grid overlay (Sahl green frame) */}
+          {gridOpen && !activeItem && !isViewing && (
+            <div className="absolute inset-x-0 top-0 z-30 max-h-[78%] overflow-auto border-[3px] border-[#2fae4e] bg-white p-1 shadow-lg">
+              <table className="w-full border-collapse text-[11px]">
+                <thead>
+                  <tr style={{ background: "#2fae4e", color: "#fff" }}>
+                    {[
+                      T("م", "No."), T("اسم الصنف", "Item Name"), T("الوحدة", "Unit"),
+                      T("التصنيف", "Category"), T("العلامة", "Brand"), T("المصنع", "Manufacturer"),
+                      T("كمية المخزن", "Store Qty"), T("جميع المخازن", "Stores Qty"),
+                      T("سعر البيع", "Sale Price"), T("كود ١", "Code 1"), T("كود ٢", "Code 2"), T("متوسط سعر", "Avg Cost"),
+                    ].map((c, i) => <th key={i} className="border border-[#1d7a37] px-1 py-1 font-normal">{c}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(q.trim() ? results : (allProducts ?? []).slice(0, 40)).map((p: any, gi: number) => (
+                    <tr key={p.id} onClick={() => { chooseItem(p); setGridOpen(false); }}
+                      className={`cursor-pointer ${gi === 0 ? "text-black" : ""}`}
+                      style={gi === 0 ? { background: "#22e022" } : undefined}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#22e022"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = gi === 0 ? "#22e022" : ""; }}>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{p.sku ?? p.barcode ?? gi + 1}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{p.nameAr || p.name}<div className="text-[9px] text-[#666]">{p.name}</div></td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{unitNameFor(p)}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{catName(p.categoryId)}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{brandName(p.brandId)}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center"></td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center tabular-nums">{numAr(stockFor(p.id))}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center tabular-nums">{numAr(stockFor(p.id))}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center font-bold tabular-nums">{numAr(Number(p.salePrice ?? 0))}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{p.barcode ?? ""}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{p.sku ?? ""}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center tabular-nums">{numAr(Number(p.purchasePrice ?? 0).toFixed(2))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex items-center justify-end gap-1 border-t-2 border-[#2fae4e] bg-[#e8f5e9] px-1 py-1">
+                <button className="border border-[#888] bg-white px-3 py-0.5 text-[11px] font-bold" onClick={() => setQ("")}>{T("الكل", "All")}</button>
+                <button className="border border-[#888] bg-white px-3 py-0.5 text-[11px] font-bold" onClick={() => navigate("/app/construction/sahl/products")}>{T("تعديل", "Edit")}</button>
+                <button className="border border-[#888] bg-white px-3 py-0.5 text-[11px] font-bold" onClick={() => { setGridOpen(false); setQ(""); }}>{T("إخفاء", "Hide")}</button>
+              </div>
+            </div>
+          )}
           <table className="w-full border-collapse text-[12px]">
             <thead>
               <tr style={{ background: "#2fae4e", color: "#fff" }}>
@@ -1006,7 +1213,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                   "#",
                   T("رقم الصنف", "Code"), T("اسم الصنف", "Item"), T("الوحدة", "Unit"),
                   ...(kind === "sales" ? [T("المتاح", "Avail")] : []),
-                  T("الكمية", "Qty"), T("السعر", "Price"), T("الخصم", "Disc"), T("الإجمالي", "Total"),
+                  T("الكمية", "Qty"), T("سعر البيع", "Sell Price"), T("الإجمالي", "Total"),
+                  T("نسبة الخصم %", "% Disc"), T("الخصم", "Discount"),
                   T("إجراءات", "Actions"),
                 ].map((c, i) => (
                   <th key={i} className="border border-[#1d7a37] px-1 py-1 font-normal">{c}</th>
@@ -1015,14 +1223,12 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             </thead>
             <tbody>
               {lines.length === 0 ? (
-                <tr><td colSpan={10} className="py-6 text-center text-[#888]">
-                  {isViewing ? T("عرض", "Viewing") : kind === "sales-return"
-                    ? T("مرتجع مرتبط أو مباشر — احفظ", "Linked or direct return — save")
-                    : T("فاتورة فارغة — ابحث وأضف صنفاً", "Empty — search and add items")}
+                <tr><td colSpan={11} className="py-6 text-center text-[#888]">
+                  {isViewing ? T("عرض", "Viewing") : T("فاتورة فارغة — ابحث عن صنف (الحقل الأحمر) وأضفه", "Empty — search an item (red field) and add it")}
                 </td></tr>
               ) : lines.map((l, i) => (
                 <tr key={i} onClick={() => setSel(i)} className="cursor-pointer"
-                  style={i === sel ? { background: "#a5d6a7" } : undefined}>
+                  style={i === sel ? { background: "#22e022" } : undefined}>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{i + 1}</td>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.code}</td>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.name}</td>
@@ -1034,9 +1240,12 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                     </td>
                   )}
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.qty}</td>
-                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.price}</td>
-                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.disc || 0}</td>
-                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{lineTotal(l).toFixed(2)}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center tabular-nums">{l.price}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center font-bold tabular-nums">{lineTotal(l).toFixed(2)}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center tabular-nums">
+                    {l.qty * l.price > 0 ? `${Math.round((l.disc / (l.qty * l.price)) * 100)}%` : "-"}
+                  </td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center tabular-nums">{l.disc || 0}</td>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center" onClick={(e) => e.stopPropagation()}>
                     <span className="flex items-center justify-center gap-0.5">
                       <button className="border border-[#999] bg-white px-1" title={T("أعلى", "Up")}
@@ -1051,6 +1260,34 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
               ))}
             </tbody>
           </table>
+          {/* 4c. Touch grid (footer toggle) */}
+          {touchOpen && !isViewing && (
+            <div className="relative border-[3px] border-[#2fae4e] bg-white p-1.5">
+              <div className="grid grid-cols-3 gap-1 md:grid-cols-4 xl:grid-cols-5">
+                {((q.trim() ? results : (allProducts ?? []).slice(0, 15)) as any[]).map((p: any) => (
+                  <button key={p.id} onClick={() => chooseItem(p)}
+                    className="border border-[#bbb] bg-white px-1 py-1 text-center hover:bg-[#fff8e1]"
+                    style={activeItem?.id === p.id ? { background: "#bbdefb" } : undefined}
+                    title={`${p.name} — ${numAr(Number(p.salePrice ?? 0))}`}>
+                    <div className="truncate text-[12px] font-bold">{p.nameAr || p.name}</div>
+                    <div className="truncate text-[10px] text-[#555]">{p.name}</div>
+                    <div className="text-[10px] tabular-nums text-[#1d7a37]">{numAr(Number(p.salePrice ?? 0))}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1 flex items-center gap-2 border-t border-[#ddd] pt-1">
+                <button className="flex h-7 w-7 items-center justify-center border border-[#999] text-[14px]" onClick={() => setTouchOpen(false)}>✕</button>
+                <label className="flex cursor-pointer items-center gap-1 text-[12px]">
+                  <input type="checkbox" checked={autoAdd} onChange={(e) => setAuto(e.target.checked)} />
+                  {T("إضافة مباشرة بدون سؤال عن الكمية أو السعر", "Add directly without asking for quantity or price")}
+                </label>
+                <label className="ms-auto flex cursor-pointer items-center gap-1 text-[11px] text-[#555]">
+                  <input type="checkbox" checked={allowDup} onChange={(e) => setDup(e.target.checked)} />
+                  {T("تكرار الصنف", "Allow duplicate rows")}
+                </label>
+              </div>
+            </div>
+          )}
           <div className="border-t border-[#bbb] bg-[#e0e0e0] p-1 text-[11px] text-[#555]">
             {isViewing
               ? T("وضع العرض — الحفظ معطل، الطباعة والحذف متاحان حسب الصلاحية", "View mode — save disabled; print/delete per permission")
@@ -1059,49 +1296,60 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 p-1.5 text-white" style={{ background: "#1d7a37" }}>
+        {/* ===== Zone 5a: green context strip ===== */}
+        <div className="flex flex-wrap items-center gap-2 px-1.5 py-1 text-white" style={{ background: "#2fae4e" }} dir="ltr">
+          <label className="flex items-center gap-1 text-[11px]">
+            <span className="opacity-90">{T("المخزن", "Warehouse")}</span>
+            <select className="h-7 min-w-[100px] px-1 text-black" value={wh} onChange={(e) => setWh(e.target.value)} disabled={isViewing}>
+              <option value="">—</option>
+              {(warehouses ?? []).map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+            <button title={T("تثبيت المخزن", "Pin warehouse")} onClick={pinPay} className="text-[12px] text-[#ffeb3b]">📌</button>
+          </label>
           {kind === "sales" && (
-            <span className="flex items-center gap-1 border border-white/40 px-1 py-0.5">
-              {(["cash", "credit", "card"] as const).map((m) => (
-                <label key={m} className="flex cursor-pointer items-center gap-0.5 text-[12px]">
-                  <input type="radio" checked={payMode === m} onChange={() => setPayMode(m)} disabled={isViewing} />
-                  {m === "cash" ? T("نقدي", "Cash") : m === "credit" ? T("آجل", "Credit") : T("شبكة", "Card")}
-                </label>
-              ))}
-              <button title={T("تثبيت طريقة السداد (الدبوس)", "Pin payment mode")} onClick={pinPay}
-                className="px-1 text-[14px]" style={{ color: "#ffeb3b" }}>📌</button>
-            </span>
+            <label className="flex items-center gap-1 text-[11px]">
+              <span className="opacity-90">{T("سعر البيع", "Selling Price")}</span>
+              <select className="h-7 min-w-[95px] px-1 text-black" value={priceListId} onChange={(e) => setPriceListId(e.target.value)} disabled={isViewing}>
+                <option value="">{T("الأساسي", "Base")}</option>
+                {((priceLists ?? []) as any[]).map((l: any) => <option key={l.id} value={l.id}>{l.nameAr || l.name}</option>)}
+              </select>
+              <button title={T("تثبيت قائمة الأسعار", "Pin price list")} onClick={pinPay} className="text-[12px] text-[#ffeb3b]">📌</button>
+            </label>
           )}
+          <button type="button" onClick={() => { if (!isViewing) { setDiscVal(String(discount || "")); setDiscPct(""); setDiscOpen(true); } }}
+            disabled={kind === "sales-return"}
+            className="flex h-7 items-center gap-1 border border-white/60 bg-white/10 px-2 text-[12px] font-bold text-white disabled:opacity-40"
+            title={T("خصم الفاتورة — اضغط للتخصيم", "Invoice discount — click to edit")}>
+            <span className="opacity-90">{T("الخصم", "Discount")}</span>
+            <b className="tabular-nums">{numAr(Number(discount || 0))}</b>
+          </button>
+          <label className="flex items-center gap-1 text-[11px]">
+            <span className="opacity-90">{T("الخزينة", "Treasury")}</span>
+            <select className="h-7 min-w-[95px] px-1 text-black" value={rSafe} onChange={(e) => setRSafe(e.target.value)} disabled={isViewing}>
+              <option value="الخزينة العامة">{T("الخزينة العامة", "General Safe")}</option>
+              <option value="بنك">{T("بنك", "Bank")}</option>
+            </select>
+          </label>
           {kind === "sales" && (
-            <label>{T("المندوب", "Rep")}
-              <select className="px-1 text-black" value={salesman} onChange={(e) => setSalesman(e.target.value)} disabled={isViewing}>
+            <label className="flex items-center gap-1 text-[11px]">
+              <span className="opacity-90">{T("مندوب", "Delegate")}</span>
+              <select className="h-7 min-w-[95px] px-1 text-black" value={salesman} onChange={(e) => setSalesman(e.target.value)} disabled={isViewing}>
                 <option value="">—</option>
                 {(salesmen ?? []).filter((s: any) => s.isActive).map((s: any) => <option key={s.id} value={s.id}>{s.nameAr || s.name}</option>)}
               </select>
             </label>
           )}
-          {kind !== "sales-return" && (
-            <label>{T("الخصم", "Discount")}
-              <input type="number" min="0" value={discount} onChange={(e) => setDiscount(Number(e.target.value))}
-                className="w-[70px] px-1 text-black" disabled={isViewing} />
-            </label>
-          )}
           {(kind === "sales" || kind === "purchase") && (
-            <label>{T("الضريبة %", "Tax %")}
+            <label className="flex items-center gap-1 text-[11px]">
+              <span className="opacity-90">{T("ضريبة %", "Tax %")}</span>
               <input type="number" min="0" value={taxPct} onChange={(e) => setTaxPct(Number(e.target.value))}
-                className="w-[60px] px-1 text-black" disabled={isViewing} />
+                className="h-7 w-[54px] px-1 text-black" disabled={isViewing} />
             </label>
           )}
-          <b>{T("الصافي", "Net")}: {grand.toFixed(2)}</b>
-          {kind === "sales" && (
-            <span className="border border-white/40 px-1" title={T("مكسب الفاتورة = الصافي − التكلفة", "Invoice profit = net − COGS")}>
-              {T("مكسب", "Profit")}: <b className="tabular-nums">{profit.toFixed(2)}</b>
-            </span>
-          )}
-          <button className={btnCls} onClick={() => save(false, false)} disabled={saving || isViewing}>{T("حفظ (F9)", "Save (F9)")}</button>
-          <button className={btnCls} onClick={() => setSettleOpen(true)} disabled={!lines.length}>{T("سداد (F11)", "Settle (F11)")}</button>
-          <button className={btnCls} onClick={doPrint}>{T("طباعة", "Print")}</button>
-          <button className={btnCls} onClick={newDoc}>{T("جديد (F10)", "New (F10)")}</button>
+          <label className="ms-auto flex items-center gap-1 text-[12px]"
+            title={T("مكسب الفاتورة = الصافي − التكلفة", "Invoice profit = net − COGS")}>
+            {T("الصافي", "Net")}: <b className="tabular-nums">{numAr(grand.toFixed(2))}</b>
+          </label>
           {msg && <span className="bg-white px-1 text-black">{msg}</span>}
         </div>
 
@@ -1113,66 +1361,82 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           />
         )}
 
-        <div className="flex flex-wrap items-center gap-1 bg-[#222] px-1.5 py-1 text-[11px] text-white">
-          <button className="border border-[#555] bg-[#333] px-2 py-1 hover:bg-[#444]" onClick={() => navigate("/app/construction")}>{T("إغلاق", "Close")}</button>
-          <button className="border border-[#555] bg-[#333] px-2 py-1 hover:bg-[#444]" onClick={() => setShowLookup(true)}>{T("قائمة الأصناف", "Item list")}</button>
-          <button className="border border-[#555] bg-[#333] px-2 py-1 hover:bg-[#444]" onClick={() => searchRef.current?.focus()}>{T("شاشة الباركود", "Barcode")}</button>
-          <button className="border border-[#555] bg-[#333] px-2 py-1 hover:bg-[#444]" onClick={() => navigate("/app/construction/sahl/prices")}>{T("تعديل الأسعار", "Edit prices")}</button>
-          {kind === "sales" && <button className="border border-[#555] bg-[#5c1010] px-2 py-1 hover:bg-[#722]" onClick={deleteDoc}>{T("حذف الفاتورة", "Delete invoice")}</button>}
-          <button className="border border-[#555] bg-[#333] px-2 py-1 hover:bg-[#444]" onClick={exportExcel}>Excel</button>
-          <button className="border border-[#555] px-2 py-1 hover:bg-[#444]" style={{ background: touch ? "#2fae4e" : "#333" }} onClick={toggleTouch} title={T("وضع اللمس", "Touch mode")}>👆</button>
+        {/* ===== Zone 5b: dark dock ===== */}
+        <div className="flex flex-wrap items-center gap-1 bg-[#333333] px-1.5 py-1 text-[11px] text-white" dir="ltr">
+          <button className="flex items-center gap-1 border border-[#555] bg-[#3a3a3a] px-2 py-1 hover:bg-[#444]" onClick={() => navigate("/app/construction")}>
+            <span className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-[#f26c63] text-[9px] text-[#f26c63]">⏻</span>
+            <b>{T("إغلاق", "Close")}</b>
+          </button>
+          <button className="flex items-center gap-1 border border-[#555] px-2 py-1 hover:brightness-110"
+            style={{ background: touchOpen ? "#1b6fb8" : "#3a3a3a" }}
+            onClick={() => setTouchOpen(!touchOpen)}>
+            👆 <b>{T("قائمة اللمس", "Touch List")}</b>
+          </button>
+          <span className="mx-1 h-5 w-px bg-[#555]" />
+          <button className="flex items-center gap-1 border border-[#0a5c2a] px-2 py-1 font-bold hover:brightness-110"
+            style={{ background: "#2fae4e" }} disabled={saving || isViewing} onClick={() => save(false, false)}>
+            ✓ <b>{T("حفظ F9", "Save F9")}</b>
+          </button>
+          <button className="border border-[#555] bg-[#3a3a3a] px-2 py-1 hover:bg-[#444]" disabled={isViewing} onClick={doPrint}>🖨 <b>{T("طباعة F11", "Print F11")}</b></button>
+          <button className="border border-[#555] bg-[#2e7d32] px-2 py-1 hover:bg-[#349e3a]" disabled={isViewing} onClick={() => printDoc("xlsx")}>
+            <b className="bg-white px-0.5 text-[#2e7d32]">X</b><b>.xlsx</b>
+          </button>
+          <button className="border border-[#555] bg-[#1565c0] px-2 py-1 hover:bg-[#1b74d4]" disabled={isViewing} onClick={newDoc}>
+            ➕ <b>{T("جديد F10", "New F10")}</b>
+          </button>
+          {kind === "sales" && (
+            <button className="border border-[#880e4e] bg-[#c62828] px-2 py-1 hover:bg-[#e53935]" onClick={deleteDoc}>
+              ✕ <b>{T("حذف الفاتورة", "Delete Invoice")}</b>
+            </button>
+          )}
+          <button className="border border-[#555] bg-[#3a3a3a] px-2 py-1 hover:bg-[#444]" onClick={() => navigate("/app/construction/sahl/prices")}>
+            🏷 <b>{T("تعديل الأسعار", "Edit Prices")}</b>
+          </button>
+          <button className="border border-[#555] bg-[#3a3a3a] px-2 py-1 hover:bg-[#444]" onClick={() => navigate("/app/construction/sahl/vault/labels")} disabled={kind !== "sales"}>
+            ॥ <b>{T("طباعة الباركود", "Print Barcode")}</b>
+          </button>
         </div>
       </div>
 
       <div className="flex w-[132px] shrink-0 flex-col gap-1 border-s border-[#888] bg-[#f7f7f7] p-1">
-        <div className="py-1 text-center text-[13px] font-bold text-white" style={{ background: TT.color }}>
-          {brandAr}
+        <div className="flex flex-col items-center border border-[#cfcfcf] rounded-b-[40px] rounded-t-sm py-2 text-white" style={{ background: kind === "purchase" ? "#e05242" : "#2fae4e" }}>
+          <div className="text-[30px] leading-none">🛒</div>
+          <div className="mt-1 px-1 text-center text-[20px] font-black tracking-wide">{brandAr}</div>
+          <div className="mt-0.5 text-[9px] font-bold tracking-widest text-white/85">YASCO ERP</div>
         </div>
-        <div className="py-0.5 text-center text-[12px] font-bold text-white" style={{ background: TT.color }}>
-          {kind === "sales" ? T("بيع", "Sale") : kind === "purchase" ? T("شراء", "Purchase") : rtl ? TT.ar : TT.en}
+        <div className="py-1.5 text-center text-[16px] font-black tracking-wide text-white" style={{ background: "#1da1f2" }}>
+          {kind === "sales" ? T("بيع", "SELL") : kind === "purchase" ? T("شراء", "BUY") : kind === "quotation" ? T("عرض", "QUOTE") : T("مرتجع", "RETURN")}
         </div>
         <div className="flex gap-1">
-          <button className="flex-1 border border-[#888] bg-white py-0.5" title={T("بحث", "Search")} onClick={() => searchRef.current?.focus()}>Q</button>
-          <button className="flex-1 border border-[#888] bg-white py-0.5" title={T("باركود", "Barcode")} onClick={() => searchRef.current?.focus()}>K</button>
+          <button className="flex-1 border border-[#888] bg-white py-0.5" title={T("بحث", "Search")} onClick={() => { searchRef.current?.focus(); setGridOpen(true); }}>🔍</button>
+          <button className="flex-1 border border-[#888] bg-white py-0.5" title={T("الأول", "First")}
+            onClick={() => (kind === "sales" || kind === "purchase") && history.length && loadView(0)}>⏮</button>
           <button className="flex-1 border border-[#888] bg-white py-0.5" title={T("السابق", "Previous")}
-            onClick={() => (kind === "sales" || kind === "purchase") && history.length && loadView((viewNav - 1 + history.length) % history.length)}>«</button>
+            onClick={() => (kind === "sales" || kind === "purchase") && history.length && loadView((viewNav - 1 + history.length) % history.length)}>◀</button>
           <button className="flex-1 border border-[#888] bg-white py-0.5" title={T("التالي", "Next")}
-            onClick={() => (kind === "sales" || kind === "purchase") && history.length && loadView((viewNav + 1) % history.length)}>»</button>
+            onClick={() => (kind === "sales" || kind === "purchase") && history.length && loadView((viewNav + 1) % history.length)}>▶</button>
+          <button className="flex-1 border border-[#888] bg-white py-0.5" title={T("الأخير", "Last")}
+            onClick={() => (kind === "sales" || kind === "purchase") && history.length && loadView(history.length - 1)}>⏭</button>
         </div>
-        <button className="bg-[#0d47a1] py-2 text-[26px] text-white" onClick={() => save(true, true)} title={T("حفظ | طباعة | جديد (F12)", "Save | print | new (F12)")}>✓</button>
-        <div className="text-center text-[10px] font-bold">{T("حفظ | طباعة | جديد", "Save | print | new")} F12</div>
-        <label className="flex items-center gap-1 text-[11px]">
+        <button className="flex flex-col items-center border-2 border-[#0d47a1] bg-[#1e88e5] py-2 text-white hover:brightness-110"
+          onClick={() => save(true, true)} title={T("حفظ | طباعة | جديد (F12)", "Save | print | new (F12)")}>
+          <span className="text-[26px] leading-none">☑</span>
+          <span className="mt-1 text-[10px] font-bold">{T("حفظ | طباعة | جديد", "Save | Print | New")}</span>
+          <span className="text-[10px] font-bold">F12</span>
+        </button>
+        <label className="flex items-center justify-center gap-1 text-[11px]">
           <input type="checkbox" checked={autoPrint} onChange={(e) => setAutoPrint(e.target.checked)} />
-          {T("طباعة الفاتورة", "Print invoice")}
+          {T("طباعة الفاتورة", "Print Invoice")}
         </label>
         <div className="flex flex-col gap-1 border-t border-[#bbb] pt-1">
-          <FuncKey k="F5" label={T("تعديل الكمية", "Edit qty")} onClick={editQty} color="#1d7a37" />
-          <FuncKey k="F6" label={T("تعديل السعر", "Edit price")} onClick={editPrice} color="#455a64" />
-          <FuncKey k="F8" label={T("حذف الصنف", "Delete item")} onClick={delLine} color="#6a1b9a" />
-          <FuncKey k="F7" label={T("خيارات أخرى", "More options")} onClick={moreOpts} color="#00838f" />
+          <FuncKey k="F5" label={T("تعديل الكمية", "Edit Qty")} onClick={editQty} color="#1d7a37" />
+          <FuncKey k="F6" label={T("تعديل السعر", "Edit Price")} onClick={editPrice} color="#455a64" />
+          <FuncKey k="F8" label={T("حذف الصنف", "Delete Item")} onClick={delLine} color="#6a1b9a" />
+          <FuncKey k="F7" label={T("خيارات أخرى", "Other Options")} onClick={moreOpts} color="#00838f" />
           <FuncKey k="F9" label={T("حفظ", "Save")} onClick={() => save(false, false)} color="#2fae4e" />
           <FuncKey k="F10" label={T("جديد", "New")} onClick={newDoc} color="#546e7a" />
           <FuncKey k="F11" label={T("سداد", "Settle")} onClick={() => { setTendered(""); setSettleOpen(true); }} color="#1565c0" />
-          <FuncKey k="F12" label={T("حفظ+طباعة", "Save+print")} onClick={() => save(true, true)} color="#0d47a1" />
         </div>
-        {showOpts && (
-          <div className="flex flex-col gap-1 border border-[#888] bg-white p-1 text-[11px]">
-            <button className={btnCls} onClick={applyLineDisc}>{T("خصم سطر (قيمة)", "Line disc (value)")}</button>
-            <span className="flex gap-1">
-              <input className={inputCls} style={{ width: 70 }} value={discPct}
-                onChange={(e) => setDiscPct(e.target.value)} placeholder="%" />
-              <button className={btnCls} onClick={() => {
-                const pc = Number(discPct);
-                if (pc >= 0 && pc <= 100) {
-                  setLines(lines.map((l, i) => (i === sel ? { ...l, disc: (l.qty * l.price * pc) / 100 } : l)));
-                }
-                setDiscPct(""); setShowOpts(false);
-              }}>{T("خصم %", "Disc %")}</button>
-            </span>
-            <button className={btnCls} onClick={() => { setLines([]); setShowOpts(false); }}>{T("مسح الكل", "Clear all")}</button>
-            <button className={btnCls} onClick={() => setShowOpts(false)}>{T("إغلاق", "Close")}</button>
-          </div>
-        )}
       </div>
 
       {printOpen && (
@@ -1272,6 +1536,298 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                 <b>{Number(p.salePrice ?? 0)}</b>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Inquiry modal (?): prices — warehouse qty — purchase history ===== */}
+      {inqOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setInqOpen(false)}>
+          <div className="w-full max-w-2xl border-[3px] border-[#2fae4e] bg-white p-2" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-1 flex items-center justify-between bg-[#2fae4e] px-2 py-1 text-white">
+              <b className="text-[13px]">{T("استعلام عن الصنف", "Item inquiry")}</b>
+              <span className="text-[12px] font-bold">{inqProd?.nameAr || inqProd?.name} <span className="text-white/80">({inqProd?.name})</span></span>
+              <button className="border border-white/60 px-2 text-[12px]" onClick={() => setInqOpen(false)}>✕</button>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="border border-[#2fae4e]">
+                <div className="bg-[#2fae4e] px-2 py-1 text-center text-[12px] font-bold text-white">{T("أسعار البيع", "Selling Prices")}</div>
+                <table className="w-full text-[11px]">
+                  <thead><tr className="bg-[#e8f5e9]">
+                    <th className="border border-[#ddd] px-1">{T("القائمة", "List")}</th>
+                    <th className="border border-[#ddd] px-1">{T("سعر البيع", "Selling Price")}</th>
+                  </tr></thead>
+                  <tbody>
+                    {inqData.prices.map((r: any, i: number) => (
+                      <tr key={i}>
+                        <td className="border border-[#ddd] px-1 py-0.5 text-center">{r.nameAr || r.name || r.code}</td>
+                        <td className="border border-[#ddd] px-1 py-0.5 text-center font-bold tabular-nums">{r.price === null ? "—" : numAr(Number(r.price))}</td>
+                      </tr>
+                    ))}
+                    {!inqData.prices.length && <tr><td colSpan={2} className="py-3 text-center text-[#999]">…</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+              <div className="border border-[#2fae4e]">
+                <div className="bg-[#2fae4e] px-2 py-1 text-center text-[12px] font-bold text-white">{T("كمية الصنف في المخازن", "Item Qty in Warehouses")}</div>
+                <table className="w-full text-[11px]">
+                  <thead><tr className="bg-[#e8f5e9]">
+                    <th className="border border-[#ddd] px-1">{T("المخزن", "Warehouse")}</th>
+                    <th className="border border-[#ddd] px-1">{T("الكمية", "Warehouse Qty")}</th>
+                    <th className="border border-[#ddd] px-1">{T("محجوزة", "Reserved")}</th>
+                  </tr></thead>
+                  <tbody>
+                    {inqData.whs.map((r: any, i: number) => (
+                      <tr key={i}>
+                        <td className="border border-[#ddd] px-1 py-0.5 text-center">{r.name}</td>
+                        <td className="border border-[#ddd] px-1 py-0.5 text-center tabular-nums">{numAr(r.qty)}</td>
+                        <td className="border border-[#ddd] px-1 py-0.5 text-center">—</td>
+                      </tr>
+                    ))}
+                    {!inqData.whs.length && <tr><td colSpan={3} className="py-3 text-center text-[#999]">…</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="mt-2 border border-[#2fae4e]">
+              <div className="bg-[#2fae4e] px-2 py-1 text-center text-[12px] font-bold text-white">{T("أسعار الشراء (سجل)", "Purchase Prices (history)")}</div>
+              <table className="w-full text-[11px]">
+                <thead><tr className="bg-[#e8f5e9]">
+                  <th className="border border-[#ddd] px-1">{T("المورد", "Supplier")}</th>
+                  <th className="border border-[#ddd] px-1">{T("التاريخ", "Date")}</th>
+                  <th className="border border-[#ddd] px-1">{T("سعر الشراء", "Purchase Price")}</th>
+                  <th className="border border-[#ddd] px-1">{T("الوحدة", "Unit")}</th>
+                </tr></thead>
+                <tbody>
+                  {inqData.buys.map((r: any, i: number) => (
+                    <tr key={i}>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{r.supplier}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{r.date}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center font-bold tabular-nums">{numAr(r.price)}</td>
+                      <td className="border border-[#ddd] px-1 py-0.5 text-center">{r.unit || unitNameFor(inqProd)}</td>
+                    </tr>
+                  ))}
+                  {!inqData.buys.length && (
+                    <tr><td colSpan={4} className="py-2 text-center text-[#999]">{T("لا يوجد سجل شراء بعد", "No purchase history yet")}</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-2 flex justify-center gap-2">
+              <button className={btnCls} onClick={() => { setInqOpen(false); if (inqProd?.id) navigate("/app/construction/sahl/products"); }}>{T("تعديل", "Edit")}</button>
+              <button className={btnCls} onClick={() => setInqOpen(false)}>{T("إخفاء", "Hide")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== F7 — Other Options for the Item ===== */}
+      {f7Open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setF7Open(false)}>
+          <div className="w-full max-w-md border border-black bg-white" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-[#f0f0f0] px-2 py-1 text-[12px] font-bold text-[#333]">{T("خيارات أخرى للصنف", "Other Options for the Item")}</div>
+            <div className="p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <button className="flex items-center gap-1 border border-[#999] bg-[#f5f5f5] px-2 py-1 text-[12px] text-red-700" onClick={() => setF7Open(false)}>
+                  ↺ {T("تراجع", "Undo")}
+                </button>
+                <div className="text-center text-[18px] font-black text-[#2fae4e]">{lines[sel]?.name ?? "—"}</div>
+              </div>
+              <div className="mb-3 border border-[#ccc] bg-[#fafafa] p-2">
+                <div className="mb-1 text-[11px] text-[#555]">{T("أدخل قيمة الخصم أو نسبة الخصم %", "Enter Discount Value or Discount Percentage %")}</div>
+                <div className="flex items-center gap-2">
+                  <label className="flex flex-1 items-center gap-1 text-[11px]">
+                    <span>{T("قيمة الخصم", "Enter Discount Value")}</span>
+                    <input className={inputCls} value={f7Val} onChange={(e) => { setF7Val(e.target.value); setF7Pct(""); }} inputMode="decimal" />
+                  </label>
+                  <label className="flex flex-1 items-center gap-1 text-[11px]">
+                    <span>{T("أو نسبة الخصم %", "or Discount Percentage %")}</span>
+                    <input className={inputCls} value={f7Pct} onChange={(e) => { setF7Pct(e.target.value); setF7Val(""); }} inputMode="decimal" />
+                  </label>
+                </div>
+              </div>
+              {lines[sel]?.tracked && (
+                <div className="mb-3 border border-[#ccc] bg-[#fafafa] p-2">
+                  <div className="mb-1 text-[11px] text-[#555]">{T("أدخل أكواد السيريال المختلفة لهذه الكمية", "Enter serial numbers for this quantity")}</div>
+                  <div className="flex items-center gap-1">
+                    <b className="text-[11px]">{T("إضافة كود", "Add Code")}</b>
+                    <input className={inputCls} value={f7Serial} onChange={(e) => setF7Serial(e.target.value)} dir="ltr"
+                      placeholder="SN001, SN002…" />
+                  </div>
+                  <div className="mt-1 h-[70px] overflow-auto border border-[#ddd] bg-white p-1 text-[11px]">
+                    {(lines[sel]?.serials ?? []).map((s, i) => <div key={i}>{s}</div>)}
+                    {f7Serial.trim() && <div className="text-[#2fae4e]">+ {f7Serial}</div>}
+                  </div>
+                </div>
+              )}
+              <div className="mb-3 border border-[#ccc] bg-[#fafafa] p-2">
+                <div className="mb-1 text-[11px] text-[#555]">{T("الشحنة: أدخل أو اختر كود الشحنة لمتابعة الشحنات", "Shipment: enter or select shipment code to track shipments")}</div>
+                <input className={inputCls} value={f7Ship} onChange={(e) => setF7Ship(e.target.value)} dir="ltr"
+                  placeholder={T("كود الشحنة", "Shipment code")} />
+              </div>
+              <div className="flex justify-center">
+                <button className="flex items-center gap-2 rounded-full border border-[#999] bg-[#fafafa] px-6 py-2 text-[14px] font-bold shadow"
+                  onClick={applyF7}>
+                  {T("موافق", "Confirm")} ✅
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Invoice-level discount modal ===== */}
+      {discOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDiscOpen(false)}>
+          <div className="w-full max-w-md border border-[#bbb] bg-white" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-2 py-1">
+              <button className="flex items-center gap-1 border border-[#e05242] bg-[#fdf0ef] px-3 py-1 text-[12px] text-[#c62828]" onClick={() => setDiscOpen(false)}>
+                ⏻ {T("إلغاء", "Cancel")}
+              </button>
+              <b className="text-[20px] text-[#1b6fb8]">{T("خصم الفاتورة", "Invoice Discount")}</b>
+              <span className="w-[70px]" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 px-4 pb-2">
+              <label className="flex flex-col text-center text-[12px]">
+                <b>{T("أدخل قيمة الخصم", "Enter Discount Value")}</b>
+                <input className="mt-1 h-10 border-2 border-[#1b6fb8] px-2 text-center text-[16px] font-bold"
+                  value={discVal} onChange={(e) => { setDiscVal(e.target.value); setDiscPct(""); }} inputMode="decimal" />
+              </label>
+              <label className="flex flex-col text-center text-[12px]">
+                <b>{T("أو نسبة الخصم %", "Or Discount %")}</b>
+                <input className="mt-1 h-10 border-2 border-[#1b6fb8] px-2 text-center text-[16px] font-bold"
+                  value={discPct} onChange={(e) => { setDiscPct(e.target.value); setDiscVal(""); }} inputMode="decimal" />
+              </label>
+              <div className="text-center text-[12px]">
+                <div className="font-bold">{T("إجمالي الفاتورة", "Invoice Total")}</div>
+                <div className="mt-1 border border-[#ccc] bg-[#e0e0e0] px-2 py-2 text-[16px] font-bold tabular-nums">{numAr(subtotal.toFixed(2))}</div>
+              </div>
+              <div className="text-center text-[12px]">
+                <div className="font-bold">{T("الإجمالي بعد الخصم", "Total After Discount")}</div>
+                <div className="mt-1 border border-[#ccc] bg-[#e0e0e0] px-2 py-2 text-[16px] font-bold tabular-nums">
+                  {numAr(Math.max(0, subtotal - (
+                    discVal.trim() !== "" ? Number(discVal) || 0
+                      : discPct.trim() !== "" ? (subtotal * (Number(discPct) || 0)) / 100
+                      : Number(discount) || 0
+                  )).toFixed(2))}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-center pb-3">
+              <button className="flex items-center gap-2 rounded-full border border-[#999] bg-[#fafafa] px-8 py-2 text-[14px] font-bold shadow" onClick={applyInvDisc}>
+                {T("موافق", "Confirm")} ✅
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Coral: did the customer pay part of the invoice? ===== */}
+      {creditAsk && !rOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl border border-[#d95549] shadow-2xl" style={{ background: "#f26c63" }}>
+            <div className="border-b border-[#d95549] bg-white/90 px-3 py-2 text-left text-[13px] font-bold text-[#333]">
+              {T("هل دفع العميل جزء من حساب الفاتورة؟", "Did the customer pay part of the invoice amount?")}
+            </div>
+            <div className="px-6 py-10 text-center text-[26px] font-black text-white">
+              {T("هل دفع العميل جزء من حساب الفاتورة؟", "Did the customer pay part of the invoice amount?")}
+              <div className="mt-2 text-[16px] font-bold text-white/90">
+                {T("الإجمالي", "Total")}: {numAr(creditAsk.total.toFixed(2))}
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-8 px-6 pb-8" dir="ltr">
+              <button className="flex w-[150px] flex-col items-center border border-[#c9c9c9] bg-white py-3 hover:bg-[#fff3f2]"
+                onClick={() => { setROpen(true); }}>
+                <span className="flex items-center gap-2 text-[16px] font-bold text-black">
+                  Yes <span className="text-[#2fae4e]">✔</span>
+                </span>
+                <span className="text-[12px] text-[#555]">{T("نعم", "Yes")}</span>
+                <span className="mt-1 text-[14px] font-bold">1</span>
+              </button>
+              <button className="flex w-[150px] flex-col items-center border border-[#c9c9c9] bg-white py-3 hover:bg-[#fff3f2]"
+                onClick={finishCreditNo}>
+                <span className="flex items-center gap-2 text-[16px] font-bold text-black">
+                  No <span className="text-[#e53935]">✖</span>
+                </span>
+                <span className="text-[12px] text-[#555]">{T("لا", "No")}</span>
+                <span className="mt-1 text-[14px] font-bold">2</span>
+              </button>
+              <button className="flex w-[150px] flex-col items-center border border-[#c9c9c9] bg-white py-3 hover:bg-[#fff3f2]"
+                onClick={() => { setCreditAsk(null); setMsg(T("تراجع — الفاتورة محفوظة بدون دفعة", "Undo — invoice saved without payment")); refreshAll(); }}>
+                <span className="flex items-center gap-2 text-[16px] font-bold text-[#c62828]">
+                  Undo <span>↺</span>
+                </span>
+                <span className="text-[12px] text-[#555]">{T("تراجع", "Undo")}</span>
+                <span className="mt-1 text-[14px] font-bold">3</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Receipt | New voucher (after Yes) ===== */}
+      {rOpen && creditAsk && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" dir="ltr">
+          <div className="w-full max-w-md border border-black bg-white">
+            <div className="flex items-center justify-between border-b border-[#ddd] px-2 py-1">
+              <div className="text-[12px] font-bold text-[#555]">{T("سند قبض | جديد", "Receipt | New")}</div>
+              <button className="px-1 text-[14px]" onClick={() => { setROpen(false); }}>✕</button>
+            </div>
+            <div className="p-3">
+              <div className="mb-4 text-center text-[26px] font-black" style={{ color: "#b52e88" }}>{T("سند قبض", "Receipt")}</div>
+              <div className="grid grid-cols-[110px_1fr] items-center gap-y-2 text-[12px]">
+                <b className="text-end">{T("المبلغ", "Amount")}</b>
+                <input autoFocus className="h-9 border border-[#999] px-2 text-center text-[16px] font-bold tabular-nums"
+                  value={rAmt} onChange={(e) => setRAmt(e.target.value)} inputMode="decimal" placeholder="0.00" />
+                <b className="text-end">{T("الحساب", "Account")}</b>
+                <div className="flex items-center gap-1">
+                  <input className="h-9 flex-1 border border-[#999] px-2" value={partyQ || T("عميل نقدي", "Walk-in customer")} readOnly />
+                  <button className="border border-[#999] bg-[#f5f5f5] px-1" onClick={() => setROpen(false)} title={T("إلغاء", "Cancel")}>✖</button>
+                  <span className="border border-[#999] bg-[#f5f5f5] px-1">{numAr(rAmt ? 1 : 0)}</span>
+                </div>
+                <b className="text-end">{T("بند الإيراد", "Revenue Category")}</b>
+                <select className="h-9 border border-[#999] px-2" value={rCat} onChange={(e) => setRCat(e.target.value)}>
+                  <option value="مبيعات">{T("مبيعات", "Sales")}</option>
+                  <option value="دفعة مقدمة">{T("دفعة مقدمة", "Advance payment")}</option>
+                  <option value="أخرى">{T("أخرى", "Other")}</option>
+                </select>
+                <b className="text-end">{T("ملاحظات", "Notes")}</b>
+                <input className="h-9 border border-[#999] px-2" value={rNotes} onChange={(e) => setRNotes(e.target.value)} />
+                <b className="text-end">{T("الخزينة أو البنك", "Safe or Bank")}</b>
+                <div className="flex items-center gap-1">
+                  <button className="border border-[#999] bg-[#f5f5f5] px-1" onClick={() => setRSafe("")} title={T("تفريغ", "Clear")}>✖</button>
+                  <select className="h-9 flex-1 border border-[#999] px-2" value={rSafe} onChange={(e) => setRSafe(e.target.value)}>
+                    <option value="الخزينة العامة">{T("الخزينة العامة", "General Safe")}</option>
+                    <option value="بنك">{T("بنك", "Bank")}</option>
+                  </select>
+                </div>
+                <b className="text-end">{T("المرجع", "Reference")}</b>
+                <input className="h-9 border border-[#999] px-2" value={rRef} onChange={(e) => setRRef(e.target.value)} dir="ltr" />
+                <b className="text-end">{T("رقم الحركة", "Trans. No.")}</b>
+                <div className="border border-[#ddd] bg-[#fafafa] px-2 py-2 font-mono text-[13px]">RC-{creditAsk.id}-…  <span className="text-[10px] text-[#888]">{T("تلقائي", "auto")}</span></div>
+                <b className="text-end">{T("الوقت", "Time")}</b>
+                <div className="flex items-center gap-1">
+                  <input className="h-9 w-[90px] border border-[#999] px-2 text-center" value={rTime} onChange={(e) => setRTime(e.target.value)} dir="ltr" />
+                  <b className="text-end">{T("التاريخ", "Date")}</b>
+                  <input type="date" className="h-9 flex-1 border border-[#999] px-2" value={rDate} onChange={(e) => setRDate(e.target.value)} />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <button className="flex items-center gap-1 border border-[#999] bg-[#f5f5f5] px-3 py-1.5 text-[12px]" onClick={() => setROpen(false)}>
+                  ⏻ {T("تراجع", "Cancel")}
+                </button>
+                <button className="flex items-center gap-1 border border-[#999] bg-[#f5f5f5] px-3 py-1.5 text-[12px]" onClick={saveReceipt} disabled={!rAmt}>
+                  💾 {T("حفظ | جديد", "Save | New")}
+                </button>
+                <button className="flex items-center gap-1 border border-[#2f7a3d] bg-[#e8f5e9] px-4 py-1.5 text-[12px] font-bold" onClick={saveReceipt} disabled={!rAmt}>
+                  ✔ {T("حفظ", "Save")}
+                </button>
+              </div>
+              <label className="mt-2 flex items-center justify-end gap-1 text-[11px]">
+                <input type="checkbox" checked={autoPrint} onChange={(e) => setAutoPrint(e.target.checked)} />
+                {T("طباعة", "Print")}
+              </label>
+            </div>
           </div>
         </div>
       )}
