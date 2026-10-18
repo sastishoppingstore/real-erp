@@ -37,20 +37,20 @@ export const ALL_COLUMNS: ColDef[] = [
   { key: "total", ar: "الإجمالي", en: "Total", visible: true },
 ];
 
-export interface DocLine { code?: string; name: string; unit?: string; qty: number; price: number; disc?: number; total: number }
+export interface DocLine { code?: string; name: string; nameAr?: string; unit?: string; qty: number; price: number; disc?: number; total: number }
 export interface DocData {
   no: string; date: string; time?: string;
-  party?: string; partyTax?: string; partyPhone?: string; branch?: string;
+  party?: string; partyTax?: string; partyPhone?: string; partyEmail?: string; partyCr?: string; partyAr?: string; branch?: string;
   lines: DocLine[];
   subtotal: number; discount: number; tax: number; net: number;
-  paid?: number; notes?: string;
+  paid?: number; notes?: string; notesAr?: string;
   qrText?: string;
   // 0060-form extras (all optional; missing values hide their rows like <#if>)
   dueDate?: string; cashier?: string; paymentType?: string;
   additions?: number; additionType?: string;
   qtyTotal?: number; taxPct?: number;
   balBefore?: number; balAfter?: number; hasAccount?: boolean;
-  companyTax?: string; companyContacts?: string[];
+  companyTax?: string; companyCr?: string; companyContacts?: string[];
   accountAddress?: string;
 }
 
@@ -393,9 +393,10 @@ function patchSheet060(
     if (step.itemIdx != null) {
       const l = lines[step.itemIdx];
       if (l) {
+        const disp = (() => { const n = String(l.name ?? "").replace(/^\[(?:custom-)?\d+\]\s*/, "").trim(); const a = String(l.nameAr ?? "").trim(); return a && a !== n ? `${n ? n + " / " : ""}${a}` : n || a; })();
         xml = setCell(xml, r, "A", step.itemIdx + 1);
         xml = setCell(xml, r, "B", l.code || null);
-        xml = setCell(xml, r, "C", l.name || null);
+        xml = setCell(xml, r, "C", disp || null);
         xml = setCell(xml, r, "D", l.unit || null);
         xml = setCell(xml, r, "E", Number(l.qty || 0));
         xml = setCell(xml, r, "F", r2(l.price));
@@ -410,24 +411,28 @@ function patchSheet060(
           xml = setCell(xml, r, "C", companyName);
           break;
         case 8:
-          xml = setCell(xml, r, "E", company.tax ? `Tax No. ${company.tax}` : null);
+          xml = setCell(xml, r, "C", d.partyCr ? `C.R. No. ${d.partyCr}` : null);
+          xml = setCell(xml, r, "E", d.partyTax ? `Tax No. ${d.partyTax}` : null);
           break;
-        case 9: xml = setCell(xml, r, "C", d.no); break;
+        case 9:
+          xml = setCell(xml, r, "C", d.no);
+          xml = setCell(xml, r, "D", d.party ? `Client: ${d.party}` : null);
+          break;
         case 10:
           xml = setCell(xml, r, "C", d.paymentType ?? null);
-          xml = setCell(xml, r, "D", d.party ?? null);
+          xml = setCell(xml, r, "D", d.partyAr ? `Arabic Name: ${d.partyAr}` : null);
           break;
         case 11:
           xml = setCell(xml, r, "C", xlSerial(d.date) ?? null);
-          xml = setCell(xml, r, "D", d.partyTax ? `Tax No. ${d.partyTax}` : null);
+          xml = setCell(xml, r, "D", d.accountAddress ? `Address: ${d.accountAddress}` : null);
           break;
         case 12:
           xml = setCell(xml, r, "C", xlTime(d.time) ?? null);
-          xml = setCell(xml, r, "D", d.accountAddress ?? null);
+          xml = setCell(xml, r, "D", d.partyPhone ? `Phone No.: ${d.partyPhone}` : null);
           break;
         case 13:
           xml = setCell(xml, r, "C", xlSerial(d.dueDate || d.date) ?? null);
-          xml = setCell(xml, r, "D", d.partyPhone ?? null);
+          xml = setCell(xml, r, "D", d.partyEmail ? `Email: ${d.partyEmail}` : null);
           break;
         case 14: xml = setCell(xml, r, "C", d.cashier ?? null); break;
         case 15: xml = setCell(xml, r, "C", note); break;
@@ -569,10 +574,11 @@ async function render060Scratch(
   ws.addRow(["", "", co]);
   if (company.tax) ws.addRow(["", "", "", "", `Tax No. ${company.tax}`]);
   kv("Doc. No.", d.no, "Client", d.party ?? "");
-  kv("Payment", d.paymentType ?? "", "", "");
-  kv("Date", d.date, d.partyTax ? `Tax No. ${d.partyTax}` : "", "");
-  kv("Time", d.time ?? "", "", d.accountAddress ?? "");
-  kv("Due Date", d.dueDate ?? d.date, "", d.partyPhone ?? "");
+  kv("Payment", d.paymentType ?? "", "Arabic Name", d.partyAr ?? "");
+  kv("C.R. No.", d.partyCr ?? "", "Tax No.", d.partyTax ?? "");
+  kv("Date", d.date, "Address", d.accountAddress ?? "");
+  kv("Time", d.time ?? "", "Phone No.", d.partyPhone ?? "");
+  kv("Due Date", d.dueDate ?? d.date, "Email", d.partyEmail ?? "");
   kv("Cashier", d.cashier ?? "", "", "");
   kv("Remarks", d.notes ?? "", "", "");
   const itemHead = ws.addRow(["", "Item No.", "Job Description", "Unit", "Qty", "Price", "Total"]);
@@ -699,7 +705,7 @@ export function printHtml(title: string, bodyHtml: string) {
 // so "Save as PDF" produces the invoice itself — not a screenshot of the app.
 // ---------------------------------------------------------------------------
 function invoice060Html(
-  d: DocData, company: { nameAr?: string; name?: string; tax?: string },
+  d: DocData, company: { nameAr?: string; name?: string; tax?: string; taxNumber?: string; crNumber?: string },
   title: string, logoUrl: string, qrUrl: string,
 ): string {
   const esc = (x: any) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -715,10 +721,10 @@ function invoice060Html(
   const contacts = (d.companyContacts ?? []).map((x) => String(x ?? "")).filter((x) => x.trim());
   const co = company.nameAr || company.name || "";
   const words = amountWordsAr(net);
-
+  const cleanIt = (s: any) => String(s ?? "").replace(/^\[(?:custom-)?\d+\]\s*/, "").trim();
   const itRows = lines.length
     ? lines.map((l, i) =>
-        `<tr><td class="sn">${i + 1}</td><td class="c bd">${esc(l.code ?? "")}</td><td class="l bd">${esc(l.name)}</td>` +
+        `<tr><td class="sn">${i + 1}</td><td class="c bd">${esc(l.code ?? "")}</td><td class="l bd">${esc(cleanIt(l.name))}${l.nameAr && cleanIt(l.nameAr) !== cleanIt(l.name) ? ` <span dir="rtl">${esc(l.nameAr)}</span>` : ""}</td>` +
         `<td class="c bd">${esc(l.unit ?? "")}</td><td class="c bd">${Number(l.qty || 0)}</td>` +
         `<td class="c bd">${n2(l.price)}</td><td class="c bd">${n2(l.total)}</td></tr>`).join("")
     : `<tr><td class="sn">1</td><td class="c bd"></td><td class="l bd"></td><td class="c bd"></td><td class="c bd"></td><td class="c bd"></td><td class="c bd"></td></tr>`;
@@ -759,7 +765,9 @@ function invoice060Html(
   .lh-l .t1 { font-size:12pt; font-weight:700; }
   .lh-l .red, .lh-r .red { color:#FF0000; font-weight:700; font-size:11pt; }
   .lh-c { width:24%; text-align:center; }
-  .lh-c img { max-height:23mm; max-width:95%; }
+  /* Same picture box the 0060 template uses for the logo image
+     (a:ext 1201615x816532 EMU) so print/PDF matches the .xlsx letterhead. */
+  .lh-c img { width:33.4mm; height:22.7mm; object-fit:fill; }
   .lh-r { width:38%; text-align:center; font-family:Arial,Tahoma,sans-serif; direction:rtl; font-size:10.5pt; line-height:1.35; }
   .lh-r .t1 { font-weight:700; font-size:11pt; }
   .gray { background:#D9D9D9; }
@@ -772,18 +780,18 @@ function invoice060Html(
   <div class="lh">
     <div class="lh-l">
       <div class="t1">Kingdom Saudi Arabia</div>
-      <div class="red">Yousef Jameel Al-Juhani</div>
-      <div class="red">Contracting Est.</div>
-      <div>C . R . No: 4700012896</div>
-      <div>Tax No:300995897900003</div>
+      <div class="red">${esc(company.name ?? "Yousef Jameel Al-Juhani")}</div>
+      <div class="red">${esc(company.nameAr ?? "Contracting Est.")}</div>
+      <div>C . R . No: ${esc(company.crNumber ?? "4700012896")}</div>
+      <div>Tax No: ${esc(company.taxNumber ?? company.tax ?? "300995897900003")}</div>
     </div>
     <div class="lh-c">${logoUrl ? `<img src="${logoUrl}" alt="">` : ""}</div>
     <div class="lh-r">
       <div class="t1">المملكة العربية السعودية</div>
-      <div class="red">مؤسسة يوســف جميـــل الجهني</div>
-      <div class="red">للمقاولات</div>
-      <div>س . ت : 4700012896</div>
-      <div>الرقم الضريبي : 300995897900003</div>
+      <div class="red">${esc(company.nameAr)}</div>
+      <div class="red">${esc(company.name)}</div>
+      <div>س . ت : ${esc(company.crNumber ?? "4700012896")}</div>
+      <div>الرقم الضريبي : ${esc(company.taxNumber ?? company.tax ?? "300995897900003")}</div>
     </div>
   </div>
   <table><colgroup>
@@ -794,12 +802,12 @@ function invoice060Html(
       <td></td><td style="font-size:10pt">${esc(title)}</td>
       <td colspan="5" class="c" style="font-size:16pt">${esc(co)}</td>
     </tr>
-    <tr><td></td><td></td><td></td><td></td><td colspan="3">${company.tax ? `Tax No. ${esc(company.tax)}` : ""}</td></tr>
-    <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(d.no)}</td><td class="lbl">Client</td><td colspan="3"></td></tr>
-    <tr><td></td><td class="lbl">Payment</td><td>${esc(d.paymentType ?? "")}</td><td></td><td colspan="3">${esc(d.party ?? "")}</td></tr>
-    <tr><td></td><td class="lbl">Date</td><td>${esc(d.date)}</td><td></td><td colspan="3">${d.partyTax ? `Tax No. ${esc(d.partyTax)}` : ""}</td></tr>
-    <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td></td><td colspan="3">${esc(d.accountAddress ?? "")}</td></tr>
-    <tr><td></td><td class="lbl">Due Date</td><td>${esc(d.dueDate ?? d.date)}</td><td></td><td colspan="3">${esc(d.partyPhone ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">C.R. No</td><td colspan="3">${esc(d.partyCr ?? "")}</td><td class="lbl">Tax No.</td><td>${esc(d.partyTax ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(d.no)}</td><td class="lbl">Client</td><td colspan="3">${esc(d.party ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Payment</td><td>${esc(d.paymentType ?? "")}</td><td class="lbl">Arabic Name</td><td colspan="3">${esc(d.partyAr ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Date</td><td>${esc(d.date)}</td><td class="lbl">Address</td><td colspan="3">${esc(d.accountAddress ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td class="lbl">Phone No.</td><td colspan="3">${esc(d.partyPhone ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Due Date</td><td>${esc(d.dueDate ?? d.date)}</td><td class="lbl">Email</td><td colspan="3">${esc(d.partyEmail ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Cashier</td><td>${esc(d.cashier ?? "")}</td><td colspan="4"></td></tr>
     ${d.notes ? `<tr><td></td><td class="lbl">Remarks</td><td colspan="5">${esc(d.notes)}</td></tr>` : ""}
     <tr style="height:30pt;font-weight:700" class="c">
@@ -836,7 +844,7 @@ function invoice060Html(
 // Printing (or "Save as PDF") yields the invoice document itself.
 export async function printInvoice060(
   d: DocData,
-  company: { nameAr?: string; name?: string; tax?: string },
+  company: { nameAr?: string; name?: string; tax?: string; taxNumber?: string; crNumber?: string },
   title?: string,
 ): Promise<void> {
   const w = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;

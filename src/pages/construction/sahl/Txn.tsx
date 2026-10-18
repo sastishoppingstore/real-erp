@@ -22,7 +22,7 @@ let LAST_SAVED_NO = "";
 // purchase-return|quotation. All saves hit real MySQL tRPC mutations.
 export type TxnKind = "sales" | "purchase" | "sales-return" | "purchase-return" | "quotation";
 
-interface Line { productId?: number; code: string; name: string; unit: string; qty: number; price: number; disc: number; cost: number; serials: string[]; tracked: boolean; ship?: string; }
+interface Line { productId?: number; code: string; name: string; nameAr?: string; unit: string; qty: number; price: number; disc: number; cost: number; serials: string[]; tracked: boolean; ship?: string; }
 
 const TITLES: Record<TxnKind, { ar: string; en: string; color: string }> = {
   sales: { ar: "فاتورة بيع", en: "Sales invoice", color: "#2fae4e" },
@@ -338,7 +338,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       const items: any[] = (viewData as any).items ?? [];
       const cust: any = (viewData as any).customer;
       setLines(items.map((it: any) => ({
-        productId: it.productId, code: it.sku ?? "", name: it.descriptionAr || it.description,
+        productId: it.productId, code: it.sku ?? "", name: it.description || it.descriptionAr || "", nameAr: it.descriptionAr || undefined,
         unit: it.unit ?? "", qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0), disc: 0,
       })));
       if (cust) {
@@ -404,7 +404,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     }
     const autoDisc = Number(p.fixedDiscount ?? 0);
     setLines([...lines, {
-      productId: p.id, code: p.sku ?? "", name: p.nameAr || p.name,
+      productId: p.id, code: p.sku ?? "", name: p.name || p.nameAr || "", nameAr: p.nameAr || undefined,
       unit: p.unitName ?? "", qty: qn, price, disc: autoDisc > 0 ? autoDisc * qn : 0,
       cost: Number(p.purchasePrice ?? 0),
       serials: [], tracked: !!p.isSerialTracked,
@@ -444,7 +444,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const pushLine = (p: any, qn: number, price: number) => {
     const autoDisc = Number(p.fixedDiscount ?? 0);
     setLines([...lines, {
-      productId: p.id, code: p.sku ?? "", name: p.nameAr || p.name,
+      productId: p.id, code: p.sku ?? "", name: p.name || p.nameAr || "", nameAr: p.nameAr || undefined,
       unit: p.unitName ?? "", qty: qn, price, disc: autoDisc > 0 ? autoDisc * qn : 0,
       cost: Number(p.purchasePrice ?? 0),
       serials: [], tracked: !!p.isSerialTracked,
@@ -696,20 +696,33 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     const comp: any = company ?? {};
     const payLabel = payMode === "card" ? (rtl ? "شبكة" : "Card") : payMode === "credit" ? (rtl ? "آجل" : "Credit") : (rtl ? "نقدي" : "Cash");
     const contacts = [comp.print1, comp.print2, comp.print3].filter((x: any) => x && String(x).trim());
+    // EN / AR values joined only when they differ (never duplicated on the invoice).
+    const pairJoin = (a: any, b: any) => {
+      const x = String(a ?? "").trim(), y = String(b ?? "").trim();
+      return x && y && x !== y ? `${x} / ${y}` : (x || y);
+    };
     if (isViewing && viewData) {
       const inv: any = (viewData as any).invoice;
       const items: any[] = (viewData as any).items ?? [];
       const cust: any = (viewData as any).customer;
+      const nameEn = String(inv?.customerName ?? cust?.name ?? cd.name ?? "").trim();
+      const nameAr = String(inv?.customerNameAr ?? cust?.nameAr ?? cd.nameAr ?? "").trim();
+      const addrEn = String(inv?.customerAddress ?? cust?.address ?? cd.address ?? "").trim();
+      const addrAr = String(inv?.customerAddressAr ?? cust?.addressAr ?? cd.addressAr ?? "").trim();
+      const partyJoin = nameEn || nameAr;
       return {
         no: inv?.invoiceNumber ?? `#${viewId}`,
         date: String(inv?.date ?? docDate).slice(0, 10),
         time: String(inv?.time ?? "").slice(0, 5) || undefined,
-        party: cust?.nameAr || cust?.name || inv?.customerName || cd.name,
-        partyTax: cust?.vatNumber ?? cust?.taxNumber ?? cd.vat,
-        partyPhone: cust?.phone ?? cd.phone,
+        party: partyJoin,
+        partyAr: nameAr && nameAr !== partyJoin ? nameAr : undefined,
+        partyTax: inv?.customerVat ?? cust?.vatNumber ?? cust?.taxNumber ?? cd.vat,
+        partyPhone: inv?.customerPhone ?? cust?.phone ?? cd.phone,
+        partyEmail: inv?.customerEmail ?? cust?.email ?? cd.email,
+        partyCr: inv?.customerCr ?? cust?.crNumber ?? cd.cr,
         branch: "",
         lines: items.map((it: any) => ({
-          code: it.sku ?? "", name: it.descriptionAr || it.description,
+          code: it.sku ?? "", name: it.description ?? "", nameAr: it.descriptionAr || undefined,
           unit: it.unit ?? "", qty: Number(it.quantity || 0),
           price: Number(it.unitPrice || 0), disc: 0,
           total: Number(it.totalAmount || 0),
@@ -718,26 +731,31 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         discount: Number(inv?.discountAmount || discount),
         tax: Number(inv?.taxAmount || taxAmt),
         net: Number(inv?.totalAmount || grand),
-        notes: inv?.notes ?? reason ?? undefined,
+        notes: [inv?.notes, inv?.notesAr].map((x: any) => String(x ?? "").trim()).filter(Boolean).join(" / ") || reason || undefined,
         qrText: inv?.zatcaQrCode || inv?.invoiceNumber,
         dueDate: String(inv?.dueDate ?? "").slice(0, 10) || undefined,
         cashier: inv?.cashier ?? userName ?? undefined,
-        paymentType: inv?.paymentType ?? undefined,
+        paymentType: inv?.paymentType ?? inv?.payment_method ?? inv?.paymentMethod ?? undefined,
         taxPct: Number(inv?.taxPercent ?? taxPct),
         qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
         balBefore, balAfter, hasAccount: !!partyId,
         companyTax: comp.taxNumber ?? undefined,
         companyContacts: contacts.length ? contacts : undefined,
-        accountAddress: cust?.address ?? cd.address ?? undefined,
+        accountAddress: pairJoin(addrEn, addrAr) || undefined,
       };
     }
+    const prem = parties.find((a: any) => String(a.id) === String(partyId));
+    const nameEn = String(cd.name || prem?.name || "").trim();
+    const nameAr = String(cd.nameAr || prem?.nameAr || "").trim();
+    const liveParty = nameEn || nameAr;
     return {
       no: savedNo || LAST_SAVED_NO || `INV-${Date.now()}`, date: docDate,
       time: `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`,
-      party: cd.name || parties.find((a: any) => String(a.id) === String(partyId))?.name || "",
-      partyTax: cd.vat, partyPhone: cd.phone, branch: "",
+      party: liveParty,
+      partyAr: nameAr && nameAr !== liveParty ? nameAr : undefined,
+      partyTax: cd.vat, partyPhone: cd.phone, partyEmail: cd.email, partyCr: cd.cr, branch: "",
       lines: lines.map((l) => ({
-        code: l.code, name: l.name, unit: l.unit, qty: l.qty,
+        code: l.code, name: l.name, nameAr: l.nameAr, unit: l.unit, qty: l.qty,
         price: l.price, disc: l.disc || 0, total: lineTotal(l),
       })),
       subtotal, discount: Number(discount), tax: taxAmt, net: grand,
@@ -748,7 +766,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       balBefore, balAfter, hasAccount: !!partyId,
       companyTax: comp.taxNumber ?? undefined,
       companyContacts: contacts.length ? contacts : undefined,
-      accountAddress: cd.address || undefined,
+      accountAddress: pairJoin(cd.address, cd.addressAr) || undefined,
     };
   };
 
@@ -778,7 +796,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     if (mode === "html" || mode === "both")
       await printInvoice060(
         d,
-        { nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber },
+        { nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber, taxNumber: comp.taxNumber, crNumber: comp.crNumber ?? comp.commercialRegistration },
         cfg?.titleAr ?? tar,
       );
     if (mode === "xlsx" || mode === "both") {
@@ -911,8 +929,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           customerVat: cd.vat.trim() || undefined,
           customerCr: cd.cr.trim() || undefined,
           items: lines.map((l) => ({
-            productId: l.productId, description: l.name, quantity: l.qty,
-            unitPrice: String(l.price), totalAmount: String(lineTotal(l)),
+            productId: l.productId, description: l.name || l.nameAr || "-", descriptionAr: l.nameAr || undefined, quantity: l.qty,
+            unitPrice: String(l.price), unit: l.unit || undefined, totalAmount: String(lineTotal(l)),
           })),
         });
         setMsg(`${T("تم حفظ الفاتورة", "Invoice saved")} — INV-${stamp}`);
@@ -1330,7 +1348,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                   style={i === sel ? { background: "#22e022" } : undefined}>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{i + 1}</td>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.code}</td>
-                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.name}</td>
+                  <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.nameAr || l.name}</td>
                   <td className="border border-[#ccc] px-1 py-0.5 text-center">{l.unit}</td>
                   {kind === "sales" && (
                     <td className="border border-[#ccc] px-1 py-0.5 text-center font-bold tabular-nums"
@@ -1476,8 +1494,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             style={{ background: "#2fae4e" }} disabled={saving || isViewing} onClick={() => save(false, false)}>
             ✓ <b>{T("حفظ F9", "Save F9")}</b>
           </button>
-          <button className="border border-[#555] bg-[#3a3a3a] px-2 py-1 hover:bg-[#444]" disabled={isViewing} onClick={doPrint}>🖨 <b>{T("طباعة F11", "Print F11")}</b></button>
-          <button className="border border-[#555] bg-[#2e7d32] px-2 py-1 hover:bg-[#349e3a]" disabled={isViewing} onClick={() => printDoc("xlsx")}>
+          <button className="border border-[#555] bg-[#3a3a3a] px-2 py-1 hover:bg-[#444]" onClick={doPrint}>🖨 <b>{T("طباعة F11", "Print F11")}</b></button>
+          <button className="border border-[#555] bg-[#2e7d32] px-2 py-1 hover:bg-[#349e3a]" onClick={() => printDoc("xlsx")}>
             <b className="bg-white px-0.5 text-[#2e7d32]">X</b><b>.xlsx</b>
           </button>
           <button className="border border-[#555] bg-[#1565c0] px-2 py-1 hover:bg-[#1b74d4]" disabled={isViewing} onClick={newDoc}>
@@ -1590,7 +1608,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             <b className="text-[13px]">{T("أرقام السيريال (سطر لكل رقم)", "Serial numbers (one per line)")}</b>
             {lines.map((l, i) => l.tracked ? (
               <div key={i} className="mt-2 border border-[#888] p-1">
-                <div className="text-[12px] font-bold">{l.name} × {l.qty}</div>
+                <div className="text-[12px] font-bold">{l.nameAr || l.name} × {l.qty}</div>
                 <textarea rows={Math.min(6, Math.max(2, l.qty))} className={inputCls}
                   value={serialInputs[i] ?? ""}
                   onChange={(e) => setSerialInputs({ ...serialInputs, [i]: e.target.value })}

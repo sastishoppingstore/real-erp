@@ -36,25 +36,26 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
   }, [detail, companyData]);
   if (!dInv) return null;
   const dItems = (detail.items || []).map((it: any, i: number) => ({
-    no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
+    no: i + 1, name: cleanItemName(it.description) || `Item #${it.productId || it.id}`,
     qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
   }));
   const dCust = detail.customer;
+  const dInvRow = dInv as any;
   const pSub = Number(dInv.subTotal || 0);
   const pDisc = Number(dInv.discountAmount || 0);
   const pVat = Number(dInv.taxAmount || 0);
   const pTotal = Number(dInv.totalAmount || 0);
-  const pCustName = dCust?.name || dCust?.nameAr || "Walk-in Customer";
-  const pCustNameAr = dCust?.nameAr || "";
-  const pCustPhone = dCust?.phone || "";
-  const pCustAddr = dCust?.address || "";
-  const pCustAddrAr = dCust?.addressAr || "";
-  const pCustVat = dCust?.vatNumber || dCust?.taxNumber || "";
-  const pCustCr = dCust?.crNumber || (dCust as any)?.commercialRegistration || "";
-  const pCustEmail = dCust?.email || "";
+  const pCustName = dInvRow.customerName || dCust?.name || dCust?.nameAr || "Walk-in Customer";
+  const pCustNameAr = dInvRow.customerNameAr || dCust?.nameAr || "";
+  const pCustPhone = dInvRow.customerPhone || dCust?.phone || "";
+  const pCustAddr = dInvRow.customerAddress || dCust?.address || "";
+  const pCustAddrAr = dInvRow.customerAddressAr || dCust?.addressAr || "";
+  const pCustVat = dInvRow.customerVat || dCust?.vatNumber || dCust?.taxNumber || "";
+  const pCustCr = dInvRow.customerCr || dCust?.crNumber || (dCust as any)?.commercialRegistration || "";
+  const pCustEmail = dInvRow.customerEmail || dCust?.email || "";
   const pType = dInv.invoiceType === "zatca" ? "zatca" : "standard";
   const printItemsWithAr = (detail.items || []).map((it: any, i: number) => ({
-    no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
+    no: i + 1, name: cleanItemName(it.description) || `Item #${it.productId || it.id}`,
     nameAr: it.descriptionAr || "", productId: it.productId ?? null,
     unit: it.unit || it.unitName || "",
     qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
@@ -104,6 +105,8 @@ function InvoicePreview({ detail, companyData }: { detail: any; companyData: any
     />
   );
 }
+
+const cleanItemName = (s: any) => String(s ?? "").replace(/^\[(?:custom-)?\d+\]\s*/, "");
 
 export default function InvoicesPage() {
   const queryClient = useQueryClient();
@@ -336,11 +339,11 @@ export default function InvoicesPage() {
     setWorkedMonth((inv as any).workedMonth || "");
   }, [editTargetId, invoiceDetail.data]);
 
-  const addToCart = (product: { id: string; name: string; price: number; sku?: string }) => {
+  const addToCart = (product: { id: string; name: string; price: number; sku?: string; nameAr?: string }) => {
     setCart(prev => {
       const ex = prev.find(i => i.id === product.id);
       if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { id: product.id, name: product.name || "Item", price: Number(product.price || 0), qty: 1, sku: product.sku }];
+      return [...prev, { id: product.id, name: product.name || "Item", nameAr: product.nameAr || undefined, price: Number(product.price || 0), qty: 1, sku: product.sku }];
     });
   };
 
@@ -429,12 +432,13 @@ export default function InvoicesPage() {
     if (!cart.length) { toast.error("Add at least one item to the cart"); return; }
     try {
       const items = cart.map(item => ({
-        description: `[${item.id}] ${item.name}`,
+        description: item.name,
+        descriptionAr: item.nameAr || undefined,
         quantity: item.qty,
         unitPrice: item.price.toString(),
         taxPercent: taxPercent.toString(),
         totalAmount: (item.price * item.qty).toFixed(2),
-        unit: item.unit || "pcs", sku: item.sku,
+        unit: item.unit || "Piece", sku: item.sku,
       }));
       const payload = {
         invoiceNumber: `BILL-${Date.now().toString().slice(-6)}`,
@@ -479,7 +483,7 @@ export default function InvoicesPage() {
 
     const printItems = useDetail
       ? detailItems.map((it: any, i: number) => ({
-          no: i + 1, name: it.description || `Item #${it.productId || it.id}`,
+          no: i + 1, name: cleanItemName(it.description) || `Item #${it.productId || it.id}`,
           nameAr: it.descriptionAr || "", productId: it.productId ?? null,
           unit: it.unit || it.unitName || "",
           qty: Number(it.quantity || 1), rate: Number(it.unitPrice || 0), total: Number(it.totalAmount || 0),
@@ -491,14 +495,15 @@ export default function InvoicesPage() {
     const pDisc = useDetail ? Number(detailInvoice?.discountAmount || 0) : discount;
     const pVat = useDetail ? Number(detailInvoice?.taxAmount || 0) : vat;
     const pTotal = useDetail ? Number(detailInvoice?.totalAmount || 0) : total;
-    const pCustName = useDetail ? (detailCustomer?.name || detailCustomer?.nameAr || "Walk-in Customer") : (customerName || "Walk-in Customer");
-    const pCustNameAr = useDetail ? (detailCustomer?.nameAr || "") : customerNameAr;
-    const pCustPhone = useDetail ? detailCustomer?.phone : customerPhone;
-    const pCustAddr = useDetail ? detailCustomer?.address : customerAddress;
-    const pCustAddrAr = useDetail ? detailCustomer?.addressAr : customerAddressAr;
-    const pCustVat = useDetail ? (detailCustomer?.vatNumber || detailCustomer?.taxNumber) : customerVat;
-    const pCustCr = useDetail ? detailCustomer?.crNumber : customerCr;
-    const pCustEmail = useDetail ? (detailCustomer?.email || "") : customerEmail;
+    const dInvRow = detailInvoice as any;
+    const pCustName = useDetail ? (dInvRow?.customerName || detailCustomer?.name || detailCustomer?.nameAr || "Walk-in Customer") : (customerName || "Walk-in Customer");
+    const pCustNameAr = useDetail ? (dInvRow?.customerNameAr || detailCustomer?.nameAr || "") : customerNameAr;
+    const pCustPhone = useDetail ? (dInvRow?.customerPhone || detailCustomer?.phone || "") : customerPhone;
+    const pCustAddr = useDetail ? (dInvRow?.customerAddress || detailCustomer?.address || "") : customerAddress;
+    const pCustAddrAr = useDetail ? (dInvRow?.customerAddressAr || detailCustomer?.addressAr || "") : customerAddressAr;
+    const pCustVat = useDetail ? (dInvRow?.customerVat || detailCustomer?.vatNumber || detailCustomer?.taxNumber || "") : customerVat;
+    const pCustCr = useDetail ? (dInvRow?.customerCr || detailCustomer?.crNumber || "") : customerCr;
+    const pCustEmail = useDetail ? (dInvRow?.customerEmail || detailCustomer?.email || "") : customerEmail;
     const pCustPo = useDetail ? detailInvoice?.poNumber : poNo;
     const pType = useDetail ? (detailInvoice?.invoiceType === "zatca" ? "zatca" : "standard") : invoiceTypeMode;
 

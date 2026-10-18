@@ -108,14 +108,17 @@ export function generateInvoiceHtml(params: {
 
   const qtyTotal = printItems.reduce((s, i) => s + Number(i.qty ?? i.totalHour ?? 0), 0);
   const coAr = companyNameAr || companyName;
-  const custLine = pCustNameAr ? `${pCustName} / ${pCustNameAr}` : pCustName;
+  const custLine = pCustName || pCustNameAr;
+  const addrLine = pCustAddr && pCustAddrAr && pCustAddr !== pCustAddrAr
+    ? `${pCustAddr} / ${pCustAddrAr}` : (pCustAddr || pCustAddrAr || '');
 
   const valRow = (label: string, val: string) =>
     `<tr><td colspan="5"></td><td class="lbl">${esc(label)}</td><td class="c bd">${esc(val)}</td></tr>`;
 
+  const cleanName = (s: any) => String(s ?? '').replace(/^\[(?:custom-)?\d+\]\s*/, '');
   const itRows = (printItems.length ? printItems : [{ no: 1, name: '', rate: 0, total: 0 }]).map((l, i) =>
     `<tr><td class="sn">${i + 1}</td><td class="c bd">${esc(l.productId ?? l.sku ?? '')}</td>` +
-    `<td class="l bd">${esc(l.name)}${l.nameAr ? ` <span dir="rtl">${esc(l.nameAr)}</span>` : ''}</td>` +
+    `<td class="l bd">${esc(cleanName(l.name))}${l.nameAr && l.nameAr !== cleanName(l.name) ? ` <span dir="rtl">${esc(l.nameAr)}</span>` : ''}</td>` +
     `<td class="c bd">${esc(l.unit ?? '')}</td><td class="c bd">${Number(l.qty ?? l.totalHour ?? 0)}</td>` +
     `<td class="c bd">${fmt(l.rate)}</td><td class="c bd">${fmt(l.total)}</td></tr>`).join('');
 
@@ -137,7 +140,8 @@ export function generateInvoiceHtml(params: {
   .lh-l .t1 { font-size:12pt; font-weight:700; }
   .lh-l .red, .lh-r .red { color:#FF0000; font-weight:700; font-size:11pt; }
   .lh-c { width:24%; text-align:center; }
-  .lh-c img { max-height:23mm; max-width:95%; }
+  /* Same picture box as the 0060 template's logo image (a:ext 1201615x816532 EMU). */
+  .lh-c img { width:33.4mm; height:22.7mm; object-fit:fill; }
   .lh-r { width:38%; text-align:center; font-family:Arial,Tahoma,sans-serif; direction:rtl; font-size:10.5pt; line-height:1.35; }
   .lh-r .t1 { font-weight:700; font-size:11pt; }
   .gray { background:#D9D9D9; }
@@ -174,12 +178,12 @@ export function generateInvoiceHtml(params: {
       <td></td><td style="font-size:10pt" dir="rtl">${esc(docTitleAr)}</td>
       <td colspan="5" class="c" style="font-size:16pt">${esc(coAr)}</td>
     </tr>
-    <tr><td></td><td></td><td></td><td></td><td colspan="3">${companyVat ? `Tax No. ${esc(companyVat)}` : ''}</td></tr>
+    <tr><td></td><td class="lbl">C.R. No</td><td>${esc(pCustCr || '')}</td><td class="lbl">Tax No.</td><td colspan="3">${esc(pCustVat || '')}</td></tr>
     <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(invoiceNo || '')}</td><td class="lbl">Client</td><td colspan="3"><b>${esc(custLine)}</b></td></tr>
-    <tr><td></td><td class="lbl">Payment</td><td>${esc(paymentType)}</td><td class="lbl">Tax No.</td><td colspan="3">${esc(pCustVat || '')}</td></tr>
-    <tr><td></td><td class="lbl">Date</td><td>${esc(date || '')}</td><td></td><td colspan="3">${esc([pCustAddr, pCustAddrAr].filter(Boolean).join(' / '))}</td></tr>
-    <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td></td><td colspan="3">${esc(pCustPhone || '')}</td></tr>
-    <tr><td></td><td class="lbl">Due Date</td><td>${esc(dueDate || date || '')}</td><td></td><td colspan="3">${esc(pCustCr ? `CR: ${pCustCr}` : '')}${pCustEmail ? ` ${esc(pCustEmail)}` : ''}</td></tr>
+    <tr><td></td><td class="lbl">Payment</td><td>${esc(paymentType)}</td><td class="lbl">Arabic Name</td><td colspan="3">${esc(pCustNameAr || '')}</td></tr>
+    <tr><td></td><td class="lbl">Date</td><td>${esc(date || '')}</td><td class="lbl">Address</td><td colspan="3">${esc(addrLine)}</td></tr>
+    <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td class="lbl">Phone No.</td><td colspan="3">${esc(pCustPhone || '')}</td></tr>
+    <tr><td></td><td class="lbl">Due Date</td><td>${esc(dueDate || date || '')}</td><td class="lbl">Email</td><td colspan="3">${esc(pCustEmail || '')}</td></tr>
     <tr><td></td><td class="lbl">Cashier</td><td>${esc(cashier)}</td><td class="lbl">PO No</td><td colspan="3">${esc(poNumber || pCustPo || '')}</td></tr>
     ${workedMonth ? `<tr><td></td><td class="lbl">Worked Month</td><td colspan="5">${esc(workedMonth)}</td></tr>` : ''}
     ${(note || noteAr) ? `<tr><td></td><td class="lbl">Remarks</td><td colspan="5">${esc(note || '')}${noteAr ? ` — ${esc(noteAr)}` : ''}</td></tr>` : ''}

@@ -81,17 +81,22 @@ async function buildSalesReturnForm(data: {
   const coEmail = co?.email || "info@yafco.com.sa";
   const coWeb = co?.website || "www.yafco.com.sa";
 
-  const custName = customer?.name || inv.customer_name || inv.customerName || "Walk-in Customer";
-  const custVat = customer?.vatNumber || customer?.taxNumber || inv.customer_vat || inv.customerVat || "";
-  const custAddr = customer?.address || inv.customer_address || inv.customerAddress || "";
-  const custPhone = customer?.phone || inv.customer_phone || inv.customerPhone || "";
+  const custName = inv.customer_name || inv.customerName || customer?.name || "Walk-in Customer";
+  const custNameAr = inv.customer_name_ar || inv.customerNameAr || customer?.name_ar || customer?.nameAr || "";
+  const custVat = inv.customer_vat || inv.customerVat || customer?.vatNumber || customer?.taxNumber || "";
+  const custCr = inv.customer_cr || inv.customerCr || customer?.crNumber || customer?.commercialRegistration || "";
+  const custAddr = inv.customer_address || inv.customerAddress || customer?.address || "";
+  const custAddrAr = inv.customer_address_ar || inv.customerAddressAr || customer?.addressAr || "";
+  const custPhone = inv.customer_phone || inv.customerPhone || customer?.phone || "";
+  const custEmail = inv.customer_email || inv.customerEmail || customer?.email || "";
+  const custJoined = custAddr && custAddrAr && custAddr !== custAddrAr ? `${custAddr} / ${custAddrAr}` : (custAddr || custAddrAr);
 
   const invoiceNo = inv.invoice_number || inv.invoiceNumber || inv.invoice_no || "";
   const payType = inv.payment_method || inv.payment_type || inv.paymentType || "Credit";
   const cashier = inv.cashier || inv.cashier_name || "\u0645\u062f\u064a\u0631 \u0627\u0644\u0646\u0638\u0627\u0645";
   const poNum = inv.po_number || inv.poNumber || "";
   const dueRaw = inv.due_date || inv.dueDate || "";
-  const notes = inv.notes || "";
+  const notes = [inv.notes, inv.notes_ar || inv.notesAr].map((x: any) => String(x ?? "").trim()).filter(Boolean).join(" / ");
   const titleEn = (inv.invoice_type === "zatca" || inv.invoiceType === "zatca") ? "TAX INVOICE" : "SALES INVOICE";
 
   const dt = inv.date ? new Date(inv.date) : (inv.created_at ? new Date(inv.created_at) : new Date());
@@ -180,19 +185,23 @@ async function buildSalesReturnForm(data: {
   ws.getCell(`C${row}`).fill = BAND;
   ws.getRow(row).height = 26.25;
   row++;
-  // ===== Row 8: company tax =====
-  ws.getCell(`E${row}`).value = `Tax No. ${coVat}`;
-  ws.getCell(`E${row}`).font = F8;
-  row++;
-  // ===== Meta + client card =====
+  // ===== Row 8: client C.R. / Tax (company CR/tax live in the letterhead) =====
   const lab = (c: string, v: string) => { ws.getCell(c).value = v; ws.getCell(c).font = F8B; };
   const val = (c: string, v: string) => { ws.getCell(c).value = v; ws.getCell(c).font = F8; };
-  lab(`B${row}`, "Doc. No."); val(`C${row}`, invoiceNo); lab(`D${row}`, "Client"); row++;
-  lab(`B${row}`, "Payment"); val(`C${row}`, payType); val(`D${row}`, custName); row++;
+  if (custCr) val(`C${row}`, `C.R. No. ${custCr}`);
+  if (custVat) val(`E${row}`, `Tax No. ${custVat}`);
+  row++;
+  // ===== Meta + client card (every field carries its label, like the CR) =====
+  lab(`B${row}`, "Doc. No."); val(`C${row}`, invoiceNo);
+  val(`D${row}`, `Client: ${custName}`); row++;
+  lab(`B${row}`, "Payment"); val(`C${row}`, payType);
+  if (custNameAr) val(`D${row}`, `Arabic Name: ${custNameAr}`); row++;
   lab(`B${row}`, "Date"); val(`C${row}`, dateStr);
-  if (custVat) val(`D${row}`, `Tax No. ${custVat}`); row++;
-  lab(`B${row}`, "Time"); val(`C${row}`, timeStr); val(`D${row}`, custAddr); row++;
-  lab(`B${row}`, "Due Date"); val(`C${row}`, dueStr); val(`D${row}`, custPhone); row++;
+  if (custJoined) val(`D${row}`, `Address: ${custJoined}`); row++;
+  lab(`B${row}`, "Time"); val(`C${row}`, timeStr);
+  if (custPhone) val(`D${row}`, `Phone No.: ${custPhone}`); row++;
+  lab(`B${row}`, "Due Date"); val(`C${row}`, dueStr);
+  if (custEmail) val(`D${row}`, `Email: ${custEmail}`); row++;
   lab(`B${row}`, "Cashier"); val(`C${row}`, cashier);
   if (poNum) { lab(`D${row}`, "PO No."); val(`E${row}`, poNum); }
   row++;
@@ -212,7 +221,7 @@ async function buildSalesReturnForm(data: {
     const qty = Number(r.quantity ?? 0);
     const rate = Number(r.unit_price ?? 0);
     const tot = Number(r.total_amount ?? qty * rate);
-    const title = r.description || "";
+    const title = String(r.description || "").replace(/^\[(?:custom-)?\d+\]\s*/, "");
     const titleAr = r.description_ar || "";
     ws.getCell(`A${row}`).value = i + 1;
     ws.getCell(`A${row}`).font = F8B;
@@ -352,6 +361,8 @@ export const excelRouter = createRouter({
       const custVat = customer?.vat_number || customer?.tax_number || inv.customer_vat || "";
       const custCr = customer?.cr_number || customer?.commercial_registration || inv.customer_cr || "";
       const custAddr = customer?.address || inv.customer_address || "";
+      const custPhone = customer?.phone || inv.customer_phone || "";
+      const custEmail = inv.customer_email || customer?.email || "";
 
       // Invoice details
       const invoiceNo = inv.invoice_no || inv.invoiceNumber || inv.invoice_number || "";
@@ -549,24 +560,49 @@ export const excelRouter = createRouter({
       ws.getCell(`A${row}`).font = { name: "Calibri", size: 10, color: { argb: "FF0563C1" }, underline: true };
       row++;
 
-      // Client info on the right side
+      // Client info on the right side (each field carries its own label)
       const clientStartRow = row - 5;
       ws.mergeCells(`E${clientStartRow}:H${clientStartRow}`);
-      ws.getCell(`E${clientStartRow}`).value = `Client: ${custName}${custNameAr ? `, ${custNameAr}` : ""}`;
+      ws.getCell(`E${clientStartRow}`).value = `Client: ${custName}`;
       ws.getCell(`E${clientStartRow}`).font = { ...FONT_AR_BOLD, size: 11 };
       row++;
-      ws.mergeCells(`E${row}:H${row}`);
-      ws.getCell(`E${row}`).value = `Tax No: ${custVat}`;
-      ws.getCell(`E${row}`).font = FONT_AR;
-      row++;
-      ws.mergeCells(`E${row}:H${row}`);
-      ws.getCell(`E${row}`).value = `CR: ${custCr}`;
-      ws.getCell(`E${row}`).font = FONT_AR;
-      row++;
-      ws.mergeCells(`E${row}:H${row}`);
-      ws.getCell(`E${row}`).value = `Address: ${custAddr}`;
-      ws.getCell(`E${row}`).font = FONT_AR;
-      ws.getCell(`E${row}`).alignment = { wrapText: true, vertical: "top" };
+      if (custNameAr) {
+        ws.mergeCells(`E${row}:H${row}`);
+        ws.getCell(`E${row}`).value = `Arabic Name: ${custNameAr}`;
+        ws.getCell(`E${row}`).font = FONT_AR;
+        row++;
+      }
+      if (custVat) {
+        ws.mergeCells(`E${row}:H${row}`);
+        ws.getCell(`E${row}`).value = `Tax No.: ${custVat}`;
+        ws.getCell(`E${row}`).font = FONT_AR;
+        row++;
+      }
+      if (custCr) {
+        ws.mergeCells(`E${row}:H${row}`);
+        ws.getCell(`E${row}`).value = `C.R. No. ${custCr}`;
+        ws.getCell(`E${row}`).font = FONT_AR;
+        row++;
+      }
+      if (custAddr) {
+        ws.mergeCells(`E${row}:H${row}`);
+        ws.getCell(`E${row}`).value = `Address: ${custAddr}`;
+        ws.getCell(`E${row}`).font = FONT_AR;
+        ws.getCell(`E${row}`).alignment = { wrapText: true, vertical: "top" };
+        row++;
+      }
+      if (custPhone) {
+        ws.mergeCells(`E${row}:H${row}`);
+        ws.getCell(`E${row}`).value = `Phone No.: ${custPhone}`;
+        ws.getCell(`E${row}`).font = FONT_AR;
+        row++;
+      }
+      if (custEmail) {
+        ws.mergeCells(`E${row}:H${row}`);
+        ws.getCell(`E${row}`).value = `Email: ${custEmail}`;
+        ws.getCell(`E${row}`).font = FONT_AR;
+        row++;
+      }
       row += 2; // Skip a line after company/client
 
       // ===== ITEMS TABLE HEADER (2 rows: Arabic + English) =====

@@ -607,6 +607,8 @@ export const salesRouter = createRouter({
           unitPrice: item.unitPrice,
           taxPercent: item.taxPercent,
           totalAmount: item.totalAmount,
+          unit: item.unit,
+          sku: item.sku || null,
           productId: item.productId,
         });
         // Auto-save new products to database for future use
@@ -692,10 +694,13 @@ export const salesRouter = createRouter({
         id: z.number().optional(),
         productId: z.number().optional(),
         description: z.string(),
+        descriptionAr: z.string().optional(),
         quantity: z.number(),
         unitPrice: z.string(),
         taxPercent: z.string().optional(),
         totalAmount: z.string(),
+        unit: z.string().optional(),
+        sku: z.string().optional(),
       })).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
