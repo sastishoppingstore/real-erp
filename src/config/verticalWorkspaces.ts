@@ -68,7 +68,7 @@ const C = {
   cyan: "bg-cyan-100 text-cyan-700 border-cyan-200",
 };
 
-const linkSales: QuickLink = { label: "Invoices", labelAr: "الفواتير", path: "/app/sales/invoices", icon: "Receipt" };
+const linkSales: QuickLink = { label: "Invoices", labelAr: "الفواتير", path: "/app/construction/sahl/sales", icon: "Receipt" };
 const linkCrm: QuickLink = { label: "Customers", labelAr: "العملاء", path: "/app/crm", icon: "Users" };
 const linkInventory: QuickLink = { label: "Inventory", labelAr: "المخزون", path: "/app/inventory/products", icon: "Package" };
 const linkPurchase: QuickLink = { label: "Purchases", labelAr: "المشتريات", path: "/app/purchase", icon: "ShoppingBag" };

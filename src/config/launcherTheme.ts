@@ -98,7 +98,7 @@ export const LAUNCHER_GROUPS: LauncherGroup[] = [
       { key: "customers", label: "Customers", labelAr: "العملاء", icon: Users, path: "/app/sales/customers", ...pickGradient(0) },
       { key: "quotations", label: "Quotations", labelAr: "عروض الأسعار", icon: Receipt, path: "/app/sales/quotations", ...pickGradient(1) },
       { key: "orders", label: "Sales Orders", labelAr: "أوامر البيع", icon: ShoppingCart, path: "/app/sales/orders", ...pickGradient(2) },
-      { key: "invoices", label: "Invoices", labelAr: "الفواتير", icon: Receipt, path: "/app/sales/invoices", ...pickGradient(3) },
+      { key: "invoices", label: "Invoices", labelAr: "الفواتير", icon: Receipt, path: "/app/construction/sahl/sales", ...pickGradient(3) },
       { key: "credit-notes", label: "Credit Notes", labelAr: "إشعارات دائنة", icon: Receipt, path: "/app/sales/credit-notes", ...pickGradient(4) },
       { key: "payments", label: "Customer Payments", labelAr: "مدفوعات العملاء", icon: Landmark, path: "/app/sales/payments", ...pickGradient(5) },
     ],

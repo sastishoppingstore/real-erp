@@ -30,7 +30,7 @@ import { getStoredCategory } from "@/config/businessCatalog";
 const COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 const quickActions = [
-  { label: "New Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/sales/invoices", color: "bg-blue-500 hover:bg-blue-600" },
+  { label: "New Invoice", labelAr: "فاتورة جديدة", icon: Receipt, path: "/app/construction/sahl/sales", color: "bg-blue-500 hover:bg-blue-600" },
   { label: "New Quotation", labelAr: "عرض سعر جديد", icon: FileText, path: "/app/sales/quotations", color: "bg-emerald-500 hover:bg-emerald-600" },
   { label: "New Project", labelAr: "مشروع جديد", icon: FolderKanban, path: "/app/projects/list", color: "bg-purple-500 hover:bg-purple-600" },
   { label: "New Employee", labelAr: "موظف جديد", icon: Users, path: "/app/hrm/employees", color: "bg-indigo-500 hover:bg-indigo-600" },
@@ -179,7 +179,7 @@ export default function Dashboard() {
     { label: "ZATCA invoices pending clearance", labelAr: "فواتير ZATCA في انتظار الموافقة", count: zatcaPending, severity: "info", icon: Shield, path: "/app/reports/zatca-status", action: rtl ? "عرض" : "View" },
     { label: "ZATCA invoices failed", labelAr: "فواتير ZATCA فاشلة", count: zatcaFailed, severity: "critical", icon: Shield, path: "/app/reports/zatca-status", action: rtl ? "إعادة المحاولة" : "Retry" },
     { label: "Employees with expiring Iqama", labelAr: "موظفون بإقامة منتهية الصلاحية", count: 0, severity: "warning", icon: Clock, path: "/app/hrm/employees", action: rtl ? "عرض الموظفين" : "View Employees" },
-    { label: "Overdue invoices", labelAr: "فواتير متأخرة", count: 0, severity: "critical", icon: CreditCard, path: "/app/sales/invoices", action: rtl ? "تحصيل" : "Collect" },
+    { label: "Overdue invoices", labelAr: "فواتير متأخرة", count: 0, severity: "critical", icon: CreditCard, path: "/app/construction/sahl/sales", action: rtl ? "تحصيل" : "Collect" },
   ].filter(a => a.count > 0);
 
   const severityColors: Record<string, string> = {
@@ -514,7 +514,7 @@ export default function Dashboard() {
               {(Array.isArray(recentInvoices) ? recentInvoices : []).slice(0, 5).map((inv) => (
                 <Link
                   key={inv.id}
-                  to={`/app/sales/invoices`}
+                  to={`/app/construction/sahl/sales`}
                   className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -576,7 +576,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { label: rtl ? "فواتير في انتظار الموافقة" : "Invoices waiting approval", value: 12, tone: "bg-amber-50 text-amber-700", icon: FileText, path: "/app/sales/invoices" },
+              { label: rtl ? "فواتير في انتظار الموافقة" : "Invoices waiting approval", value: 12, tone: "bg-amber-50 text-amber-700", icon: FileText, path: "/app/construction/sahl/sales" },
               { label: rtl ? "أصناف منخفضة المخزون" : "Stock below reorder point", value: stats?.lowStockItems || 0, tone: "bg-red-50 text-red-700", icon: Package, path: "/app/inventory/stock" },
               { label: rtl ? "مشاريع بدون سجلات وقت" : "Projects missing timesheets", value: 7, tone: "bg-cyan-50 text-cyan-700", icon: Clock, path: "/app/projects/timesheets" },
               { label: rtl ? "تذاكر دعم متأخرة" : "Overdue support tickets", value: stats?.openTickets || 0, tone: "bg-blue-50 text-blue-700", icon: HeadphonesIcon, path: "/app/helpdesk/tickets" },

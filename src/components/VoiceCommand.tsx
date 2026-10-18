@@ -4,8 +4,8 @@
  * آواز سنتا ہے → Gemini سے intent سمجھتا ہے → navigate/action کرتا ہے
  * 
  * مثال آوازی حکم:
- *   "Show me invoices"          → /app/sales/invoices
- *   "فواتیر دکھاؤ"               → /app/sales/invoices
+ *   "Show me invoices"          → /app/construction/sahl/sales
+ *   "فواتیر دکھاؤ"               → /app/construction/sahl/sales
  *   "Open dashboard"            → /app
  *   "New customer"              → /app/sales/customers
  *   "Go to reports"             → /app/reports
@@ -21,7 +21,7 @@ import { trpc } from "@/providers/trpc";
 /* ── Navigation Map ──────────────────────────────────────── */
 const NAV_MAP: Array<{ keywords: string[]; path: string; label: string; labelAr: string; labelUr: string }> = [
   { keywords: ["dashboard", "home", "main", "لوحة", "لوحة التحكم", "ہوم", "ڈیش بورڈ", "مین"], path: "/app", label: "Dashboard", labelAr: "لوحة التحكم", labelUr: "ڈیش بورڈ" },
-  { keywords: ["invoice", "invoices", "فاتورة", "فواتير", "فاتورے", "فواتیر", "billing"], path: "/app/sales/invoices", label: "Invoices", labelAr: "الفواتير", labelUr: "فواتیر" },
+  { keywords: ["invoice", "invoices", "فاتورة", "فواتير", "فاتورے", "فواتیر", "billing"], path: "/app/construction/sahl/sales", label: "Invoices", labelAr: "الفواتير", labelUr: "فواتیر" },
   { keywords: ["customer", "customers", "client", "عميل", "عملاء", "کسٹمر", "گاہک"], path: "/app/sales/customers", label: "Customers", labelAr: "العملاء", labelUr: "گاہک" },
   { keywords: ["product", "products", "item", "صنف", "أصناف", "پروڈکٹ", "مصنوعات", "inventory"], path: "/app/inventory/products", label: "Products", labelAr: "الأصناف", labelUr: "مصنوعات" },
   { keywords: ["sales", "sale", "مبيعات", "سیلز", "فروخت"], path: "/app/sales", label: "Sales", labelAr: "المبيعات", labelUr: "فروخت" },

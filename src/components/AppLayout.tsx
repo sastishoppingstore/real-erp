@@ -189,7 +189,7 @@ const menuGroups = [
       { label: "Customers", labelAr: "العملاء", icon: Users, path: "/app/sales/customers" },
       { label: "Quotations", labelAr: "عروض الأسعار", icon: Receipt, path: "/app/sales/quotations" },
       { label: "Sales Orders", labelAr: "أوامر البيع", icon: ShoppingCart, path: "/app/sales/orders" },
-      { label: "Invoices", labelAr: "الفواتير", icon: Receipt, path: "/app/sales/invoices" },
+      { label: "Invoices", labelAr: "الفواتير", icon: Receipt, path: "/app/construction/sahl/sales" },
       { label: "Credit Notes", labelAr: "إشعارات دائنة", icon: Receipt, path: "/app/sales/credit-notes" },
       { label: "Customer Payments", labelAr: "مدفوعات العملاء", icon: Landmark, path: "/app/sales/payments" },
     ],

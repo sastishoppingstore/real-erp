@@ -6,7 +6,7 @@ export default function SalesPage() {
   const modules = [
     { title: "Customers", desc: "Customer management & credit", icon: Users, path: "/app/sales/customers", color: "bg-blue-600" },
     { title: "Quotations", desc: "Create and send quotations", icon: Receipt, path: "/app/sales/quotations", color: "bg-emerald-600" },
-    { title: "Invoices", desc: "Sales invoicing with ZATCA", icon: ShoppingCart, path: "/app/sales/invoices", color: "bg-purple-600" },
+    { title: "Invoices", desc: "Sales invoicing with ZATCA", icon: ShoppingCart, path: "/app/construction/sahl/sales", color: "bg-purple-600" },
     { title: "Payments", desc: "Customer payment tracking", icon: CreditCard, path: "/app/sales/payments", color: "bg-orange-600" },
   ];
 
