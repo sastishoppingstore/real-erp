@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "YASCO ERP",
-  "version": "5.6.0",
+  "version": "15.6.0",
   "identifier": "com.yasco.erp",
   "build": {
     "frontendDist": "../dist/public",
@@ -10,21 +10,7 @@
     "beforeBuildCommand": "npm run build && npm run build:desktop"
   },
   "app": {
-    "windows": [
-      {
-        "title": "YASCO ERP",
-        "url": "https://yasco.tech/app/construction",
-        "width": 1440,
-        "height": 900,
-        "minWidth": 1100,
-        "minHeight": 720,
-        "resizable": true,
-        "fullscreen": false,
-        "center": true,
-        "decorations": true,
-        "shadow": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }

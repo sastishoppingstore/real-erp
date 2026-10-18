@@ -57,6 +57,7 @@ pub fn run() {
     ])
     .setup(|app| {
       start_local_backend(app)?;
+      create_main_window(app)?;
 
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -137,6 +138,51 @@ fn start_local_backend(app: &mut tauri::App) -> Result<(), Box<dyn std::error::E
   app.manage(BackendChild(Some(child)));
   wait_for_backend("127.0.0.1:32145", Duration::from_secs(15))?;
   Ok(())
+}
+
+fn create_main_window(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+  // The main window is created here (instead of tauri.conf.json) so the
+  // on_download handler can be attached. Tauri/WebView2 drops downloads by
+  // default, which silently broke the invoice xlsx (Excel) export in the app.
+  tauri::WebviewWindowBuilder::new(
+    app,
+    "main",
+    tauri::WebviewUrl::External("https://yasco.tech/app/construction".parse()?),
+  )
+  .title("YASCO ERP")
+  .inner_size(1440.0, 900.0)
+  .min_inner_size(1100.0, 720.0)
+  .resizable(true)
+  .fullscreen(false)
+  .decorations(true)
+  .shadow(true)
+  .center()
+  .on_download(|_webview, event| {
+    if let tauri::webview::DownloadEvent::Requested { destination, .. } = event {
+      // Save every download (invoice xlsx exports etc.) into the user's
+      // Downloads folder, keeping the suggested file name.
+      let file_name = destination
+        .file_name()
+        .map(|name| name.to_owned())
+        .unwrap_or_else(|| std::ffi::OsString::from("download.bin"));
+      *destination = downloads_dir().join(file_name);
+    }
+    true
+  })
+  .build()?;
+
+  Ok(())
+}
+
+fn downloads_dir() -> std::path::PathBuf {
+  #[cfg(windows)]
+  if let Ok(profile) = std::env::var("USERPROFILE") {
+    let dir = std::path::Path::new(&profile).join("Downloads");
+    let _ = fs::create_dir_all(&dir);
+    return dir;
+  }
+
+  std::env::temp_dir()
 }
 
 fn normalize_node_path(path: &Path) -> std::path::PathBuf {
