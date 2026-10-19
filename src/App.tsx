@@ -343,6 +343,7 @@ const SahlSettings = lazy(() => import("./pages/construction/sahl/Settings"));
 const SahlProducts = lazy(() => import("./pages/construction/sahl/Products"));
 const SahlAccounts = lazy(() => import("./pages/construction/sahl/Accounts"));
 const SahlTxn = lazy(() => import("./pages/construction/sahl/Txn"));
+const SahlInvoiceHistory = lazy(() => import("./pages/construction/sahl/InvoiceHistory"));
 const SahlCash = lazy(() => import("./pages/construction/sahl/Cash"));
 const SahlDaily = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlDaily })));
 const SahlSalesAnalysis = lazy(() => import("./pages/construction/sahl/Reports").then((m) => ({ default: m.SahlSalesAnalysis })));
@@ -941,6 +942,7 @@ export default function App() {
         <Route path="sahl/products" element={<SahlProducts />} />
         <Route path="sahl/accounts" element={<SahlAccounts />} />
         <Route path="sahl/sales" element={<SahlTxn kind="sales" />} />
+        <Route path="invoice-history" element={<SahlInvoiceHistory />} />
         <Route path="sahl/purchase" element={<SahlTxn kind="purchase" />} />
         <Route path="sahl/sales-return" element={<SahlTxn kind="sales-return" />} />
         <Route path="sahl/purchase-return" element={<SahlTxn kind="purchase-return" />} />

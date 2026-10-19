@@ -97,6 +97,7 @@ const quickMenu = [
   { label: "Accounts", labelAr: "الحسابات", path: "/app/construction/subcontractors" },
   { label: "Treasury", labelAr: "الخزينة", path: "/app/construction/advance-payments" },
   { label: "Invoices", labelAr: "الفواتير", path: "/app/construction/sahl/sales" },
+  { label: "Invoice History", labelAr: "سجل الفواتير", path: "/app/construction/invoice-history" },
   { label: "Reports", labelAr: "التقارير", path: "/app/construction/cvr" },
   { label: "Warehouse", labelAr: "المخازن", path: "/app/construction/warehouses" },
 ];
@@ -278,6 +279,9 @@ function DrawerNav({ onNavigate }: { onNavigate: () => void }) {
 // keeps uncommitted lines (see SahlTxn draft effect).
 const TAB_TITLES: [string, string, string][] = [
   ["/app/construction", "إبدأ مع YASCO", "Start"],
+  ["/app/construction/invoice-history", "سجل الفواتير", "Invoice History"],
+  ["/app/construction/sahl/sales-return", "مرتجع بيع", "Sales Return"],
+  ["/app/construction/sahl/purchase-return", "مرتجع شراء", "Purchase Return"],
   ["/app/construction/sahl/sales", "بيع", "Sale"],
   ["/app/construction/sahl/purchase", "شراء", "Purchase"],
   ["/app/construction/sahl/products", "البضاعة", "Goods"],
@@ -454,7 +458,7 @@ export default function ConstructionLayout() {
       <SahlTabs rtl={rtl} />
 
       {/* ===== Full-screen content (no permanent sidebar — Sahl style) ===== */}
-      <main className="min-w-0 flex-1 p-2 pb-14 text-slate-900 lg:p-3">
+      <main className="min-w-0 flex-1 p-2 pb-24 text-slate-900 lg:p-3 lg:pb-24">
         <Outlet />
       </main>
 

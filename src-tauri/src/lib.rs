@@ -144,14 +144,17 @@ fn create_main_window(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Er
   // The main window is created here (instead of tauri.conf.json) so the
   // on_download handler can be attached. Tauri/WebView2 drops downloads by
   // default, which silently broke the invoice xlsx (Excel) export in the app.
-  tauri::WebviewWindowBuilder::new(
+  //
+  // Sizing: default 1280x800, then shrunk to fit the actual monitor so the
+  // bottom action bars / save buttons are never off-screen on small laptops.
+  let win = tauri::WebviewWindowBuilder::new(
     app,
     "main",
     tauri::WebviewUrl::External("https://yasco.tech/app/construction".parse()?),
   )
   .title("YASCO ERP")
-  .inner_size(1440.0, 900.0)
-  .min_inner_size(1100.0, 720.0)
+  .inner_size(1280.0, 800.0)
+  .min_inner_size(760.0, 500.0)
   .resizable(true)
   .fullscreen(false)
   .decorations(true)
@@ -170,6 +173,16 @@ fn create_main_window(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Er
     true
   })
   .build()?;
+
+  // Fit-to-screen: never taller/wider than the current monitor (keeps room
+  // for taskbar + title bar), then re-center. Covers 800x600 up to 4K.
+  if let Ok(Some(mon)) = win.primary_monitor() {
+    let scale = if mon.scale_factor > 0.0 { mon.scale_factor } else { 1.0 };
+    let w = (mon.size.width as f64 / scale - 16.0).clamp(760.0, 1280.0);
+    let h = (mon.size.height as f64 / scale - 110.0).clamp(500.0, 800.0);
+    let _ = win.set_size(tauri::LogicalSize::new(w, h));
+    let _ = win.center();
+  }
 
   Ok(())
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
@@ -280,6 +280,41 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   useEffect(() => {
     setLines([]); setMsg(""); setOrigId(""); setReason(""); setPartyId("");
     setPartyQ(""); setDiscount(0); setDocDate(today()); setDueDate(today()); setViewId(null); setPoViewId(null); setViewNav(0); resetCd();
+  }, [kind]);
+
+  // Invoice History deep links: /sahl/sales?view=<id> (or purchase) opens
+  // that saved document in view mode; /sahl/sales-return?orig=<id> prefills
+  // a return from that invoice (party + lines) and links the credit note
+  // back to it on save (invoiceId).
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const v = Number(searchParams.get("view") || 0);
+    if (v) {
+      if (kind === "purchase") { setPoViewId(v); setViewId(null); }
+      else if (kind === "sales") { setViewId(v); setPoViewId(null); }
+    }
+    const o = Number(searchParams.get("orig") || 0);
+    if (o && kind === "sales-return") {
+      (async () => {
+        try {
+          const data: any = await utils.sales.invoiceGet.fetch({ id: o });
+          const inv: any = data?.invoice;
+          if (!inv) { setMsg(T("لم يتم العثور على الفاتورة الأصلية", "Original invoice not found")); return; }
+          setOrigId(String(o));
+          setPartyId(String(inv.customerId ?? ""));
+          setReason(`${T("مرتجع من الفاتورة", "Return from invoice")} ${inv.invoiceNumber ?? o}`);
+          const its: any[] = data?.items ?? [];
+          setLines(its.map((it: any) => ({
+            productId: it.productId, code: it.sku ?? "", name: it.description || it.descriptionAr || "",
+            nameAr: it.descriptionAr || undefined, unit: it.unit ?? "",
+            qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0),
+            disc: 0, cost: Number(it.unitPrice || 0), serials: [], tracked: false,
+          })));
+          setMsg(`${T("مرتجع من الفاتورة", "Return from invoice")} ${inv.invoiceNumber ?? o} — ${T("راجع الكميات ثم اضغط حفظ", "check quantities, then save")}`);
+        } catch (e: any) { setMsg(String(e?.message ?? e)); }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
 
   // Draft persistence per document kind: switching tabs keeps uncommitted lines
