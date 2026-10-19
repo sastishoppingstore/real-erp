@@ -4,7 +4,8 @@ import { getDb } from "./queries/connection";
 import {
   customers, salesQuotations, salesQuotationItems,
   salesOrders, salesOrderItems, invoices, invoiceItems,
-  creditNotes, customerPayments, companySettings, auditLogs, companies, products
+  creditNotes, customerPayments, companySettings, auditLogs, companies, products,
+  inventoryBalances, inventoryMovements, warehouses, cashboxTransactions
 } from "@db/schema";
 import { eq, sql, and, like, or, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -400,6 +401,7 @@ export const salesRouter = createRouter({
       paymentType: z.string().optional(),
       cashier: z.string().optional(),
       poNumber: z.string().optional(),
+      warehouseId: z.number().optional(),
 
       items: z.array(z.object({
         productId: z.number().optional(),
@@ -581,6 +583,11 @@ export const salesRouter = createRouter({
           await db.update(customers).set(refresh).where(and(eq(customers.id, resolvedCustomerId), eq(customers.tenantId, tenantId)));
         }
       }
+      // Payment state: cash/card are collected at the counter -> fully paid,
+      // credit/deferred stays fully due (customer balance = due amount).
+      const payType = String(invoiceData.paymentType || "").toLowerCase();
+      const isCashPaid = payType === "cash";
+      const isPaidNow = isCashPaid || payType === "card";
       const [{ id }] = await db.insert(invoices).values({
         invoiceNumber: invoiceData.invoiceNumber,
         invoiceType,
@@ -611,7 +618,8 @@ export const salesRouter = createRouter({
         zatcaXml: isAboveThreshold ? zatcaXml : undefined,
         zatcaStatus: isAboveThreshold && isZatcaEligible ? "pending" : undefined,
         terms: settings?.invoiceTerms,
-        balanceDue: invoiceData.totalAmount,
+        paidAmount: isPaidNow ? String(invoiceData.totalAmount || "0") : "0",
+        balanceDue: isPaidNow ? "0" : invoiceData.totalAmount,
         status: "draft",
       }).$returningId();
       for (const item of items) {
@@ -642,6 +650,61 @@ export const salesRouter = createRouter({
           } catch (e) {
             console.warn("Product auto-save failed:", e);
           }
+        }
+      }
+      // ---- Stock posting (sale): decrease warehouse balance + movement ----
+      // Without this the "Avail" column, stock reports and valuation always
+      // showed 0 because no invoice ever touched inventory_balances.
+      let stockWarehouseId = invoiceData.warehouseId;
+      if (!stockWarehouseId) {
+        const ws = await db.select({ id: warehouses.id }).from(warehouses)
+          .where(eq(warehouses.tenantId, tenantId)).limit(1);
+        stockWarehouseId = ws[0]?.id;
+      }
+      if (stockWarehouseId) {
+        for (const item of items) {
+          if (!item.productId) continue;
+          const qty = Number(item.quantity || 0);
+          if (!qty) continue;
+          const balRows = await db.select().from(inventoryBalances).where(and(
+            eq(inventoryBalances.productId, item.productId),
+            eq(inventoryBalances.tenantId, tenantId),
+            eq(inventoryBalances.warehouseId, stockWarehouseId)));
+          if (balRows.length) {
+            const newQty = Number(balRows[0].quantity || 0) - qty;
+            await db.update(inventoryBalances).set({ quantity: newQty })
+              .where(eq(inventoryBalances.id, balRows[0].id));
+          } else {
+            await db.insert(inventoryBalances).values({
+              tenantId, productId: item.productId, warehouseId: stockWarehouseId, quantity: -qty,
+            });
+          }
+          await db.insert(inventoryMovements).values({
+            tenantId, productId: item.productId, warehouseId: stockWarehouseId,
+            movementType: "sale", quantity: -qty, reference: "Invoice", referenceId: id,
+            createdBy: ctx.user.id, unitCost: item.unitPrice,
+          });
+        }
+      }
+      // ---- Cash invoice: money collected -> cashbox (General Safe) ----
+      if (isCashPaid && Number(invoiceData.totalAmount || 0) > 0) {
+        try {
+          const lastTx = await db.select({ bal: cashboxTransactions.balanceAfter })
+            .from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, tenantId))
+            .orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+          const prevBal = Number(lastTx[0]?.bal || 0);
+          const amt = Number(invoiceData.totalAmount || 0);
+          await db.insert(cashboxTransactions).values({
+            tenantId, userId: ctx.user.id,
+            transactionNumber: `SALE-${invoiceData.invoiceNumber}`.slice(0, 50),
+            transactionType: "sale", amount: String(amt), paymentMethod: "cash",
+            referenceType: "Invoice", referenceId: id,
+            description: `Invoice ${invoiceData.invoiceNumber}${invoiceData.customerName ? " - " + invoiceData.customerName : ""}`,
+            balanceBefore: String(prevBal), balanceAfter: String(prevBal + amt),
+            status: "completed",
+          });
+        } catch (e) {
+          console.warn("Cashbox posting failed:", e);
         }
       }
       await db.insert(auditLogs).values({
@@ -898,16 +961,93 @@ export const salesRouter = createRouter({
       date: z.string(),
       amount: z.string(),
       reason: z.string().optional(),
+      warehouseId: z.number().optional(),
+      items: z.array(z.object({
+        productId: z.number().optional(),
+        code: z.string().optional(),
+        description: z.string(),
+        quantity: z.number(),
+        unitPrice: z.string().optional(),
+        totalAmount: z.string().optional(),
+      })).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
+      const tenantId = ctx.user.tenantId!;
+      // The returned item lines are kept inside the note text (marker block) so
+      // the invoice history can show product details for sales returns too.
+      const items = input.items ?? [];
+      const head = String(input.reason ?? "").trim();
+      const itemsBlock = items.length ? `\n[ITEMS]${JSON.stringify(items)}` : "";
       const [{ id }] = await db.insert(creditNotes).values({
-        ...input,
-        tenantId: ctx.user.tenantId!,
+        creditNoteNumber: input.creditNoteNumber,
+        customerId: input.customerId,
         invoiceId: input.invoiceId || 0,
+        date: input.date,
+        amount: input.amount,
+        reason: (head + itemsBlock) || null,
+        tenantId,
         status: "draft",
+        createdBy: ctx.user.id,
       }).$returningId();
+      // ---- Stock back in (return_in) ----
+      let whId = input.warehouseId;
+      if (!whId) {
+        const ws = await db.select({ id: warehouses.id }).from(warehouses)
+          .where(eq(warehouses.tenantId, tenantId)).limit(1);
+        whId = ws[0]?.id;
+      }
+      if (whId && items.length) {
+        for (const it of items) {
+          if (!it.productId) continue;
+          const qty = Number(it.quantity || 0);
+          if (!qty) continue;
+          const balRows = await db.select().from(inventoryBalances).where(and(
+            eq(inventoryBalances.productId, it.productId),
+            eq(inventoryBalances.tenantId, tenantId),
+            eq(inventoryBalances.warehouseId, whId)));
+          if (balRows.length) {
+            await db.update(inventoryBalances)
+              .set({ quantity: Number(balRows[0].quantity || 0) + qty })
+              .where(eq(inventoryBalances.id, balRows[0].id));
+          } else {
+            await db.insert(inventoryBalances).values({
+              tenantId, productId: it.productId, warehouseId: whId, quantity: qty,
+            });
+          }
+          await db.insert(inventoryMovements).values({
+            tenantId, productId: it.productId, warehouseId: whId,
+            movementType: "return_in", quantity: qty, reference: "Credit Note",
+            referenceId: id, createdBy: ctx.user.id, unitCost: it.unitPrice,
+          });
+        }
+      }
       return { id, success: true };
+    }),
+
+  creditNoteGet: authedQuery
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const tenantId = ctx.user.tenantId!;
+      const cn = await db.query.creditNotes.findFirst({
+        where: and(eq(creditNotes.id, input.id), eq(creditNotes.tenantId, tenantId)),
+      });
+      if (!cn) return null;
+      const raw = String(cn.reason ?? "");
+      const idx = raw.indexOf("[ITEMS]");
+      const reason = idx >= 0 ? raw.slice(0, idx).trim() : raw;
+      let items: any[] = [];
+      if (idx >= 0) {
+        try { items = JSON.parse(raw.slice(idx + 7).trim()) || []; } catch { items = []; }
+      }
+      const cust = cn.customerId
+        ? await db.query.customers.findFirst({ where: and(eq(customers.id, cn.customerId), eq(customers.tenantId, tenantId)) })
+        : null;
+      const inv = cn.invoiceId
+        ? await db.query.invoices.findFirst({ where: and(eq(invoices.id, cn.invoiceId), eq(invoices.tenantId, tenantId)) })
+        : null;
+      return { creditNote: cn, items, reason, customer: cust, invoice: inv };
     }),
 
   // Customer Payments
@@ -936,8 +1076,44 @@ export const salesRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const [{ id }] = await db.insert(customerPayments).values({ ...input, tenantId: ctx.user.tenantId! }).$returningId();
+      const tenantId = ctx.user.tenantId!;
+      const [{ id }] = await db.insert(customerPayments).values({ ...input, tenantId }).$returningId();
       if (input.invoiceId) {
+        // Apply the receipt to the invoice: paid / due / status.
+        const inv: any = await db.query.invoices.findFirst({
+          where: and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, tenantId)),
+        });
+        if (inv) {
+          const amount = Number(input.amount || 0);
+          const paidNow = Number(inv.paidAmount || 0) + amount;
+          const due = Math.max(0, Number(inv.totalAmount || 0) - paidNow);
+          await db.update(invoices).set({
+            paidAmount: String(paidNow),
+            balanceDue: String(due),
+            status: due <= 0.001 ? "paid" : (paidNow > 0 ? "partial" : inv.status),
+          }).where(eq(invoices.id, inv.id));
+          // Cash / card collections increase the cashbox (General Safe) balance.
+          if (input.paymentMethod === "cash" || input.paymentMethod === "card") {
+            try {
+              const lastTx = await db.select({ bal: cashboxTransactions.balanceAfter })
+                .from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, tenantId))
+                .orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+              const prevBal = Number(lastTx[0]?.bal || 0);
+              await db.insert(cashboxTransactions).values({
+                tenantId, userId: ctx.user.id,
+                transactionNumber: `PAY-${input.paymentNumber}`.slice(0, 50),
+                transactionType: "customer_payment", amount: String(amount),
+                paymentMethod: input.paymentMethod === "card" ? "card" : "cash",
+                referenceType: "Invoice", referenceId: inv.id,
+                description: `Payment for ${inv.invoiceNumber}${input.reference ? " - " + input.reference : ""}`,
+                balanceBefore: String(prevBal), balanceAfter: String(prevBal + amount),
+                status: "completed",
+              });
+            } catch (e) {
+              console.warn("cashbox receipt failed:", e);
+            }
+          }
+        }
         onPaymentReceived(ctx.user.tenantId!, input.customerId, input.invoiceId, input.amount).catch((err) =>
           console.error("[notify] onPaymentReceived error:", err)
         );

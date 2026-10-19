@@ -53,9 +53,11 @@ export default function SahlTreasury() {
   };
 
   const rows: any[] = Array.isArray(ledger) ? ledger : [];
+  // Money-IN transaction types (cash sales count as money in) vs money-out.
+  const IN_TYPES = ["cash_in", "sale", "customer_payment", "income", "opening_balance"];
   const dayNet = rows.reduce((a: number, r: any) => {
     const v = Number(r.amount || 0);
-    return a + (r.transactionType === "cash_in" ? v : -v);
+    return a + (IN_TYPES.includes(String(r.transactionType)) ? v : -v);
   }, 0);
 
   return (

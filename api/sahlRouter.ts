@@ -639,6 +639,7 @@ export const sahlRouter = createRouter({
       });
       if (!po) return null;
       const items = await db.select({
+        productId: purchaseOrderItems.productId,
         description: purchaseOrderItems.description,
         quantity: purchaseOrderItems.quantity,
         unitPrice: purchaseOrderItems.unitPrice,

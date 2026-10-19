@@ -169,11 +169,16 @@ export default function SahlInvoiceHistory() {
     for (const a of (adjs ?? []) as any[]) {
       const reason = String(a.notes ?? "");
       if (!/return|مرتجع/i.test(reason)) continue;
+      // A purchase return is stored as a stock adjustment — link it back to the
+      // original PO so the row shows the supplier and the PO number.
+      const poMatch = reason.match(/PO#(\d+)/);
+      const po: any = poMatch ? (pos ?? []).find((p: any) => String(p.id) === String(poMatch[1])) : null;
+      const sup: any = po ? supMap.get(Number(po.supplierId)) : null;
       out.push({
         key: `adj-${a.id}`, kind: "purchase-return", id: Number(a.id),
-        no: String(a.adjustmentNumber ?? `ADJ-${a.id}`),
+        no: po ? String(po.poNumber ?? `ADJ-${a.id}`) : String(a.adjustmentNumber ?? `ADJ-${a.id}`),
         date: String(a.date ?? "").slice(0, 10),
-        clientEn: reason, clientAr: reason, phone: "", taxNo: "",
+        clientEn: sup?.name ?? reason, clientAr: sup ? (sup.nameAr || sup.name) : reason, phone: "", taxNo: "",
         payment: "", total: 0, discount: 0, vat: 0,
         grand: Number(a.totalValue || 0), paid: 0, balance: 0,
         cashier: "",
@@ -217,8 +222,8 @@ export default function SahlInvoiceHistory() {
   const openRow = (r: HRow) => {
     if (r.kind === "sale") navigate(`/app/construction/sahl/sales?view=${r.id}`);
     else if (r.kind === "purchase") navigate(`/app/construction/sahl/purchase?view=${r.id}`);
-    else if (r.kind === "quotation") navigate("/app/construction/sahl/quotation");
-    else if (r.kind === "sale-return") navigate("/app/construction/sahl/sales-return");
+    else if (r.kind === "quotation") navigate(`/app/construction/sahl/quotation?view=${r.id}`);
+    else if (r.kind === "sale-return") navigate(`/app/construction/sahl/sales-return?view=${r.id}`);
   };
 
   const startReturn = (r: HRow) => navigate(`/app/construction/sahl/sales-return?orig=${r.id}`);

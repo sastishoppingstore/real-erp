@@ -14,7 +14,7 @@ export function SahlDaily() {
   const kpis: [string, string | number][] = [
     [T("مبيعات اليوم", "Day sales"), day.reduce((a: number, i: any) => a + Number(i.totalAmount || 0), 0).toFixed(2)],
     [T("فواتير", "Invoices"), day.length],
-    [T("مقبوضات الخزينة", "Cash in"), Number((today as any)?.cashIn?.total ?? 0).toFixed(2)],
+    [T("مقبوضات الخزينة", "Cash in"), (Number((today as any)?.cashIn?.total ?? 0) + Number((today as any)?.sales?.total ?? 0)).toFixed(2)],
     [T("مدفوعات الخزينة", "Cash out"), (Number((today as any)?.cashOut?.total ?? 0) + Number((today as any)?.expenses?.total ?? 0)).toFixed(2)],
   ];
   return (

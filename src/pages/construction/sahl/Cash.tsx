@@ -40,6 +40,7 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
   const cashIn = trpc.cashbox.cashIn.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
   const cashOut = trpc.cashbox.cashOut.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
   const addExpense = trpc.cashbox.addExpense.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
+  const payCreate = trpc.sales.paymentCreate.useMutation({ onSuccess: () => showSaved(lastStay.current), onError: showErr });
 
   const { data: customers } = trpc.sales.customerList.useQuery();
   const { data: suppliers } = trpc.purchase.supplierList.useQuery();
@@ -61,6 +62,35 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
       paymentMethod: f.method as any, notes: extras || undefined,
     };
     if (mode === "receipt") {
+      // A receipt from a customer must also settle their open invoice and show
+      // up in the account statement — otherwise the due never goes down.
+      if (f.accountKind === "customer" && f.accountId) {
+        const custId = Number(f.accountId);
+        (async () => {
+          try {
+            let invId: number | undefined;
+            try {
+              const invs: any[] = ((await utils.sales.invoiceList.fetch({ customerId: custId })) as any[]) ?? [];
+              const open = invs.filter((i: any) => Number(i.balanceDue || 0) > 0.001)
+                .sort((a: any, b: any) => String(a.date || "").localeCompare(String(b.date || "")))[0];
+              invId = open ? Number(open.id) : undefined;
+            } catch { /* no open invoice — record the receipt anyway */ }
+            await payCreate.mutateAsync({
+              paymentNumber: `RC-${String(Date.now()).slice(-9)}`,
+              customerId: custId,
+              ...(invId ? { invoiceId: invId } : {}),
+              date: new Date().toISOString().slice(0, 10),
+              amount: String(f.amount),
+              paymentMethod: (f.method === "card" ? "card" : f.method === "cash" ? "cash"
+                : f.method === "cheque" ? "cheque" : "bank_transfer") as any,
+              notes: [base.description, extras].filter(Boolean).join(" — ") || undefined,
+            });
+            utils.sales.paymentList.invalidate();
+            utils.sales.invoiceList.invalidate();
+          } catch (e: any) { showErr(e); }
+        })();
+        return;
+      }
       cashIn.mutate({
         ...base,
         ...(f.accountId ? { referenceType: f.accountKind, referenceId: Number(f.accountId) } : {}),
