@@ -14,6 +14,19 @@ import { LayoutThemeProvider } from "@/providers/layoutTheme"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import App from './App.tsx'
 
+// If a redeploy replaces the hashed chunks a still-open tab references, Vite
+// fires "vite:preloadError" when a lazy route fails to load. Reload once so
+// that tab picks up the fresh build instead of showing an empty page.
+window.addEventListener("vite:preloadError", (e) => {
+  e.preventDefault();
+  try {
+    const last = Number(sessionStorage.getItem("erp:chunk-reload-at") || 0);
+    if (Date.now() - last < 15000) return;
+    sessionStorage.setItem("erp:chunk-reload-at", String(Date.now()));
+  } catch { /* ignore */ }
+  window.location.reload();
+});
+
 function CountryLanguageBridge() {
   const { selectedCountry, language: detectedLanguage, isRtl } = useCountryDetection();
   const { language, setLang } = useLanguage();

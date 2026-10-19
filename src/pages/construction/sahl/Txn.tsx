@@ -236,10 +236,17 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const { data: company } = trpc.settings.companySettingsGet.useQuery();
   const brandAr = (company as any)?.companyNameAr || (company as any)?.companyName || "سهل";
   const { data: priceLists } = trpc.sahl.priceListList.useQuery(undefined, { enabled: kind === "sales" });
-  const { data: viewData } = trpc.sales.invoiceGet.useQuery(
+  const { data: viewData, error: viewErr } = trpc.sales.invoiceGet.useQuery(
     { id: viewId ?? 0 }, { enabled: kind === "sales" && isViewing });
-  const { data: poViewData } = trpc.sahl.poDetail.useQuery(
+  const { data: poViewData, error: poViewErr } = trpc.sahl.poDetail.useQuery(
     { id: poViewId ?? 0 }, { enabled: kind === "purchase" && poViewId !== null });
+  // Surface detail-query failures instead of leaving the form silently empty.
+  useEffect(() => {
+    if (viewErr) setMsg(String((viewErr as any)?.message ?? viewErr));
+  }, [viewErr]);
+  useEffect(() => {
+    if (poViewErr) setMsg(String((poViewErr as any)?.message ?? poViewErr));
+  }, [poViewErr]);
 
   const { data: partyInvoices } = trpc.sales.invoiceList.useQuery(
     partyId && kind === "sales" ? { customerId: Number(partyId) } : { customerId: 0 },
@@ -287,14 +294,20 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   // a return from that invoice (party + lines) and links the credit note
   // back to it on save (invoiceId).
   const [searchParams] = useSearchParams();
+  const viewParam = searchParams.get("view") || "";
+  const origParam = searchParams.get("orig") || "";
   useEffect(() => {
-    const v = Number(searchParams.get("view") || 0);
+    const v = Number(viewParam || 0);
     if (v) {
       if (kind === "purchase") { setPoViewId(v); setViewId(null); }
       else if (kind === "sales") { setViewId(v); setPoViewId(null); }
+      // Clear feedback while the (sometimes slow) detail query runs, so the
+      // page never looks like the saved data simply failed to load.
+      setMsg(T("جارٍ تحميل المستند…", "Loading document…"));
     }
-    const o = Number(searchParams.get("orig") || 0);
+    const o = Number(origParam || 0);
     if (o && kind === "sales-return") {
+      setMsg(T("جارٍ تحميل الفاتورة الأصلية…", "Loading original invoice…"));
       (async () => {
         try {
           const data: any = await utils.sales.invoiceGet.fetch({ id: o });
@@ -315,7 +328,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind]);
+  }, [kind, viewParam, origParam]);
 
   // Draft persistence per document kind: switching tabs keeps uncommitted lines
   useEffect(() => {
@@ -777,6 +790,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         companyTax: comp.taxNumber ?? undefined,
         companyContacts: contacts.length ? contacts : undefined,
         accountAddress: pairJoin(addrEn, addrAr) || undefined,
+        docType: docTypeFor(),
       };
     }
     const prem = parties.find((a: any) => String(a.id) === String(partyId));
@@ -802,6 +816,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       companyTax: comp.taxNumber ?? undefined,
       companyContacts: contacts.length ? contacts : undefined,
       accountAddress: pairJoin(cd.address, cd.addressAr) || undefined,
+      docType: docTypeFor(),
     };
   };
 

@@ -45,6 +45,9 @@ export interface DocData {
   subtotal: number; discount: number; tax: number; net: number;
   paid?: number; notes?: string; notesAr?: string;
   qrText?: string;
+  // Which Sahl document this is — lets the print/xlsx gray banner show
+  // "Tax Invoice" for sales (مؤسسة name stays on other doc types).
+  docType?: DocType;
   // 0060-form extras (all optional; missing values hide their rows like <#if>)
   dueDate?: string; cashier?: string; paymentType?: string;
   additions?: number; additionType?: string;
@@ -408,7 +411,10 @@ function patchSheet060(
       switch (step.old) {
         case 7:
           xml = setCell(xml, r, "B", cfg.titleAr || "");
-          xml = setCell(xml, r, "C", companyName);
+          // The gray merged banner (C7:G7) announces the document: sales invoices
+          // carry "Tax Invoice" (as in the original 0060 form), other doc types
+          // keep the company name they always had.
+          xml = setCell(xml, r, "C", cfg.docType === "sale" ? "Tax Invoice" : companyName);
           break;
         case 8:
           xml = setCell(xml, r, "C", d.partyCr ? `C.R. No. ${d.partyCr}` : null);
@@ -800,7 +806,7 @@ function invoice060Html(
   </colgroup><tbody>
     <tr class="gray" style="height:26.25pt">
       <td></td><td style="font-size:10pt">${esc(title)}</td>
-      <td colspan="5" class="c" style="font-size:16pt">${esc(co)}</td>
+      <td colspan="5" class="c" style="font-size:16pt">${esc(d.docType === "sale" ? "Tax Invoice" : co)}</td>
     </tr>
     <tr><td></td><td class="lbl">C.R. No</td><td colspan="3">${esc(d.partyCr ?? "")}</td><td class="lbl">Tax No.</td><td>${esc(d.partyTax ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(d.no)}</td><td class="lbl">Client</td><td colspan="3">${esc(d.party ?? "")}</td></tr>

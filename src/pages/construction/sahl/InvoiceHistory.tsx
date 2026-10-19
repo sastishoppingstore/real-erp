@@ -267,6 +267,7 @@ export default function SahlInvoiceHistory() {
       companyTax: comp.taxNumber ?? undefined,
       companyContacts: contacts.length ? contacts : undefined,
       accountAddress: joinTwo(addrEn, addrAr) || undefined,
+      docType: "sale",
     } as DocData;
   };
 
