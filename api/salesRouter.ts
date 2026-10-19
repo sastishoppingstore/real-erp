@@ -6,7 +6,7 @@ import {
   salesOrders, salesOrderItems, invoices, invoiceItems,
   creditNotes, customerPayments, companySettings, auditLogs, companies, products
 } from "@db/schema";
-import { eq, sql, and, like, desc } from "drizzle-orm";
+import { eq, sql, and, like, or, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { onInvoiceCreated, onPaymentReceived } from "./lib/notifications/events";
 
@@ -105,7 +105,17 @@ export const salesRouter = createRouter({
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
       const conditions = [eq(customers.tenantId, tenantId)];
-      if (input?.search) conditions.push(like(customers.name, `%${input.search}%`));
+      if (input?.search) {
+        // Search across English/Arabic names, phone and code so Arabic-named
+        // customers remain findable from the entry screens.
+        const q = `%${input.search}%`;
+        conditions.push(or(
+          like(customers.name, q),
+          like(customers.nameAr, q),
+          like(customers.phone, q),
+          like(customers.code, q),
+        )!);
+      }
       return db.select().from(customers).where(and(...conditions)).orderBy(desc(customers.createdAt));
     }),
 

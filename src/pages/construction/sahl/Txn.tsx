@@ -284,9 +284,20 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     (allBalances ?? []).filter((b: any) => b.productId === pid)
       .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
 
-  useEffect(() => {
+  // True while a saved document is open (?view=…); lets us tell "leaving a
+  // viewed document" (must reset the whole form) apart from a plain re-entry
+  // (which may restore an uncommitted local draft).
+  const wasViewingRef = useRef(false);
+  const resetFormDoc = () => {
     setLines([]); setMsg(""); setOrigId(""); setReason(""); setPartyId("");
-    setPartyQ(""); setDiscount(0); setDocDate(today()); setDueDate(today()); setViewId(null); setPoViewId(null); setViewNav(0); resetCd();
+    setPartyQ(""); setDiscount(0); setDocDate(today()); setDueDate(today());
+    setViewId(null); setPoViewId(null); setViewNav(0); resetCd();
+  };
+
+  useEffect(() => {
+    resetFormDoc();
+    wasViewingRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
 
   // Invoice History deep links: /sahl/sales?view=<id> (or purchase) opens
@@ -299,11 +310,19 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   useEffect(() => {
     const v = Number(viewParam || 0);
     if (v) {
+      wasViewingRef.current = true;
       if (kind === "purchase") { setPoViewId(v); setViewId(null); }
       else if (kind === "sales") { setViewId(v); setPoViewId(null); }
       // Clear feedback while the (sometimes slow) detail query runs, so the
       // page never looks like the saved data simply failed to load.
       setMsg(T("جارٍ تحميل المستند…", "Loading document…"));
+    } else if (wasViewingRef.current) {
+      // Leaving ?view= → close the opened document AND clear the form so
+      // "New invoice" (or any menu click) starts fresh and item/party
+      // lookups are re-enabled. A plain re-entry (no view was open) keeps
+      // any uncommitted draft untouched.
+      wasViewingRef.current = false;
+      resetFormDoc();
     }
     const o = Number(origParam || 0);
     if (o && kind === "sales-return") {
@@ -359,6 +378,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     const h = history[idx];
     if (!h) return;
     setViewNav(idx);
+    wasViewingRef.current = true;
     if (kind === "purchase") { setPoViewId(h.id); setViewId(null); }
     else { setViewId(h.id); setPoViewId(null); }
   };
@@ -414,6 +434,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   }, [viewData]);
 
   const newDoc = () => {
+    wasViewingRef.current = false;
     setLines([]); setDiscount(0); setOrigId(""); setReason(""); setViewId(null); setPoViewId(null); setMsg("");
     setPartyId(""); setPartyQ(""); resetCd(); setDueDate(today()); setSavedNo(""); LAST_SAVED_NO = "";
   };

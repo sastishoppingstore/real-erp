@@ -389,6 +389,7 @@ export const sahlRouter = createRouter({
           eq(products.tenantId, ctx.user.tenantId!),
           or(
             like(products.name, pattern),
+            like(products.nameAr, pattern),
             like(products.sku, pattern),
             like(products.barcode, pattern),
           )!))

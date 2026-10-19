@@ -7,7 +7,7 @@ import {
   inventoryBalances, inventoryMovements, stockTransfers,
   stockTransferItems, stockAdjustments, stockAdjustmentItems
 } from "@db/schema";
-import { eq, sql, and, like, desc } from "drizzle-orm";
+import { eq, sql, and, like, or, desc } from "drizzle-orm";
 import { checkLowStockAndNotify } from "./lib/notifications/events";
 
 export const inventoryRouter = createRouter({
@@ -149,7 +149,15 @@ export const inventoryRouter = createRouter({
       const tenantId = ctx.user.tenantId!;
       const conditions = [eq(products.tenantId, tenantId)];
       if (input?.categoryId) conditions.push(eq(products.categoryId, input.categoryId));
-      if (input?.search) conditions.push(like(products.name, `%${input.search}%`));
+      if (input?.search) {
+        const q = `%${input.search}%`;
+        conditions.push(or(
+          like(products.name, q),
+          like(products.nameAr, q),
+          like(products.sku, q),
+          like(products.barcode, q),
+        )!);
+      }
       return db.select().from(products).where(and(...conditions)).orderBy(desc(products.createdAt));
     }),
 

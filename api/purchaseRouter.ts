@@ -6,7 +6,7 @@ import {
   goodsReceivedNotes, grnItems, supplierPayments,
   inventoryBalances, inventoryMovements
 } from "@db/schema";
-import { eq, sql, and, like, desc } from "drizzle-orm";
+import { eq, sql, and, like, or, desc } from "drizzle-orm";
 
 export const purchaseRouter = createRouter({
   // Suppliers
@@ -16,7 +16,15 @@ export const purchaseRouter = createRouter({
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
       const conditions = [eq(suppliers.tenantId, tenantId)];
-      if (input?.search) conditions.push(like(suppliers.name, `%${input.search}%`));
+      if (input?.search) {
+        const q = `%${input.search}%`;
+        conditions.push(or(
+          like(suppliers.name, q),
+          like(suppliers.nameAr, q),
+          like(suppliers.phone, q),
+          like(suppliers.code, q),
+        )!);
+      }
       return db.select().from(suppliers).where(and(...conditions)).orderBy(desc(suppliers.createdAt));
     }),
 
