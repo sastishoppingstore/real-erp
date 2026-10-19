@@ -177,9 +177,9 @@ fn create_main_window(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Er
   // Fit-to-screen: never taller/wider than the current monitor (keeps room
   // for taskbar + title bar), then re-center. Covers 800x600 up to 4K.
   if let Ok(Some(mon)) = win.primary_monitor() {
-    let scale = if mon.scale_factor > 0.0 { mon.scale_factor } else { 1.0 };
-    let w = (mon.size.width as f64 / scale - 16.0).clamp(760.0, 1280.0);
-    let h = (mon.size.height as f64 / scale - 110.0).clamp(500.0, 800.0);
+    let scale = mon.scale_factor().max(0.0001);
+    let w = (mon.size().width as f64 / scale - 16.0).clamp(760.0, 1280.0);
+    let h = (mon.size().height as f64 / scale - 110.0).clamp(500.0, 800.0);
     let _ = win.set_size(tauri::LogicalSize::new(w, h));
     let _ = win.center();
   }
