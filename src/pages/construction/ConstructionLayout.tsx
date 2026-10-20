@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -93,25 +94,25 @@ const navSections = [
 // Sahl top menu strip — direct links, always visible like the desktop app.
 const quickMenu = [
   { label: "Dashboard", labelAr: "الرئيسية", path: "/app/construction" },
-  { label: "Goods", labelAr: "البضاعة", path: "/app/construction/materials" },
-  { label: "Accounts", labelAr: "الحسابات", path: "/app/construction/subcontractors" },
-  { label: "Treasury", labelAr: "الخزينة", path: "/app/construction/advance-payments" },
+  { label: "Goods", labelAr: "البضاعة", path: "/app/construction/sahl/products" },
+  { label: "Accounts", labelAr: "الحسابات", path: "/app/construction/sahl/accounts" },
+  { label: "Treasury", labelAr: "الخزينة", path: "/app/construction/sahl/treasury" },
   { label: "Invoices", labelAr: "الفواتير", path: "/app/construction/sahl/sales" },
   { label: "Invoice History", labelAr: "سجل الفواتير", path: "/app/construction/invoice-history" },
-  { label: "Reports", labelAr: "التقارير", path: "/app/construction/cvr" },
-  { label: "Warehouse", labelAr: "المخازن", path: "/app/construction/warehouses" },
+  { label: "Reports", labelAr: "التقارير", path: "/app/construction/sahl/reports/sales" },
+  { label: "Warehouse", labelAr: "المخازن", path: "/app/construction/sahl/vault/stocktake" },
 ];
 
 // Sahl dropdown menu bar (desktop menus, all items open real sahl routes)
-const dropMenus: { label: string; labelAr: string; items: { label: string; labelAr: string; path: string }[] }[] = [
+const dropMenus: { label: string; labelAr: string; items: { label: string; labelAr: string; path?: string; action?: "logout" }[] }[] = [
   {
     label: "System", labelAr: "البرنامج",
     items: [
       { label: "Program settings", labelAr: "إعداد البرنامج", path: "/app/construction/sahl/settings" },
       { label: "Print designer", labelAr: "تصميم نماذج الطباعة", path: "/app/construction/sahl/prints" },
-      { label: "Backup", labelAr: "نسخ احتياطي", path: "/app/construction/sahl/admin" },
-      { label: "Year summary", labelAr: "ملخص السنة", path: "/app/construction/sahl/admin" },
-      { label: "Exit", labelAr: "خروج", path: "/app/construction" },
+      { label: "Backup", labelAr: "نسخ احتياطي", path: "/app/construction/sahl/admin?focus=backup" },
+      { label: "Year summary", labelAr: "ملخص السنة", path: "/app/construction/sahl/admin?focus=year" },
+      { label: "Exit", labelAr: "خروج", action: "logout" },
     ],
   },
   {
@@ -129,7 +130,7 @@ const dropMenus: { label: string; labelAr: string; items: { label: string; label
     label: "Accounts", labelAr: "الحسابات",
     items: [
       { label: "Customers & suppliers", labelAr: "العملاء والموردين", path: "/app/construction/sahl/accounts" },
-      { label: "Credit follow-up", labelAr: "متابعة الفواتير الآجلة", path: "/app/construction/sahl/reports/more" },
+      { label: "Credit follow-up", labelAr: "متابعة الفواتير الآجلة", path: "/app/construction/sahl/reports/more?tab=aging" },
       { label: "Cheques & installments", labelAr: "متابعة الشيكات والأقساط", path: "/app/construction/sahl/vault/cheques" },
       { label: "Salesmen", labelAr: "مندوبي المبيعات", path: "/app/construction/sahl/salesmen" },
     ],
@@ -138,10 +139,10 @@ const dropMenus: { label: string; labelAr: string; items: { label: string; label
     label: "Treasury", labelAr: "الخزينة",
     items: [
       { label: "Treasury hub", labelAr: "الخزائن والبنوك", path: "/app/construction/sahl/treasury" },
-      { label: "Treasury moves", labelAr: "حركة الخزينة", path: "/app/construction/sahl/treasury" },
+      { label: "Treasury moves", labelAr: "حركة الخزينة", path: "/app/construction/sahl/treasury?focus=moves" },
       { label: "Payment voucher", labelAr: "سند صرف", path: "/app/construction/sahl/cash" },
       { label: "Receipt voucher", labelAr: "سند قبض", path: "/app/construction/sahl/receipts" },
-      { label: "Expense analysis", labelAr: "تحليل المصروفات", path: "/app/construction/sahl/treasury" },
+      { label: "Expense analysis", labelAr: "تحليل المصروفات", path: "/app/construction/sahl/treasury?focus=expenses" },
     ],
   },
   {
@@ -175,8 +176,8 @@ const dropMenus: { label: string; labelAr: string; items: { label: string; label
   {
     label: "Help", labelAr: "مساعدة",
     items: [
-      { label: "Quick tour", labelAr: "جولة سريعة", path: "/app/construction" },
-      { label: "Support", labelAr: "الدعم الفني", path: "/app/construction/sahl/users" },
+      { label: "Quick tour", labelAr: "جولة سريعة", path: "/app/construction?tour=1" },
+      { label: "Support", labelAr: "الدعم الفني", path: "/app/construction?support=1" },
     ],
   },
   {
@@ -188,26 +189,68 @@ const dropMenus: { label: string; labelAr: string; items: { label: string; label
   },
 ];
 
-function DropMenu({ m, rtl }: { m: (typeof dropMenus)[number]; rtl: boolean }) {
+function DropMenu({ m, rtl, onExit }: { m: (typeof dropMenus)[number]; rtl: boolean; onExit: () => void }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ left: 0, top: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const closeTimer = useRef<number | null>(null);
   const navigate = useNavigate();
+
+  const cancelClose = () => {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  // The menu strip scrolls horizontally, so an absolutely-positioned dropdown
+  // would be clipped by its overflow. Render it in a portal with fixed
+  // coordinates instead — every menu is always visible and clickable.
+  const openNow = () => {
+    cancelClose();
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) {
+      const width = 190;
+      const left = Math.max(4, Math.min(rtl ? r.right - width : r.left, window.innerWidth - width - 4));
+      setPos({ left, top: r.bottom });
+    }
+    setOpen(true);
+  };
+  const closeSoon = () => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 180);
+  };
+  useEffect(() => cancelClose, []);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    return () => window.removeEventListener("scroll", close, true);
+  }, [open]);
+
   return (
-    <div className="relative"
-      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <button onClick={() => setOpen((o) => !o)}
+    <div className="relative" onMouseEnter={openNow} onMouseLeave={closeSoon}>
+      <button ref={btnRef} onClick={() => (open ? setOpen(false) : openNow())}
         className="whitespace-nowrap px-2.5 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-200">
         {rtl ? m.labelAr : m.label}
       </button>
-      {open && (
-        <div className="absolute start-0 top-full z-50 min-w-[190px] border border-[#888] bg-white py-1 shadow-lg">
+      {open && createPortal(
+        <div
+          style={{ position: "fixed", left: pos.left, top: pos.top, width: 190, zIndex: 1000 }}
+          className="border border-[#888] bg-white py-1 shadow-lg"
+          onMouseEnter={openNow} onMouseLeave={closeSoon}>
           {m.items.map((it) => (
-            <button key={it.path + it.label}
-              onClick={() => { setOpen(false); navigate(it.path); }}
+            <button key={(it.path ?? "") + it.label}
+              onClick={() => {
+                setOpen(false);
+                if (it.action === "logout") onExit();
+                else if (it.path) navigate(it.path);
+              }}
               className="block w-full px-3 py-1.5 text-start text-[12px] text-black hover:bg-[#e8f5e9]">
               {rtl ? it.labelAr : it.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -424,8 +467,14 @@ export default function ConstructionLayout() {
       </header>
 
       {/* ===== Sahl dropdown menu bar (desktop menus) ===== */}
-      <div className="flex items-stretch overflow-x-auto border-b border-[#999] bg-white">
-        {dropMenus.map((m) => <DropMenu key={m.label} m={m} rtl={rtl} />)}
+      <div className="flex flex-wrap items-stretch border-b border-[#999] bg-white">
+        {dropMenus.map((m) => (
+          <DropMenu key={m.label} m={m} rtl={rtl}
+            onExit={() => {
+              const ok = window.confirm(rtl ? "هل تريد الخروج من ياسكو؟" : "Exit YASCO and sign out?");
+              if (ok) logout();
+            }} />
+        ))}
       </div>
 
       {/* ===== Sahl menu strip ===== */}

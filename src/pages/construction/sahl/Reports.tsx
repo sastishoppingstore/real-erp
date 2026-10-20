@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router";
 import { useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
@@ -149,7 +150,17 @@ export function SahlValuation() {
 export function SahlMoreReports() {
   const { language } = useLanguage();
   const rtl = language === "ar";
-  const [tab, setTab] = useState<"tax" | "pnl" | "aging">("tax");
+  const location = useLocation();
+  const [tab, setTab] = useState<"tax" | "pnl" | "aging">(() => {
+    const q = new URLSearchParams(location.search).get("tab");
+    return q === "aging" || q === "pnl" ? q : "tax";
+  });
+  // Header shortcut (Accounts > Credit follow-up) lands on the aging tab,
+  // including when the report page is already open.
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get("tab");
+    if (q === "aging" || q === "pnl" || q === "tax") setTab(q);
+  }, [location.key, location.search]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const { data: tax } = trpc.reports.taxReport.useQuery(

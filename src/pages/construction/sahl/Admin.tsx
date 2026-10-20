@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { SahlField, SahlGrid, inputCls, btnCls, btnGreenCls } from "./ui";
@@ -9,7 +10,25 @@ export default function SahlAdmin() {
   const { language } = useLanguage();
   const rtl = language === "ar";
   const utils = trpc.useUtils();
+  const location = useLocation();
   const T = (ar: string, en: string) => (rtl ? ar : en);
+  // Deep links from the header menus: Backup / Year summary scroll straight
+  // to their section instead of landing at the top of the admin screen.
+  useEffect(() => {
+    const focus = new URLSearchParams(location.search).get("focus");
+    if (!focus) return;
+    const id = focus === "year" ? "sahl-year-summary" : focus === "backup" ? "sahl-backup" : "";
+    if (!id) return;
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.style.outline = "2px solid #2fae4e";
+        window.setTimeout(() => { el.style.outline = ""; }, 1600);
+      }
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [location.key, location.search]);
   const [msg, setMsg] = useState("");
   const [pin, setPin] = useState("");
   const [pw, setPw] = useState({ old: "", nw: "", nw2: "" });
@@ -98,7 +117,7 @@ export default function SahlAdmin() {
               {T("تغيير", "Change")}
             </button>
           </div>
-          <b className="mt-2 block">{T("نسخ احتياطي", "Backup")}</b>
+          <b id="sahl-backup" className="mt-2 block scroll-mt-16">{T("نسخ احتياطي", "Backup")}</b>
           <button className={btnCls} onClick={doBackup}>
             {T("تنزيل نسخة JSON", "Download JSON backup")}
           </button>
@@ -147,7 +166,7 @@ export default function SahlAdmin() {
               emptyText={T("لا ورديات", "No shifts")}
             />
           </div>
-          <div className="border border-[#333] bg-[#111] p-2">
+          <div id="sahl-year-summary" className="border border-[#333] bg-[#111] p-2 scroll-mt-16">
             <b>{T("ملخص السنة (إغلاق بدون حذف)", "Year summary (close view, no purge)")}</b>
             <div className="mt-1 flex gap-1">
               <input className={inputCls} style={{ width: 100 }} value={year} onChange={(e) => setYear(e.target.value)} />

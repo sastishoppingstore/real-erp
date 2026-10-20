@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { inputCls, btnCls, btnGreenCls, SahlGrid } from "./ui";
@@ -10,6 +10,7 @@ export default function SahlTreasury() {
   const { language } = useLanguage();
   const rtl = language === "ar";
   const navigate = useNavigate();
+  const location = useLocation();
   const utils = trpc.useUtils();
   const T = (ar: string, en: string) => (rtl ? ar : en);
   const today = new Date().toISOString().slice(0, 10);
@@ -21,6 +22,21 @@ export default function SahlTreasury() {
   const { data: bal } = trpc.cashbox.currentBalance.useQuery();
   const { data: ledger } = trpc.sahl.treasuryLedger.useQuery({ from, to, limit: 200 });
   const { data: exp } = trpc.sahl.expenseAnalysis.useQuery({ from, to });
+
+  // Menu shortcuts: Treasury moves / Expense analysis scroll to their block.
+  useEffect(() => {
+    const focus = new URLSearchParams(location.search).get("focus");
+    if (!focus) return;
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(focus === "expenses" ? "sahl-treasury-expenses" : "sahl-treasury-moves");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.style.outline = "2px solid #2fae4e";
+        window.setTimeout(() => { el.style.outline = ""; }, 1600);
+      }
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [location.key, location.search]);
 
   const cashOut = trpc.cashbox.cashOut.useMutation({ onError: (e) => setMsg(e.message) });
   const cashIn = trpc.cashbox.cashIn.useMutation({
@@ -78,7 +94,7 @@ export default function SahlTreasury() {
       </div>
 
       <div className="grid gap-2 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div id="sahl-treasury-moves" className="lg:col-span-2 scroll-mt-16">
           <SahlGrid
             columns={[T("التاريخ", "Date"), T("النوع", "Type"), T("المبلغ", "Amount"), T("الرصيد", "Balance"), T("البيان", "Desc")]}
             rows={rows.map((r: any) => [
@@ -106,7 +122,7 @@ export default function SahlTreasury() {
               {T("يُنشئ سند صرف + سند قبض مرتبطين", "Creates a linked payment + receipt pair")}
             </div>
           </div>
-          <div className="border border-[#333] bg-[#111] p-2">
+          <div id="sahl-treasury-expenses" className="border border-[#333] bg-[#111] p-2 scroll-mt-16">
             <b>{T("تحليل المصروفات", "Expense analysis")}</b>
             <div className="mt-1 text-[11px]">
               {T("الإجمالي", "Total")}: <b>{Number((exp as any)?.total ?? 0).toFixed(2)}</b>

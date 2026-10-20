@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import {
@@ -46,6 +46,7 @@ const TOUR_STEPS = [
 
 export default function ConstructionDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { language } = useLanguage();
   const rtl = language === "ar";
   const [tour, setTour] = useState(false);
@@ -58,6 +59,12 @@ export default function ConstructionDashboard() {
     setDashBg(bg);
     try { localStorage.setItem("sahl-dashbg", bg); } catch { /* ignore */ }
   };
+  // Header Help menu deep links: Quick tour / Support open the real overlays.
+  useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    if (q.get("tour") === "1") { setStep(0); setTour(true); }
+    if (q.get("support") === "1") setShowSupport(true);
+  }, [location.key, location.search]);
   const { data: stats } = trpc.construction.constructionStats.useQuery(undefined);
   const { data: projects } = trpc.construction.projectList.useQuery(undefined);
   const { data: invoices } = trpc.constructionInvoices.invoiceList.useQuery(undefined);
