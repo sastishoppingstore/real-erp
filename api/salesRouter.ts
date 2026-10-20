@@ -764,9 +764,12 @@ export const salesRouter = createRouter({
       date: z.string().optional(),
       dueDate: z.string().optional(),
       subTotal: z.string().optional(),
+      discountAmount: z.string().optional(),
+      shippingAmount: z.string().optional(),
       taxAmount: z.string().optional(),
       taxPercent: z.string().optional(),
       totalAmount: z.string().optional(),
+      warehouseId: z.number().optional(),
       notes: z.string().optional(),
       status: z.enum(["draft", "sent", "paid", "partial", "overdue", "cancelled", "credit_note"]).optional(),
       items: z.array(z.object({
@@ -785,7 +788,7 @@ export const salesRouter = createRouter({
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
-      const { items, ...invoiceData } = input;
+      const { items, warehouseId: inputWarehouseId, ...invoiceData } = input;
       const invoiceId = input.id;
 
       const existingInvoice = await db.query.invoices.findFirst({
@@ -794,10 +797,17 @@ export const salesRouter = createRouter({
       if (!existingInvoice) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
       }
-      if (isIssuedOrZatcaLocked(existingInvoice)) {
+      // Sales invoices can be corrected after saving (draft, paid or partial).
+      // Only regulator-locked / cancelled / credit-note rows stay immutable.
+      if (
+        existingInvoice.zatcaStatus === "reported" ||
+        existingInvoice.zatcaStatus === "cleared" ||
+        existingInvoice.status === "cancelled" ||
+        existingInvoice.status === "credit_note"
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Issued, paid, reported, or cleared invoices are immutable. Use a credit/debit note instead.",
+          message: "Reported, cleared, cancelled or credit-note invoices are immutable. Use a credit/debit note instead.",
         });
       }
 
@@ -829,26 +839,38 @@ export const salesRouter = createRouter({
             message: "Saudi ZATCA invoices require a valid 15-digit VAT number that starts and ends with 3.",
           });
         }
-        const timestamp = new Date(`${invoiceData.date || existingInvoice.date}T00:00:00.000Z`).toISOString();
-        zatcaQrCode = buildZatcaQrPayload(sellerName, vatNumber, timestamp, invoiceData.totalAmount || existingInvoice.totalAmount, taxAmount);
-        zatcaXml = buildSaudiInvoiceXml({
-          invoiceNumber: invoiceData.invoiceNumber || existingInvoice.invoiceNumber,
-          date: invoiceData.date || existingInvoice.date,
-          sellerName,
-          vatNumber,
-          crNumber: settings?.crNumber,
-          currency,
-          subTotal: invoiceData.subTotal || existingInvoice.subTotal,
-          taxAmount,
-          totalAmount: invoiceData.totalAmount || existingInvoice.totalAmount,
-        });
-        zatcaStatus = "pending";
+        // Only invoices that already carry a regulator payload get it
+        // refreshed — an edit must not create a ZATCA XML out of nothing
+        // (that would lock the document against further corrections).
+        if (existingInvoice.zatcaXml || existingInvoice.zatcaQrCode) {
+          const timestamp = new Date(`${invoiceData.date || existingInvoice.date}T00:00:00.000Z`).toISOString();
+          zatcaQrCode = buildZatcaQrPayload(sellerName, vatNumber, timestamp, invoiceData.totalAmount || existingInvoice.totalAmount, taxAmount);
+          zatcaXml = buildSaudiInvoiceXml({
+            invoiceNumber: invoiceData.invoiceNumber || existingInvoice.invoiceNumber,
+            date: invoiceData.date || existingInvoice.date,
+            sellerName,
+            vatNumber,
+            crNumber: settings?.crNumber,
+            currency,
+            subTotal: invoiceData.subTotal || existingInvoice.subTotal,
+            taxAmount,
+            totalAmount: invoiceData.totalAmount || existingInvoice.totalAmount,
+          });
+          zatcaStatus = "pending";
+        }
       }
 
       const invoiceUpdateData: Record<string, any> = { ...invoiceData };
+      delete invoiceUpdateData.id;
       if (!invoiceUpdateData.dueDate) invoiceUpdateData.dueDate = null;
       if (invoiceUpdateData.paymentType) invoiceUpdateData.paymentMethod = invoiceUpdateData.paymentType;
       delete invoiceUpdateData.paymentType;
+      const newTotal = Number(invoiceData.totalAmount ?? existingInvoice.totalAmount ?? 0);
+      const paidSoFar = Number(existingInvoice.paidAmount || 0);
+      const newBalance = Math.max(0, newTotal - paidSoFar);
+      let nextStatus = existingInvoice.status;
+      if (paidSoFar > 0) nextStatus = newBalance <= 0.005 ? "paid" : "partial";
+      else if (nextStatus === "paid" || nextStatus === "partial") nextStatus = "sent";
       // Refresh the saved customer record (non-empty typed values only) so the
       // next bill auto-fills every detail after typing 2 letters of the name.
       const updCustId = invoiceData.customerId || existingInvoice.customerId;
@@ -876,14 +898,64 @@ export const salesRouter = createRouter({
         zatcaQrCode,
         zatcaXml,
         zatcaStatus,
-        balanceDue: (Number(invoiceData.totalAmount || existingInvoice.totalAmount) - Number(existingInvoice.paidAmount)).toFixed(2),
+        balanceDue: newBalance.toFixed(2),
+        status: nextStatus as any,
         updatedAt: new Date(),
       }).where(eq(invoices.id, invoiceId));
 
+      const oldItemRows = await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
       if (items) {
         await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
         for (const item of items) {
           await db.insert(invoiceItems).values({ ...item, invoiceId });
+        }
+      }
+
+      // ---- Stock correction for edited lines ----
+      // Invoice create already subtracted the old quantities. Apply only the
+      // difference so editing 1 → 100 adds -99, not another -100.
+      if (items) {
+        let stockWh = inputWarehouseId;
+        if (!stockWh) {
+          const ws = await db.select({ id: warehouses.id }).from(warehouses)
+            .where(eq(warehouses.tenantId, tenantId)).limit(1);
+          stockWh = ws[0]?.id;
+        }
+        if (stockWh) {
+          const oldQty = new Map<number, number>();
+          for (const it of oldItemRows) {
+            if (!it.productId) continue;
+            oldQty.set(it.productId, (oldQty.get(it.productId) || 0) + Number(it.quantity || 0));
+          }
+          const newQty = new Map<number, number>();
+          for (const it of items) {
+            if (!it.productId) continue;
+            newQty.set(it.productId, (newQty.get(it.productId) || 0) + Number(it.quantity || 0));
+          }
+          const productIds = new Set<number>([...oldQty.keys(), ...newQty.keys()]);
+          for (const productId of productIds) {
+            const delta = (newQty.get(productId) || 0) - (oldQty.get(productId) || 0);
+            if (!delta) continue;
+            const stockDelta = -delta; // sales invoice reduces stock
+            const balRows = await db.select().from(inventoryBalances).where(and(
+              eq(inventoryBalances.productId, productId),
+              eq(inventoryBalances.tenantId, tenantId),
+              eq(inventoryBalances.warehouseId, stockWh)));
+            if (balRows.length) {
+              await db.update(inventoryBalances).set({ quantity: Number(balRows[0].quantity || 0) + stockDelta })
+                .where(eq(inventoryBalances.id, balRows[0].id));
+            } else {
+              await db.insert(inventoryBalances).values({
+                tenantId, productId, warehouseId: stockWh, quantity: stockDelta,
+              });
+            }
+            await db.insert(inventoryMovements).values({
+              tenantId, productId, warehouseId: stockWh,
+              movementType: "adjustment", quantity: stockDelta,
+              reference: "Invoice Edit", referenceId: invoiceId,
+              createdBy: ctx.user.id,
+            });
+          }
         }
       }
 

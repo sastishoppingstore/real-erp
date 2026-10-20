@@ -113,10 +113,38 @@ export default function SahlProducts() {
     });
   };
 
-  const save = () => {
+  // Post a stock quantity for one product into a warehouse.
+  // adjustmentCreate stores an ABSOLUTE target, so an item that already has
+  // stock asks first: OK = add on top, Cancel = replace with this number.
+  const postStockFor = async (product: any, qty: number, warehouseId: string) => {
+    const cur = (balances ?? [])
+      .filter((b: any) => b.productId === product.id && String(b.warehouseId) === String(warehouseId))
+      .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
+    let target = Number(qty);
+    if (cur > 0) {
+      const add = confirm(rtl
+        ? `الرصيد الحالي ${cur}. هل تريد الإضافة عليه (يصبح ${cur + target})؟ موافق=إضافة / إلغاء=استبدال`
+        : `Current stock is ${cur}. Add on top (becomes ${cur + target})? OK=add / Cancel=overwrite`);
+      if (add) target = cur + target;
+    }
+    await adjust.mutateAsync({
+      adjustmentDate: new Date().toISOString().slice(0, 10),
+      adjustmentType: "addition",
+      reason: rtl ? "رصيد افتتاحي" : "Opening stock",
+      warehouseId: Number(warehouseId),
+      items: [{ productId: product.id, quantity: target, unitCost: String(product.purchasePrice ?? 0) }],
+    } as any);
+  };
+
+  const save = async () => {
     setErr("");
     if (!f.name?.trim() || !f.sku?.trim() || !String(f.salePrice ?? "").trim()) {
       setErr(rtl ? "اسم الصنف والكود وسعر البيع حقول مطلوبة" : "Name, SKU and sale price are required");
+      return;
+    }
+    const wantQty = Number(opening.qty) > 0 ? Number(opening.qty) : 0;
+    if (wantQty && !opening.warehouseId) {
+      setErr(rtl ? "اختر المخزن للكمية الافتتاحية" : "Select the warehouse for the opening quantity");
       return;
     }
     const payload = {
@@ -133,8 +161,23 @@ export default function SahlProducts() {
       isTaxable: !!f.isTaxable, taxRate: String(f.taxRate ?? "15"),
       isActive: !!f.isActive, isSerialTracked: !!f.isSerialTracked,
     };
-    if (selProduct) update.mutate({ id: selProduct.id, ...payload });
-    else create.mutate(payload as any);
+    try {
+      if (selProduct) {
+        await update.mutateAsync({ id: selProduct.id, ...payload } as any);
+        // Opening quantity typed in the form is posted to the stock as well.
+        if (wantQty) await postStockFor(selProduct, wantQty, opening.warehouseId);
+      } else {
+        const res: any = await create.mutateAsync(payload as any);
+        // New item: post the opening quantity (100 / 1000 / …) straight after
+        // the product row exists, so the stock column shows it immediately.
+        if (res?.id && wantQty) {
+          await postStockFor({ id: res.id, purchasePrice: f.purchasePrice }, wantQty, opening.warehouseId);
+        }
+      }
+      setOpening({ warehouseId: "", qty: "" });
+    } catch (e: any) {
+      setErr(String(e?.message ?? e));
+    }
   };
 
   const postOpening = () => {
@@ -142,25 +185,7 @@ export default function SahlProducts() {
       setErr(rtl ? "اختر المخزن وأدخل كمية افتتاحية" : "Select warehouse and opening qty");
       return;
     }
-    const cur = (balances ?? [])
-      .filter((b: any) => b.productId === selProduct.id && String(b.warehouseId) === String(opening.warehouseId))
-      .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
-    // adjustmentCreate sets an ABSOLUTE target: from zero post as-is,
-    // otherwise add on top after explicit confirmation.
-    let target = Number(opening.qty);
-    if (cur > 0) {
-      const add = confirm(rtl
-        ? `الرصيد الحالي ${cur}. هل تريد الإضافة عليه (يصبح ${cur + target})؟ موافق=إضافة / إلغاء=استبدال`
-        : `Current stock is ${cur}. Add on top (becomes ${cur + target})? OK=add / Cancel=overwrite`);
-      if (add) target = cur + target;
-    }
-    adjust.mutate({
-      adjustmentDate: new Date().toISOString().slice(0, 10),
-      adjustmentType: "addition",
-      reason: rtl ? "رصيد افتتاحي" : "Opening stock",
-      warehouseId: Number(opening.warehouseId),
-      items: [{ productId: selProduct.id, quantity: target, unitCost: String(selProduct.purchasePrice ?? 0) }],
-    } as any);
+    postStockFor(selProduct, Number(opening.qty), opening.warehouseId).catch((e: any) => setErr(String(e?.message ?? e)));
   };
 
   const list = rows ?? [];
@@ -365,6 +390,21 @@ export default function SahlProducts() {
               <SahlField label={rtl ? "حد الطلب" : "Reorder"}>
                 <input type="number" min="0" className={inputCls} value={f.reorderLevel} onChange={(e) => setF({ ...f, reorderLevel: e.target.value })} />
               </SahlField>
+              <SahlField label={rtl ? "الكمية (افتتاحية)" : "Quantity (opening)"}>
+                <div className="flex gap-1">
+                  <input type="number" min="0" className={inputCls} value={opening.qty}
+                    onChange={(e) => setOpening({ ...opening, qty: e.target.value })}
+                    placeholder="0" title={rtl ? "الكمية الافتتاحية — تُرحّل للمخزون عند الحفظ" : "Opening quantity — posted to stock on Save"} />
+                  <select className={inputCls} value={opening.warehouseId}
+                    onChange={(e) => setOpening({ ...opening, warehouseId: e.target.value })}>
+                    <option value="">—</option>
+                    {(warehouses ?? []).map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  </select>
+                </div>
+                <div className="mt-0.5 text-[10px] text-white/70">
+                  {rtl ? "اكتب 100 أو 1000 ثم اضغط حفظ — تُضاف للرصيد مباشرة" : "Type 100 or 1000 then press Save — it is posted to the stock right away"}
+                </div>
+              </SahlField>
             </div>
           </div>
           <div className="mt-2 grid gap-3 lg:grid-cols-2">
@@ -450,9 +490,9 @@ export default function SahlProducts() {
                     <option value="">—</option>
                     {(warehouses ?? []).map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
                   </select>
-                  <input type="number" min="0" className={inputCls} value={opening.qty} onChange={(e) => setOpening({ ...opening, qty: e.target.value })} placeholder={rtl ? "افتتاحي" : "Opening"} />
+                  <input type="number" min="0" className={inputCls} value={opening.qty} onChange={(e) => setOpening({ ...opening, qty: e.target.value })} placeholder={rtl ? "الكمية" : "Qty"} title={rtl ? "الكمية المضافة للمخزون" : "Quantity to add to the stock"} />
                   <button className={btnCls} disabled={adjust.isPending} onClick={postOpening}>
-                    {rtl ? "ترحيل" : "Post"}
+                    {rtl ? "إضافة للمخزون" : "Add stock"}
                   </button>
                 </div>
               )}

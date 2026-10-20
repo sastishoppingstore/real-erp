@@ -189,6 +189,10 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const searchRef = useRef<HTMLInputElement>(null);
   // view mode flag (must exist BEFORE the queries below read it)
   const isViewing = viewId !== null || poViewId !== null;
+  // Saved invoice can be switched into edit mode from history (?edit=1) or
+  // the Edit button. Data queries stay enabled; only the form is unlocked.
+  const [editMode, setEditMode] = useState(false);
+  const readOnly = isViewing && !editMode;
 
   // ==== Sahl 5-zone POS additions ====
   const [reference, setReference] = useState("");
@@ -225,7 +229,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     : String(v));
 
   const { data: lookup } = trpc.sahl.lookup.useQuery(
-    { q, limit: 8 }, { enabled: q.trim().length > 0 && viewId === null });
+    { q, limit: 8 }, { enabled: q.trim().length > 0 && (viewId === null || editMode) });
   const { data: customers } = trpc.sales.customerList.useQuery(isSales && partyQ ? { search: partyQ } : undefined);
   const { data: suppliers } = trpc.purchase.supplierList.useQuery(!isSales && partyQ ? { search: partyQ } : undefined);
   const { data: warehouses } = trpc.inventory.warehouseList.useQuery();
@@ -268,10 +272,10 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     partyId && kind === "sales" ? { customerId: Number(partyId) } : { customerId: 0 },
     { enabled: kind === "sales" && !!partyId });
   // Sahl search-grid + touch-grid data (categories/brands/units for label columns)
-  const { data: allProducts } = trpc.inventory.productList.useQuery(undefined, { enabled: !isViewing });
-  const { data: cats } = trpc.inventory.categoryList.useQuery(undefined, { enabled: !isViewing });
-  const { data: brandsQ } = trpc.inventory.brandList.useQuery(undefined, { enabled: !isViewing });
-  const { data: unitsQ } = trpc.inventory.unitList.useQuery(undefined, { enabled: !isViewing });
+  const { data: allProducts } = trpc.inventory.productList.useQuery(undefined, { enabled: !readOnly });
+  const { data: cats } = trpc.inventory.categoryList.useQuery(undefined, { enabled: !readOnly });
+  const { data: brandsQ } = trpc.inventory.brandList.useQuery(undefined, { enabled: !readOnly });
+  const { data: unitsQ } = trpc.inventory.unitList.useQuery(undefined, { enabled: !readOnly });
   const catName = (id: any) => { const c = (cats ?? []).find((x: any) => x.id === id); return c?.nameAr || c?.name || ""; };
   const brandName = (id: any) => { const b = (brandsQ ?? []).find((x: any) => x.id === id); return (b?.nameAr || b?.name || ""); };
   const unitNameFor = (p: any) => (unitsQ ?? []).find((x: any) => x.id === p?.unitId)?.name ?? p?.unitName ?? "";
@@ -323,6 +327,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const [searchParams] = useSearchParams();
   const viewParam = searchParams.get("view") || "";
   const origParam = searchParams.get("orig") || "";
+  const editParam = searchParams.get("edit") === "1";
   useEffect(() => {
     const v = Number(viewParam || 0);
     if (v) {
@@ -330,15 +335,20 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       if (kind === "purchase") { setPoViewId(v); setViewId(null); }
       else if (kind === "sales") { setViewId(v); setPoViewId(null); }
       else if (kind === "sales-return" || kind === "quotation") { setViewId(v); setPoViewId(null); }
+      const canEdit = kind === "sales" && editParam;
+      setEditMode(canEdit);
       // Clear feedback while the (sometimes slow) detail query runs, so the
       // page never looks like the saved data simply failed to load.
-      setMsg(T("جارٍ تحميل المستند…", "Loading document…"));
+      setMsg(canEdit
+        ? T("جارٍ تحميل الفاتورة للتعديل…", "Loading invoice for edit…")
+        : T("جارٍ تحميل المستند…", "Loading document…"));
     } else if (wasViewingRef.current) {
       // Leaving ?view= → close the opened document AND clear the form so
       // "New invoice" (or any menu click) starts fresh and item/party
       // lookups are re-enabled. A plain re-entry (no view was open) keeps
       // any uncommitted draft untouched.
       wasViewingRef.current = false;
+      setEditMode(false);
       resetFormDoc();
     }
     const o = Number(origParam || 0);
@@ -364,7 +374,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, viewParam, origParam]);
+  }, [kind, viewParam, origParam, editParam]);
 
   // Purchase return: choosing the original PO fills the supplier + its lines
   // (the user then adjusts the returned quantities and saves).
@@ -472,9 +482,16 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         });
       }
       setDiscount(Number(inv?.discountAmount || 0));
+      setTaxPct(Number(inv?.taxPercent || 15));
+      if (inv?.dueDate) setDueDate(String(inv.dueDate).slice(0, 10));
+      if (inv?.warehouseId) setWh(String(inv.warehouseId));
+      const savedPm = String(inv?.paymentMethod ?? "").toLowerCase();
+      setPayMode(savedPm === "credit" ? "credit" : savedPm === "card" ? "card" : "cash");
       setReason(String(inv?.notes ?? ""));
       setDocDate(String(inv?.date ?? today()).slice(0, 10));
-      setMsg(T("وضع العرض — الحفظ معطل", "View mode — saving disabled"));
+      setMsg(editParam
+        ? T("وضع التعديل — عدّل ثم اضغط حفظ", "Edit mode — change then press Save")
+        : T("وضع العرض — الحفظ معطل", "View mode — saving disabled"));
     }
   }, [viewData]);
 
@@ -532,20 +549,39 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const newDoc = () => {
     wasViewingRef.current = false;
+    setEditMode(false);
     setLines([]); setDiscount(0); setOrigId(""); setReason(""); setViewId(null); setPoViewId(null); setMsg("");
     setPartyId(""); setPartyQ(""); resetCd(); setDueDate(today()); setSavedNo(""); LAST_SAVED_NO = "";
+  };
+
+  // Unlock the currently viewed sales invoice for editing.
+  const startEdit = () => {
+    if (kind !== "sales" || viewId === null) return;
+    setEditMode(true);
+    setMsg(T("وضع التعديل — عدّل ثم اضغط حفظ", "Edit mode — change then press Save"));
+    setTimeout(() => searchRef.current?.focus(), 0);
+  };
+  const cancelEdit = () => {
+    if (viewId === null) return;
+    setEditMode(false);
+    navigate(`/app/construction/sahl/sales?view=${viewId}`, { replace: true });
+    utils.sales.invoiceGet.invalidate({ id: viewId });
+    setMsg(T("وضع العرض — الحفظ معطل", "View mode — saving disabled"));
   };
 
   // Step 1 -> 2: pick item, default qty/price, focus qty.
   // Supermarket mode: choosing adds immediately with qty 1 (rescan increments).
   const chooseItem = (p: any) => {
+    if (readOnly) return;
     if (autoAdd && viewId === null && (kind === "sales" || kind === "purchase")) {
-      fastAdd(p, 1);
+      fastAdd(p, Number(qtyInput) || 1);
       return;
     }
     setActiveItem(p);
     setQ(p.nameAr || p.name);
-    setQtyInput("1");
+    // Keep a quantity the user typed before picking the item (100/1000).
+    // Only fall back to 1 when the field is empty/zero.
+    setQtyInput(Number(qtyInput) > 0 ? qtyInput : "1");
     setPriceInput("");
     setTimeout(() => { qtyRef.current?.focus(); qtyRef.current?.select(); }, 0);
   };
@@ -592,7 +628,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   // Step 2 -> 3 (Enter in qty) and Step 3 -> add (Enter in price)
   const commitLine = async () => {
     const p = activeItem;
-    if (!p || isViewing) return;
+    if (!p || readOnly) return;
     const qn = Number(qtyInput) || 1;
     let price = priceInput.trim() === "" ? defaultPriceFor(p) : Number(priceInput);
     if (priceListId && kind === "sales" && priceInput.trim() === "") {
@@ -634,7 +670,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const totalCost = lines.reduce((a, l) => a + l.qty * (l.cost || 0), 0);
 
   const addLine = async (p: any) => {
-    if (isViewing) return;
+    if (readOnly) return;
     chooseItem(p);
   };
 
@@ -663,7 +699,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const moveRow = (i: number, dir: -1 | 1) => {
     const j = i + dir;
-    if (j < 0 || j >= lines.length || isViewing) return;
+    if (j < 0 || j >= lines.length || readOnly) return;
     const next = [...lines];
     [next[i], next[j]] = [next[j], next[i]];
     setLines(next);
@@ -671,16 +707,16 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   };
 
   const editQty = () => {
-    if (isViewing) return;
+    if (readOnly) return;
     const v = prompt(T("تعديل الكمية (F5)", "Edit qty (F5)"));
     if (v && Number(v) > 0) setLines(lines.map((l, i) => (i === sel ? { ...l, qty: Number(v) } : l)));
   };
   const editPrice = () => {
-    if (isViewing) return;
+    if (readOnly) return;
     const v = prompt(T("تعديل السعر (F6)", "Edit price (F6)"));
     if (v && Number(v) >= 0) setLines(lines.map((l, i) => (i === sel ? { ...l, price: Number(v) } : l)));
   };
-  const delLine = () => { if (viewId === null) gate(() => setLines(lines.filter((_, i) => i !== sel))); };
+  const delLine = () => { if (!readOnly) gate(() => setLines(lines.filter((_, i) => i !== sel))); };
   const moreOpts = () => setF7Open(true);
   const applyLineDisc = () => {
     gate(() => {
@@ -691,6 +727,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   };
 
   const invCreate = trpc.sales.invoiceCreate.useMutation();
+  const invUpdate = trpc.sales.invoiceUpdate.useMutation();
   const invDelete = trpc.sales.invoiceDelete.useMutation();
   const payCreate = trpc.sales.paymentCreate.useMutation();
   const prodUpdate = trpc.inventory.productUpdate.useMutation();
@@ -1070,7 +1107,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
 
   const save = async (andPrint: boolean, andNew: boolean) => {
     setMsg("");
-    if (isViewing) { setMsg(T("وضع العرض — أنشئ مستنداً جديداً", "View mode — create a new document")); return; }
+    if (readOnly) { setMsg(T("وضع العرض — أنشئ مستنداً جديداً", "View mode — create a new document")); return; }
     if (saving) { setMsg(T("جاري الحفظ — تم منع التكرار", "Saving — duplicate blocked")); return; }
     if (!lines.length && kind !== "sales-return") { setMsg(T("أضف سطراً واحداً على الأقل", "Add at least one line")); return; }
     // Sales works WITHOUT a selected customer: backend resolves walk-in or
@@ -1109,6 +1146,51 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       if (kind === "sales") {
         const custName = cd.name.trim() || parties.find((a: any) => String(a.id) === String(partyId))?.name;
         const nowT = new Date();
+        const salesItems = lines.map((l) => ({
+          productId: l.productId, description: l.name || l.nameAr || "-", descriptionAr: l.nameAr || undefined, quantity: l.qty,
+          unitPrice: String(l.price), unit: l.unit || undefined, totalAmount: String(lineTotal(l)),
+        }));
+        // Editing a saved invoice: update the same row + items (never create
+        // a duplicate). Backend adjusts stock by the quantity delta.
+        if (isViewing && editMode && viewId !== null) {
+          const savedNo = String((viewData as any)?.invoice?.invoiceNumber ?? `INV-${stamp}`);
+          await invUpdate.mutateAsync({
+            id: viewId,
+            invoiceNumber: savedNo,
+            ...(partyId ? { customerId: Number(partyId) } : {}),
+            date: docDate,
+            dueDate: dueDate || undefined,
+            time: `${String(nowT.getHours()).padStart(2, "0")}:${String(nowT.getMinutes()).padStart(2, "0")}`,
+            cashier: userName || undefined,
+            subTotal: String(subtotal), discountAmount: String(discount),
+            taxPercent: String(taxPct), taxAmount: taxAmt.toFixed(2),
+            totalAmount: String(grand), notes: note,
+            paymentType: payMode === "card" ? "card" : payMode === "credit" ? "credit" : "cash",
+            warehouseId: wh ? Number(wh) : undefined,
+            customerName: custName || undefined,
+            customerNameAr: cd.nameAr.trim() || undefined,
+            customerPhone: cd.phone.trim() || undefined,
+            customerEmail: cd.email.trim() || undefined,
+            customerAddress: cd.address.trim() || undefined,
+            customerAddressAr: cd.addressAr.trim() || undefined,
+            customerVat: cd.vat.trim() || undefined,
+            customerCr: cd.cr.trim() || undefined,
+            items: salesItems,
+          });
+          setMsg(`${T("تم تحديث الفاتورة", "Invoice updated")} — ${savedNo}`);
+          setSavedNo(savedNo);
+          LAST_SAVED_NO = savedNo;
+          setEditMode(false);
+          navigate(`/app/construction/sahl/sales?view=${viewId}`, { replace: true });
+          await Promise.all([
+            utils.sales.invoiceGet.invalidate({ id: viewId }),
+            utils.sales.invoiceList.invalidate(),
+            utils.inventory.inventoryList.invalidate(),
+            utils.inventory.movementList.invalidate(),
+            utils.cashbox.currentBalance.invalidate(),
+          ]);
+          return;
+        }
         const inv = await invCreate.mutateAsync({
           invoiceNumber: `INV-${stamp}`,
           ...(partyId ? { customerId: Number(partyId) } : {}),
@@ -1129,10 +1211,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           customerAddressAr: cd.addressAr.trim() || undefined,
           customerVat: cd.vat.trim() || undefined,
           customerCr: cd.cr.trim() || undefined,
-          items: lines.map((l) => ({
-            productId: l.productId, description: l.name || l.nameAr || "-", descriptionAr: l.nameAr || undefined, quantity: l.qty,
-            unitPrice: String(l.price), unit: l.unit || undefined, totalAmount: String(lineTotal(l)),
-          })),
+          items: salesItems,
         });
         setMsg(`${T("تم حفظ الفاتورة", "Invoice saved")} — INV-${stamp}`);
         setSavedNo(`INV-${stamp}`);
@@ -1302,10 +1381,10 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                   : isViewing && quoteViewData ? (String((quoteViewData as any)?.quotationNumber ?? "").replace(/^\D+/, "") || String(viewId))
                   : history.length + 1}
               </div>
-              <div className="text-[11px] text-white/95"><input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} disabled={isViewing}
+              <div className="text-[11px] text-white/95"><input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} disabled={readOnly}
                 className="w-full bg-transparent text-[10px] font-bold text-white outline-none [color-scheme:dark]" /></div>
               {(kind === "sales" || kind === "quotation") && (
-                <div className="text-[9px] text-white/80"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={isViewing}
+                <div className="text-[9px] text-white/80"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={readOnly}
                   className="w-full bg-transparent text-[9px] text-white/90 outline-none [color-scheme:dark]" title={T("الاستحقاق", "Due date")} /></div>
               )}
             </div>
@@ -1386,9 +1465,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
               <label className="flex items-center gap-1">
                 <b className="text-[11px]">{isSales ? T("الحساب", "Account") : T("المورد", "Supplier")}</b>
                 <input value={partyQ} onChange={(e) => { setPartyQ(e.target.value); if (kind === "sales" && e.target.value.length >= 2 && !partyId) setCd((c) => ({ ...c, name: c.name || e.target.value })); }}
-                  placeholder={T("بحث…", "Search…")} className={`${inputCls} h-8 w-[180px]`} disabled={isViewing} />
+                  placeholder={T("بحث…", "Search…")} className={`${inputCls} h-8 w-[180px]`} disabled={readOnly} />
               </label>
-              <select className={`${inputCls} h-8 w-[150px]`} value={partyId} onChange={(e) => pickParty(e.target.value)} disabled={isViewing}>
+              <select className={`${inputCls} h-8 w-[150px]`} value={partyId} onChange={(e) => pickParty(e.target.value)} disabled={readOnly}>
                 <option value="">—</option>
                 {parties.map((a: any) => <option key={a.id} value={a.id}>{a.nameAr || a.name}</option>)}
               </select>
@@ -1399,36 +1478,36 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                 ＋
               </button>
               <label className="flex cursor-pointer items-center gap-0.5 text-[12px]" title={T("نقدي", "Cash")}>
-                <input type="checkbox" checked={payMode === "cash"} onChange={() => setPayMode("cash")} disabled={isViewing} />
+                <input type="checkbox" checked={payMode === "cash"} onChange={() => setPayMode("cash")} disabled={readOnly} />
                 {T("نقدي", "Cash")}
               </label>
               <label className="flex cursor-pointer items-center gap-0.5 text-[12px]" title={T("آجل", "Credit/Deferred")}>
-                <input type="checkbox" checked={payMode === "credit"} onChange={() => setPayMode("credit")} disabled={isViewing} />
+                <input type="checkbox" checked={payMode === "credit"} onChange={() => setPayMode("credit")} disabled={readOnly} />
                 {payMode === "credit" ? T("آجل", "Deferred") : T("آجل", "Credit")}
               </label>
               {kind === "sales" && (
                 <label className="flex cursor-pointer items-center gap-0.5 text-[12px]" title={T("شبكة", "Card")}>
-                  <input type="checkbox" checked={payMode === "card"} onChange={() => setPayMode("card")} disabled={isViewing} />
+                  <input type="checkbox" checked={payMode === "card"} onChange={() => setPayMode("card")} disabled={readOnly} />
                   {T("شبكة", "Card")}
                 </label>
               )}
               <label className="ms-auto flex items-center gap-1">
                 <b className="text-[11px]">{T("المرجع", "Reference")}</b>
-                <input value={reference} onChange={(e) => setReference(e.target.value)} disabled={isViewing}
+                <input value={reference} onChange={(e) => setReference(e.target.value)} disabled={readOnly}
                   className={`${inputCls} h-8 w-[110px]`} />
               </label>
             </div>
             <div className="flex flex-wrap items-center gap-1">
               <label className="flex min-w-[260px] flex-1 items-start gap-1">
                 <b className="mt-1 whitespace-nowrap text-[11px]">{T("ملاحظة", "Note")}</b>
-                <textarea rows={2} dir="auto" value={reason} onChange={(e) => setReason(e.target.value)} disabled={isViewing}
+                <textarea rows={2} dir="auto" value={reason} onChange={(e) => setReason(e.target.value)} disabled={readOnly}
                   placeholder={T("ملاحظة تظهر على الفاتورة", "Note shown on the invoice")}
                   className="min-h-9 flex-1 resize-y border border-[#888] bg-white px-1 py-0.5 text-[12px] text-black disabled:bg-[#f0f0f0]" />
               </label>
               {kind.endsWith("return") && (
                 <label className="flex items-center gap-1">
                   <b className="text-[11px]">{T("الأصلي", "Original")}</b>
-                  <select className={`${inputCls} h-8 w-[120px]`} value={origId} onChange={(e) => setOrigId(e.target.value)} disabled={isViewing}>
+                  <select className={`${inputCls} h-8 w-[120px]`} value={origId} onChange={(e) => setOrigId(e.target.value)} disabled={readOnly}>
                     <option value="">—</option>
                     {history.map((hh: any) => (
                       <option key={hh.id} value={hh.id}>{hh.invoiceNumber ?? hh.poNumber ?? hh.creditNoteNumber ?? hh.id}</option>
@@ -1480,7 +1559,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                 ["vat", T("الضريبي", "VAT")], ["cr", T("السجل", "CR")],
               ] as [string, string][]).map(([k, lbl]) => (
                 <label key={k} className="flex items-center gap-1 text-[11px]">{lbl}
-                  <input className={inputCls} value={(cd as any)[k]} disabled={isViewing} onChange={(e) => setCd({ ...cd, [k]: e.target.value })} />
+                  <input className={inputCls} value={(cd as any)[k]} disabled={readOnly} onChange={(e) => setCd({ ...cd, [k]: e.target.value })} />
                 </label>
               ))}
             </div>
@@ -1498,7 +1577,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         {/* ===== Zone 4: workspace (table + search grid overlay + touch grid) ===== */}
         <div className="relative flex min-h-[140px] flex-1 flex-col overflow-visible">
           {/* 4b. Live multi-column search grid overlay (Sahl green frame) */}
-          {gridOpen && !activeItem && !isViewing && (
+          {gridOpen && !activeItem && !readOnly && (
             <div className="absolute inset-x-0 top-0 z-30 max-h-[78%] overflow-auto border-[3px] border-[#2fae4e] bg-white p-1 shadow-lg">
               <table className="w-full border-collapse text-[11px]">
                 <thead>
@@ -1567,7 +1646,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             <tbody>
               {lines.length === 0 ? (
                 <tr><td colSpan={11} className="py-6 text-center text-[#888]">
-                  {isViewing ? T("عرض", "Viewing") : T("فاتورة فارغة — ابحث عن صنف (الحقل الأحمر) وأضفه", "Empty — search an item (red field) and add it")}
+                  {readOnly ? T("عرض", "Viewing") : T("فاتورة فارغة — ابحث عن صنف (الحقل الأحمر) وأضفه", "Empty — search an item (red field) and add it")}
                 </td></tr>
               ) : lines.map((l, i) => (
                 <tr key={i} onClick={() => setSel(i)} className="cursor-pointer"
@@ -1604,7 +1683,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             </tbody>
           </table>
           {/* 4c. Touch grid (footer toggle) */}
-          {touchOpen && !isViewing && (
+          {touchOpen && !readOnly && (
             <div className="relative border-[3px] border-[#2fae4e] bg-white p-1.5">
               <div className="grid grid-cols-3 gap-1 md:grid-cols-4 xl:grid-cols-5">
                 {((q.trim() ? results : (allProducts ?? []).slice(0, 15)) as any[]).map((p: any) => (
@@ -1633,7 +1712,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           )}
           <div className="border-t border-[#bbb] bg-[#e0e0e0] p-1 text-[11px] text-[#555]">
             {isViewing
-              ? T("وضع العرض — الحفظ معطل، الطباعة والحذف متاحان حسب الصلاحية", "View mode — save disabled; print/delete per permission")
+              ? (editMode
+                ? T("وضع التعديل — عدّل البيانات ثم اضغط حفظ", "Edit mode — change data then press Save")
+                : T("وضع العرض — الحفظ معطل، الطباعة والحذف متاحان حسب الصلاحية", "View mode — save disabled; print/delete per permission"))
               : T("ملاحظة: الحفظ يرحّل المخزون والحسابات", "Note: saving posts stock and accounts")}
             {" · "}{T("الأرشيف", "Archive")}: {history.length}
           </div>
@@ -1643,7 +1724,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         <div className="flex flex-wrap items-center gap-2 px-1.5 py-1 text-white" style={{ background: "#2fae4e" }} dir="ltr">
           <label className="flex items-center gap-1 text-[11px]">
             <span className="opacity-90">{T("المخزن", "Warehouse")}</span>
-            <select className="h-7 min-w-[100px] px-1 text-black" value={wh} onChange={(e) => setWh(e.target.value)} disabled={isViewing}>
+            <select className="h-7 min-w-[100px] px-1 text-black" value={wh} onChange={(e) => setWh(e.target.value)} disabled={readOnly}>
               <option value="">—</option>
               {(warehouses ?? []).map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
@@ -1652,14 +1733,14 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           {kind === "sales" && (
             <label className="flex items-center gap-1 text-[11px]">
               <span className="opacity-90">{T("سعر البيع", "Selling Price")}</span>
-              <select className="h-7 min-w-[95px] px-1 text-black" value={priceListId} onChange={(e) => setPriceListId(e.target.value)} disabled={isViewing}>
+              <select className="h-7 min-w-[95px] px-1 text-black" value={priceListId} onChange={(e) => setPriceListId(e.target.value)} disabled={readOnly}>
                 <option value="">{T("الأساسي", "Base")}</option>
                 {((priceLists ?? []) as any[]).map((l: any) => <option key={l.id} value={l.id}>{l.nameAr || l.name}</option>)}
               </select>
               <button title={T("تثبيت قائمة الأسعار", "Pin price list")} onClick={pinPay} className="text-[12px] text-[#ffeb3b]">📌</button>
             </label>
           )}
-          <button type="button" onClick={() => { if (!isViewing) { setDiscVal(String(discount || "")); setDiscPct(""); setDiscOpen(true); } }}
+          <button type="button" onClick={() => { if (!readOnly) { setDiscVal(String(discount || "")); setDiscPct(""); setDiscOpen(true); } }}
             disabled={kind === "sales-return"}
             className="flex h-7 items-center gap-1 border border-white/60 bg-white/10 px-2 text-[12px] font-bold text-white disabled:opacity-40"
             title={T("خصم الفاتورة — اضغط للتخصيم", "Invoice discount — click to edit")}>
@@ -1668,7 +1749,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           </button>
           <label className="flex items-center gap-1 text-[11px]">
             <span className="opacity-90">{T("الخزينة", "Treasury")}</span>
-            <select className="h-7 min-w-[95px] px-1 text-black" value={rSafe} onChange={(e) => setRSafe(e.target.value)} disabled={isViewing}>
+            <select className="h-7 min-w-[95px] px-1 text-black" value={rSafe} onChange={(e) => setRSafe(e.target.value)} disabled={readOnly}>
               <option value="الخزينة العامة">{T("الخزينة العامة", "General Safe")}</option>
               <option value="بنك">{T("بنك", "Bank")}</option>
             </select>
@@ -1676,7 +1757,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           {kind === "sales" && (
             <label className="flex items-center gap-1 text-[11px]">
               <span className="opacity-90">{T("مندوب", "Delegate")}</span>
-              <select className="h-7 min-w-[95px] px-1 text-black" value={salesman} onChange={(e) => setSalesman(e.target.value)} disabled={isViewing}>
+              <select className="h-7 min-w-[95px] px-1 text-black" value={salesman} onChange={(e) => setSalesman(e.target.value)} disabled={readOnly}>
                 <option value="">—</option>
                 {(salesmen ?? []).filter((s: any) => s.isActive).map((s: any) => <option key={s.id} value={s.id}>{s.nameAr || s.name}</option>)}
               </select>
@@ -1686,7 +1767,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             <label className="flex items-center gap-1 text-[11px]">
               <span className="opacity-90">{T("ضريبة %", "Tax %")}</span>
               <input type="number" min="0" value={taxPct} onChange={(e) => setTaxPct(Number(e.target.value))}
-                className="h-7 w-[54px] px-1 text-black" disabled={isViewing} />
+                className="h-7 w-[54px] px-1 text-black" disabled={readOnly} />
             </label>
           )}
           <label className="ms-auto flex items-center gap-1 text-[12px]"
@@ -1717,14 +1798,24 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           </button>
           <span className="mx-1 h-5 w-px bg-[#555]" />
           <button className="flex items-center gap-1 border border-[#0a5c2a] px-2 py-1 font-bold hover:brightness-110"
-            style={{ background: "#2fae4e" }} disabled={saving || isViewing} onClick={() => save(false, false)}>
+            style={{ background: "#2fae4e" }} disabled={saving || readOnly} onClick={() => save(false, false)}>
             ✓ <b>{T("حفظ F9", "Save F9")}</b>
           </button>
-          <button className="border border-[#555] bg-[#3a3a3a] px-2 py-1 hover:bg-[#444]" onClick={doPrint}>🖨 <b>{T("طباعة F11", "Print F11")}</b></button>
+          {isViewing && kind === "sales" && !editMode && (
+            <button className="border border-[#8a6d00] bg-[#f7c631] px-2 py-1 font-bold text-black hover:brightness-105" onClick={startEdit}>
+              ✎ <b>{T("تعديل الفاتورة", "Edit Invoice")}</b>
+            </button>
+          )}
+          {isViewing && editMode && (
+            <button className="border border-[#555] bg-[#555] px-2 py-1 hover:bg-[#666]" onClick={cancelEdit}>
+              ✖ <b>{T("إلغاء التعديل", "Cancel Edit")}</b>
+            </button>
+          )}
+          <button className="border border-[#555] bg-[#3a3a3a] px-2 py-1 hover:bg-[#444]" onClick={doPrint}>🖨 <b>{T("PDF / طباعة F11", "PDF / Print F11")}</b></button>
           <button className="border border-[#555] bg-[#2e7d32] px-2 py-1 hover:bg-[#349e3a]" onClick={() => printDoc("xlsx")}>
-            <b className="bg-white px-0.5 text-[#2e7d32]">X</b><b>.xlsx</b>
+            <b className="bg-white px-0.5 text-[#2e7d32]">X</b><b> Excel .xlsx</b>
           </button>
-          <button className="border border-[#555] bg-[#1565c0] px-2 py-1 hover:bg-[#1b74d4]" disabled={isViewing} onClick={newDoc}>
+          <button className="border border-[#555] bg-[#1565c0] px-2 py-1 hover:bg-[#1b74d4]" disabled={readOnly} onClick={newDoc}>
             ➕ <b>{T("جديد F10", "New F10")}</b>
           </button>
           {kind === "sales" && (

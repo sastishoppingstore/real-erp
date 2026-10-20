@@ -226,6 +226,9 @@ export default function SahlInvoiceHistory() {
     else if (r.kind === "sale-return") navigate(`/app/construction/sahl/sales-return?view=${r.id}`);
   };
 
+  // Open the saved sales invoice directly in edit mode (form unlocked).
+  const editRow = (r: HRow) => navigate(`/app/construction/sahl/sales?view=${r.id}&edit=1`);
+
   const startReturn = (r: HRow) => navigate(`/app/construction/sahl/sales-return?orig=${r.id}`);
 
   const compContacts = (comp: any) => [comp.print1, comp.print2, comp.print3].filter((x: any) => x && String(x).trim());
@@ -243,6 +246,18 @@ export default function SahlInvoiceHistory() {
     const pm = String(inv?.paymentMethod ?? "").toLowerCase();
     const pay = pm === "card" ? T("شبكة", "Card") : pm === "credit" ? T("آجل", "Credit") : T("نقدي", "Cash");
     const contacts = compContacts(comp);
+    // Older documents (created before the Sahl invoice screen) can have line
+    // rows but zero header totals. Rebuild the money fields from the lines so
+    // history print / Excel never shows an empty zero-value invoice.
+    const lineSub = items.reduce((a: number, it: any) => {
+      const t = Number(it.totalAmount || 0);
+      return a + (t || Number(it.quantity || 0) * Number(it.unitPrice || 0));
+    }, 0);
+    const subTotal = Number(inv?.subTotal || 0) || lineSub;
+    const discount = Number(inv?.discountAmount || 0);
+    const taxPct = Number(inv?.taxPercent || 15) || 0;
+    const tax = Number(inv?.taxAmount || 0) || Math.max(0, subTotal - discount) * taxPct / 100;
+    const net = Number(inv?.totalAmount || 0) || (subTotal - discount + tax);
     return {
       no: inv?.invoiceNumber ?? `#${inv?.id}`,
       date: String(inv?.date ?? "").slice(0, 10),
@@ -257,17 +272,17 @@ export default function SahlInvoiceHistory() {
       lines: items.map((it: any) => ({
         code: it.sku ?? "", name: it.description ?? "", nameAr: it.descriptionAr || undefined,
         unit: it.unit ?? "", qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0),
-        disc: 0, total: Number(it.totalAmount || 0),
+        disc: 0, total: Number(it.totalAmount || 0) || Number(it.quantity || 0) * Number(it.unitPrice || 0),
       })),
-      subtotal: Number(inv?.subTotal || 0), discount: Number(inv?.discountAmount || 0),
-      tax: Number(inv?.taxAmount || 0), net: Number(inv?.totalAmount || 0),
+      subtotal: subTotal, discount,
+      tax, net,
       paid: Number(inv?.paidAmount || 0),
       notes: [inv?.notes, inv?.notesAr].map((x: any) => String(x ?? "").trim()).filter(Boolean).join(" / ") || undefined,
       qrText: inv?.zatcaQrCode || inv?.invoiceNumber || undefined,
       dueDate: String(inv?.dueDate ?? "").slice(0, 10) || undefined,
       cashier: inv?.cashier || undefined,
       paymentType: pay,
-      taxPct: Number(inv?.taxPercent || 15),
+      taxPct,
       qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
       companyTax: comp.taxNumber ?? undefined,
       companyContacts: contacts.length ? contacts : undefined,
@@ -498,15 +513,18 @@ export default function SahlInvoiceHistory() {
                 <td className={tdNum}>{money(r.balance)}</td>
                 <td className={td}>{r.cashier || "—"}</td>
                 <td className={td}>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {(r.kind === "sale" || r.kind === "purchase" || r.kind === "quotation" || r.kind === "sale-return") && (
-                      <button className={miniBtn} title={T("عرض / تعديل", "View / Edit")} onClick={() => openRow(r)}>👁</button>
+                      <button className={miniBtn} title={T("عرض الفاتورة", "View invoice")} onClick={() => openRow(r)}>👁</button>
+                    )}
+                    {r.kind === "sale" && (
+                      <button className={miniBtn} title={T("تعديل الفاتورة", "Edit invoice")} onClick={() => editRow(r)}>✎ Edit</button>
                     )}
                     {(r.kind === "sale" || r.kind === "purchase" || r.kind === "quotation") && (
-                      <button className={miniBtn} disabled={!!busy} title={T("طباعة / PDF", "Print / PDF")} onClick={() => printRow(r, "html")}>🖨</button>
+                      <button className={miniBtn} disabled={!!busy} title={T("طباعة / PDF", "Print / PDF")} onClick={() => printRow(r, "html")}>PDF</button>
                     )}
                     {(r.kind === "sale" || r.kind === "purchase" || r.kind === "quotation") && (
-                      <button className={miniBtn} disabled={!!busy} title={T("تصدير إكسل 0060", "Excel 0060 export")} onClick={() => printRow(r, "xlsx")}>xlsx ↓</button>
+                      <button className={miniBtn} disabled={!!busy} title={T("تصدير إكسل 0060", "Excel 0060 export")} onClick={() => printRow(r, "xlsx")}>Excel ↓</button>
                     )}
                     {r.kind === "sale" && (
                       <button className={miniBtn} title={T("إنشاء مرتجع بيع", "Create sales return")} onClick={() => startReturn(r)}>↩</button>
