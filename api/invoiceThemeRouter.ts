@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { createRouter, authedQuery, adminQuery, userAdminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import * as schema from "@db/schema";
@@ -94,11 +94,45 @@ export const invoiceThemeRouter = createRouter({
   // ================================================
   list: authedQuery.query(async ({ ctx }) => {
     const db = getDb();
-    const tenantThemes = await db.select().from(schema.invoiceThemes)
+    // The uploaded .xlsx is big — the list only says whether a design has one.
+    const tenantThemes = await db.select({
+      id: schema.invoiceThemes.id,
+      name: schema.invoiceThemes.name,
+      nameAr: schema.invoiceThemes.nameAr,
+      themeKey: schema.invoiceThemes.themeKey,
+      config: schema.invoiceThemes.config,
+      templateName: schema.invoiceThemes.templateName,
+      isDefault: schema.invoiceThemes.isDefault,
+      createdAt: schema.invoiceThemes.createdAt,
+      hasTemplate: sql<number>`CASE WHEN ${schema.invoiceThemes.templateData} IS NULL OR ${schema.invoiceThemes.templateData} = '' THEN 0 ELSE 1 END`,
+    }).from(schema.invoiceThemes)
       .where(eq(schema.invoiceThemes.tenantId, ctx.user.tenantId!))
       .orderBy(desc(schema.invoiceThemes.createdAt));
     return tenantThemes.length > 0 ? tenantThemes : DEFAULT_THEMES;
   }),
+
+  // The uploaded Excel design itself (base64) for one saved template.
+  getTemplate: authedQuery
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const row = await db.select({
+        id: schema.invoiceThemes.id,
+        name: schema.invoiceThemes.name,
+        templateData: schema.invoiceThemes.templateData,
+        templateName: schema.invoiceThemes.templateName,
+      }).from(schema.invoiceThemes).where(and(
+        eq(schema.invoiceThemes.id, input.id),
+        eq(schema.invoiceThemes.tenantId, ctx.user.tenantId!),
+      )).limit(1);
+      const t = row[0];
+      return {
+        id: t?.id ?? input.id,
+        name: t?.name ?? "",
+        templateName: t?.templateName ?? null,
+        templateData: t?.templateData ?? null,
+      };
+    }),
 
   getDefaults: authedQuery.query(() => DEFAULT_THEMES),
 
@@ -111,11 +145,18 @@ export const invoiceThemeRouter = createRouter({
       nameAr: z.string().optional(),
       themeKey: z.string().min(1),
       config: z.any(),
+      // Base64 of the tenant's own .xlsx design (optional).
+      templateData: z.string().optional(),
+      templateName: z.string().optional(),
       isDefault: z.boolean().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
+      const { templateData, templateName, ...rest } = input;
+      const patch: Record<string, any> = { ...rest, config: input.config };
+      if (templateData !== undefined) patch.templateData = templateData || null;
+      if (templateName !== undefined) patch.templateName = templateName || null;
       if (input.isDefault) {
         await db.update(schema.invoiceThemes)
           .set({ isDefault: false })
@@ -129,14 +170,13 @@ export const invoiceThemeRouter = createRouter({
       });
       if (existing) {
         await db.update(schema.invoiceThemes)
-          .set({ ...input, config: input.config })
+          .set(patch)
           .where(eq(schema.invoiceThemes.id, existing.id));
         return { id: existing.id, success: true };
       }
       const [{ id }] = await db.insert(schema.invoiceThemes).values({
         tenantId,
-        ...input,
-        config: input.config,
+        ...patch,
       }).$returningId();
       return { id, success: true };
     }),

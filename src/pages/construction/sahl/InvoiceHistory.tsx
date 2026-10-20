@@ -4,7 +4,7 @@ import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { inputCls, btnCls } from "./ui";
 import {
-  DOC_TITLES, downloadBlob, printInvoice060, render060, zatcaQrTlv,
+  DOC_TITLES, downloadBlob, printInvoice060, render060, renderTemplateXlsx, zatcaQrTlv,
   type DocData, type PrintConfig,
 } from "./printEngine";
 
@@ -87,6 +87,7 @@ export default function SahlInvoiceHistory() {
   const { data: customers } = trpc.sales.customerList.useQuery(undefined);
   const { data: suppliers } = trpc.purchase.supplierList.useQuery(undefined);
   const { data: company } = trpc.settings.companySettingsGet.useQuery();
+  const { data: themesQ } = trpc.invoiceTheme.list.useQuery();
 
   const custMap = useMemo(() => {
     const m = new Map<number, any>();
@@ -392,6 +393,24 @@ export default function SahlInvoiceHistory() {
         );
       } else {
         const cfg: PrintConfig = { ...DEFAULT_CFG, docType, titleAr: tar, titleEn: DOC_TITLES[docType][1] };
+        // The tenant's own uploaded Excel design (if any) is used for the
+        // export — otherwise the built-in 0060 form.
+        const tpl = (themesQ ?? []).find((t: any) => t.hasTemplate && t.templateName);
+        if (tpl?.id) {
+          try {
+            const tplFile = await utils.invoiceTheme.getTemplate.fetch({ id: Number(tpl.id) });
+            if (tplFile?.templateData) {
+              const blob = await renderTemplateXlsx(tplFile.templateData, cfg, d, {
+                nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber,
+                logoBase64: comp.logo || undefined,
+              });
+              downloadBlob(blob, `${d.no}.xlsx`);
+              return;
+            }
+          } catch (e: any) {
+            setMsg(String(e?.message ?? e));
+          }
+        }
         const blob = await render060(cfg, d, {
           nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber,
           logoBase64: comp.logo || undefined,

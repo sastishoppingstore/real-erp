@@ -5,7 +5,7 @@ import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
 import { inputCls, btnCls, btnGreenCls, FuncKey } from "./ui";
 import {
-  DOC_TITLES, downloadBlob, printInvoice060, renderXlsx, render060, zatcaQrTlv,
+  DOC_TITLES, downloadBlob, printInvoice060, renderXlsx, render060, renderTemplateXlsx, zatcaQrTlv,
   type DocData, type PrintConfig,
 } from "./printEngine";
 
@@ -1042,6 +1042,26 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       );
     if (mode === "xlsx" || mode === "both") {
       const compInfo = { nameAr: comp.companyNameAr, name: comp.companyName };
+      // The tenant's own uploaded Excel design wins: the invoice is written
+      // into THAT file (tags replaced, item row repeated per line).
+      const tplRow = myTpls.find((x: any) => String(x.id) === String(printTpl) || x.themeKey === printTpl);
+      if (tplRow && tplRow.hasTemplate && tplRow.id && cfg) {
+        try {
+          const tpl = await utils.invoiceTheme.getTemplate.fetch({ id: Number(tplRow.id) });
+          if (tpl?.templateData) {
+            const blob = await renderTemplateXlsx(tpl.templateData, cfg, d, {
+              ...compInfo, tax: comp.taxNumber,
+              logoBase64: comp.logo || undefined,
+            });
+            downloadBlob(blob, `${d.no}-${(tplRow.name || "invoice").replace(/[^\w؀-ۿ-]+/g, "-")}.xlsx`);
+            if (mode === "both") { /* the HTML copy was already sent to the printer */ }
+            closePrint();
+            return;
+          }
+        } catch (e: any) {
+          setMsg(String(e?.message ?? e));
+        }
+      }
       if (!cfg) {
         // DEFAULT: form-returnsale-0060 replica (the user's Excel file)
         const cfg060: PrintConfig = {
@@ -1883,7 +1903,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             <b className="text-[13px]">{T("الطباعة — اختر القالب", "Print — pick template")}</b>
             <select className={`${inputCls} mt-2`} value={printTpl} onChange={(e) => setPrintTpl(e.target.value)}>
               <option value="">{T("الافتراضي", "Default")}</option>
-              {myTpls.map((t: any) => <option key={t.id ?? t.themeKey} value={t.id ?? t.themeKey}>{t.name}</option>)}
+              {myTpls.map((t: any) => <option key={t.id ?? t.themeKey} value={t.id ?? t.themeKey}>{t.hasTemplate ? "📄 " : ""}{t.name}</option>)}
             </select>
             <div className="mt-1 text-[11px]">
               <button className={btnCls} onClick={() => navigate("/app/construction/sahl/prints")}>

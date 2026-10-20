@@ -893,6 +893,201 @@ function invoice060Html(
 
 // Opens the invoice as a real A4 print document in a new window/tab.
 // Printing (or "Save as PDF") yields the invoice document itself.
+// ---------------------------------------------------------------------------
+// Tenant's own Excel design (uploaded .xlsx).
+// The uploaded file IS the invoice form: every Sahl tag inside it
+// (<Data:…>, <Account:…>, <Items:…>, <AmountString>) is replaced with the
+// document values and the item row is repeated for every invoice line — so
+// the exported workbook looks exactly like the design the tenant uploaded.
+// ---------------------------------------------------------------------------
+function xmlDecode(s: string) {
+  return String(s ?? "")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_m, d) => String.fromCharCode(Number(d)))
+    .replace(/&amp;/g, "&");
+}
+function xmlEncode(s: string) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function readSharedStrings(xml: string): string[] {
+  const out: string[] = [];
+  const re = /<si>([\s\S]*?)<\/si>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml))) {
+    out.push(xmlDecode([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((x) => x[1]).join("")));
+  }
+  return out;
+}
+function cellTextOf(cellXml: string, shared: string[]): string {
+  const t = (cellXml.match(/\st="([^"]+)"/) || [])[1] || "n";
+  if (t === "s") {
+    const v = (cellXml.match(/<v>([\s\S]*?)<\/v>/) || [])[1] || "";
+    return shared[Number(v)] ?? "";
+  }
+  if (t === "inlineStr") {
+    return xmlDecode([...cellXml.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((x) => x[1]).join(""));
+  }
+  return xmlDecode((cellXml.match(/<v>([\s\S]*?)<\/v>/) || [])[1] || "");
+}
+function tagValue(
+  tag: string, d: DocData, company: any, line: DocLine | null,
+): string | number | null {
+  const t = tag.trim();
+  const n = (v: any) => Number(v || 0);
+  if (/^<Items:/i.test(t)) {
+    if (!line) return ""; // stray item tag outside the item row → clear it
+    if (/^<Items:title>/i.test(t)) return line.name ?? "";
+    if (/^<Items:code>/i.test(t)) return line.code ?? "";
+    if (/^<Items:unit>/i.test(t)) return line.unit ?? "";
+    if (/^<Items:user_qty>|^<Items:qty>/i.test(t)) return n(line.qty);
+    if (/^<Items:price>/i.test(t)) return n(line.price);
+    if (/^<Items:total_price>|^<Items:net_price>/i.test(t)) return n(line.total);
+    if (/^<Items:discount>/i.test(t)) return n(line.disc);
+    return null;
+  }
+  if (/^<Data:no>/i.test(t)) return d.no ?? "";
+  if (/^<Data:reference>/i.test(t)) return (d as any).reference ?? "";
+  if (/^<Data:date>/i.test(t)) return d.date ?? "";
+  if (/^<Data:time>/i.test(t)) return d.time ?? "";
+  if (/^<Data:total_price>/i.test(t)) return n(d.subtotal);
+  if (/^<Data:discount>/i.test(t)) return n(d.discount);
+  if (/^<Data:net_price>/i.test(t)) return n(d.net);
+  if (/^<Data:tax_amount>/i.test(t)) return n(d.tax);
+  if (/^<Data:paid>/i.test(t)) return n(d.paid);
+  if (/^<Data:remaining>/i.test(t)) return n(d.net) - n(d.paid);
+  if (/^<Account:title>/i.test(t)) return d.party ?? "";
+  if (/^<Account:tax_id>/i.test(t)) return d.partyTax ?? "";
+  if (/^<Account:phone>/i.test(t)) return d.partyPhone ?? "";
+  if (/^<Branch:name>/i.test(t)) return d.branch ?? "";
+  if (/^<AmountString>/i.test(t)) return amountWords(d.net);
+  if (/^<ZATCA:QR_TLV>/i.test(t)) return d.qrText ?? "";
+  if (/^<Company:name>/i.test(t)) return company?.nameAr || company?.name || "";
+  return null;
+}
+function patchTemplateSheet(
+  sheet: string, d: DocData, company: any, shared: string[],
+): string {
+  const rowRe = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g;
+  const rows: { num: number; attrs: string; inner: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = rowRe.exec(sheet))) {
+    const attrs = m[1] || "";
+    rows.push({
+      num: Number((attrs.match(/r="(\d+)"/) || [])[1] || 0),
+      attrs,
+      inner: m[2] ?? "",
+    });
+  }
+  if (!rows.length) return sheet;
+
+  const lines = d.lines ?? [];
+  // The tag text inside the XML is escaped (&lt;Items:title&gt;) — the row is
+  // detected through the DECODED cell text, otherwise the item row is missed.
+  const rowHasItems = (inner: string) => {
+    const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    let cm: RegExpExecArray | null;
+    while ((cm = cellRe.exec(inner))) {
+      if (/<Items:/i.test(cellTextOf(cm[0], shared))) return true;
+    }
+    return false;
+  };
+  const itemIdx = rows.findIndex((r) => rowHasItems(r.inner));
+
+  const patchInner = (inner: string, rowNum: number, line: DocLine | null): string => {
+    const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    return inner.replace(cellRe, (full, attrs: string) => {
+      const ref = (attrs.match(/r="([A-Z]+)\d+"/) || [])[1];
+      if (!ref) return full;
+      const text = cellTextOf(full, shared);
+      const tags = text.match(/<[^<>]+>/g) || [];
+      let newText = text;
+      let numeric = false;
+      for (const tg of tags) {
+        const v = tagValue(tg, d, company, line);
+        if (v === null) continue;
+        newText = newText.replace(tg, typeof v === "number" ? String(v) : String(v));
+        if (typeof v === "number" && text.trim() === tg) numeric = true;
+      }
+      const newRef = `${ref}${rowNum}`;
+      const oldRef = (attrs.match(/r="([^"]+)"/) || [])[1] || "";
+      if (newText === text && newRef === oldRef) return full;
+      const style = (attrs.match(/s="(\d+)"/) || [])[1];
+      const keep = style ? ` s="${style}"` : "";
+      if (newText === text) {
+        // no tag to replace, only the row number moved
+        return `<c r="${newRef}"${keep}${attrs.replace(/\st="[^"]*"/, "").replace(/r="[^"]*"/, "").replace(/^\s+/, "")}${full.endsWith("/>") ? "/>" : `>${(full.match(/>([\s\S]*)<\/c>/) || [])[1] || ""}</c>`}`;
+      }
+      const innerXml = numeric
+        ? `<v>${newText}</v>`
+        : `<is><t xml:space="preserve">${xmlEncode(newText)}</t></is>`;
+      const tAttr = numeric ? "" : ' t="inlineStr"';
+      return `<c r="${newRef}"${keep}${tAttr}>${innerXml}</c>`;
+    });
+  };
+
+  const out: { num: number; attrs: string; inner: string }[] = [];
+  const delta = Math.max(0, lines.length - 1);
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (i === itemIdx) {
+      const list = lines.length ? lines : [null as any];
+      list.forEach((ln, li) => {
+        const newNum = r.num + li;
+        out.push({
+          num: newNum,
+          attrs: r.attrs.replace(/r="\d+"/, `r="${newNum}"`),
+          inner: patchInner(r.inner, newNum, ln),
+        });
+      });
+      continue;
+    }
+    const newNum = r.num + (itemIdx >= 0 && i > itemIdx ? delta : 0);
+    out.push({
+      num: newNum,
+      attrs: newNum !== r.num ? r.attrs.replace(/r="\d+"/, `r="${newNum}"`) : r.attrs,
+      inner: patchInner(r.inner, newNum, null),
+    });
+  }
+
+  const body = out.map((r) => {
+    const attrs = r.attrs.replace(/\s*spans="[^"]*"/, "");
+    return r.inner ? `<row${attrs}>${r.inner}</row>` : `<row${attrs}/>`;
+  }).join("");
+  let outXml = sheet.replace(/<sheetData\b[^>]*>[\s\S]*?<\/sheetData>/, `<sheetData>${body}</sheetData>`);
+  const maxRow = out.length ? Math.max(...out.map((r) => r.num)) : 1;
+  outXml = outXml.replace(/<dimension ref="([^"]+)"/, (_m, ref) =>
+    `<dimension ref="${ref.replace(/(\d+)$/, String(maxRow))}"`);
+  return outXml;
+}
+
+// Render an invoice from the tenant's uploaded Excel design.
+export async function renderTemplateXlsx(
+  templateB64: string, cfg: PrintConfig, d: DocData,
+  company: { nameAr?: string; name?: string; tax?: string; logoBase64?: string },
+): Promise<Blob> {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(templateB64, { base64: true });
+  const sheetFile = zip.file("xl/worksheets/sheet1.xml");
+  if (!sheetFile) throw new Error("Template: sheet1 missing");
+  const sharedFile = zip.file("xl/sharedStrings.xml");
+  const shared = sharedFile ? readSharedStrings(await sharedFile.async("string")) : [];
+  const sheet = await sheetFile.async("string");
+  zip.file("xl/worksheets/sheet1.xml", patchTemplateSheet(sheet, d, company, shared));
+  // company logo replaces the first picture of the uploaded design
+  const jpg = await logoToJpegBytes(company.logoBase64);
+  if (jpg) {
+    const rels = zip.file("xl/drawings/_rels/drawing1.xml.rels");
+    if (rels) {
+      const relXml = await rels.async("string");
+      const first = relXml.match(/Target="\.\.\/media\/([^"]+)"/);
+      if (first) zip.file(`xl/media/${first[1]}`, jpg);
+    }
+  }
+  const out = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+  return new Blob([out as any], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
 export async function printInvoice060(
   d: DocData,
   company: { nameAr?: string; name?: string; tax?: string; taxNumber?: string; crNumber?: string; logoBase64?: string },

@@ -2948,6 +2948,10 @@ export const invoiceThemes = mysqlTable("invoice_themes", {
   nameAr: varchar("name_ar", { length: 100 }),
   themeKey: varchar("theme_key", { length: 50 }).notNull(),
   config: json("config").notNull(),
+  // Own Excel design uploaded by the tenant: the invoice is printed/exported
+  // from THIS file (base64 .xlsx) instead of the built-in 0060 form.
+  templateData: mediumtext("template_data"),
+  templateName: varchar("template_name", { length: 200 }),
   isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [

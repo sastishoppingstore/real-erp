@@ -33,6 +33,10 @@ export default function SahlPrints() {
   const [selKey, setSelKey] = useState<string>("sales-0060");
   const [cfg, setCfg] = useState<PrintConfig>({ ...BUILTINS[0].config });  const [msg, setMsg] = useState("");
   const [myName, setMyName] = useState("");
+  // The tenant's own Excel design (base64 .xlsx) that will be used as the
+  // invoice form once it is saved with a design.
+  const [upload, setUpload] = useState<{ name: string; data: string } | null>(null);
+  const [selTheme, setSelTheme] = useState<{ id?: number; themeKey: string; name: string } | null>(null);
 
   const { data: themesQ } = trpc.invoiceTheme.list.useQuery();
   const allThemes: any[] = Array.isArray(themesQ) ? themesQ : [];
@@ -54,6 +58,8 @@ export default function SahlPrints() {
   };
   const pickMine = (t: any) => {
     setSelKey(`my-${t.id}`);
+    setSelTheme({ id: t.id, themeKey: t.themeKey, name: t.name });
+    setUpload(t.templateName ? { name: t.templateName, data: "" } : null);
     setCfg({ ...(t.config as PrintConfig), docType });
   };
 
@@ -66,6 +72,7 @@ export default function SahlPrints() {
       themeKey: `sahl-${docType}-${Date.now().toString(36)}`,
       config: { ...cfg, docType },
       isDefault: false,
+      ...(upload?.data ? { templateData: upload.data, templateName: upload.name } : {}),
     } as any);
   };
 
@@ -74,11 +81,33 @@ export default function SahlPrints() {
     downloadBlob(blob, `template-${selKey}-sample.xlsx`);
   };
 
+  // Upload the tenant's own Excel design: the file is kept with the design
+  // and the invoice is then printed/exported from THAT file.
   const doImport = async (file: File) => {
     try {
+      setMsg(T("جارٍ رفع الملف…", "Uploading file…"));
+      const buf = await file.arrayBuffer();
+      const u = new Uint8Array(buf);
+      let bin = "";
+      for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+      const data = btoa(bin);
       const part = await importXlsx(file, docType);
       setCfg({ ...cfg, ...part, docType });
-      setMsg(T("تم الاستيراد — راجع ثم احفظ", "Imported — review then save"));
+      setUpload({ name: file.name, data });
+      if (selTheme) {
+        // attach the file to the design that is open right now
+        saveTheme.mutate({
+          name: selTheme.name,
+          themeKey: selTheme.themeKey,
+          config: { ...cfg, ...part, docType },
+          isDefault: false,
+          templateData: data,
+          templateName: file.name,
+        } as any);
+        setMsg(T(`✓ تم رفع الملف وربطه بالتصميم "${selTheme.name}"`, `✓ File uploaded and linked to design "${selTheme.name}"`));
+      } else {
+        setMsg(T(`✓ تم رفع الملف (${file.name}) — اكتب اسم التصميم ثم اضغط "أضف إلى تصميماتي"`, `✓ File uploaded (${file.name}) — name the design and press "Add to mine"`));
+      }
     } catch (e: any) {
       setMsg(e.message ?? String(e));
     }
@@ -133,7 +162,11 @@ export default function SahlPrints() {
             {mine.length === 0 && <div className="text-[11px] text-white/50">{T("لا توجد بعد", "None yet")}</div>}
             {mine.map((t: any) => (
               <div key={t.id} className="flex items-center justify-between gap-1 border border-[#444] px-1 py-0.5">
-                <button className="flex-1 text-start hover:underline" onClick={() => pickMine(t)}>{t.name}</button>
+                <button className="flex-1 text-start hover:underline" onClick={() => pickMine(t)}
+                  title={t.templateName ? `${t.templateName}` : T("بدون ملف إكسل", "No Excel file")}>
+                  {t.hasTemplate || t.templateName ? "📄 " : ""}{t.name}
+                  {t.templateName ? <span className="text-[10px] text-white/50"> ({t.templateName})</span> : null}
+                </button>
                 {typeof t.id === "number" && (
                   <button className={btnCls} onClick={() => setDefault.mutate({ themeId: t.id })}>
                     {t.isDefault ? "✓" : T("افتراضي", "Default")}
@@ -151,9 +184,15 @@ export default function SahlPrints() {
             </button>
           </div>
           <label className="mt-2 block border border-dashed border-[#666] p-2 text-center text-[11px] text-white/70">
-            {T("استيراد xlsx (يقرأ الوسوم)", "Import xlsx (reads tags)")}
+            {T("رفع تصميم Excel الخاص بك (يستخدم لطباعة الفواتير)", "Upload your own Excel design (used for invoice printing)")}
             <input type="file" accept=".xlsx" className="mt-1 w-full text-[11px]"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = ""; }} />
+            {upload && (
+              <div className="mt-1 text-[10px] text-white/80">
+                {T("الملف المرفوع:", "Uploaded file:")} <b>{upload.name}</b>
+                {upload.data ? "" : ` (${T("محفوظ مسبقاً", "already saved")})`}
+              </div>
+            )}
           </label>
         </div>
 
