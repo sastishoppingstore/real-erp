@@ -418,7 +418,11 @@ function patchSheet060(
           break;
         case 8:
           xml = setCell(xml, r, "C", d.partyCr ? `C.R. No. ${d.partyCr}` : null);
-          xml = setCell(xml, r, "E", d.partyTax ? `Tax No. ${d.partyTax}` : null);
+          // "Tax No." belongs in the same column as the other right hand
+          // labels (Client / Arabic Name / Address / Phone No. / Email) so it
+          // starts on the very same left edge as they do.
+          xml = setCell(xml, r, "D", d.partyTax ? `Tax No. ${d.partyTax}` : null);
+          xml = setCell(xml, r, "E", null);
           break;
         case 9:
           xml = setCell(xml, r, "C", d.no);
@@ -853,9 +857,9 @@ function invoice060Html(
       <td></td><td style="font-size:10pt">${esc(title)}</td>
       <td colspan="5" class="c" style="font-size:16pt">${esc(d.docType === "sale" ? "Tax Invoice" : co)}</td>
     </tr>
-    <tr><td></td><td class="lbl">C.R. No</td><td colspan="3">${esc(d.partyCr ?? "")}</td><td class="lbl">Tax No.</td><td>${esc(d.partyTax ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">C.R. No</td><td>${esc(d.partyCr ?? "")}</td><td class="lbl">Tax No.</td><td colspan="3">${esc(d.partyTax ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(d.no)}</td><td class="lbl">Client</td><td colspan="3">${esc(d.party ?? "")}</td></tr>
-    <tr><td></td><td class="lbl">Payment</td><td>${esc(d.paymentType ?? "")}</td><td class="lbl">Arabic Name</td><td colspan="3">${esc(d.partyAr ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">Payment</td><td>${esc(d.paymentType ?? "")}</td><td class="lbl" style="white-space:normal">Arabic Name</td><td colspan="3">${esc(d.partyAr ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Date</td><td>${esc(d.date)}</td><td class="lbl">Address</td><td colspan="3">${esc(d.accountAddress ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td class="lbl">Phone No.</td><td colspan="3">${esc(d.partyPhone ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Due Date</td><td>${esc(d.dueDate ?? d.date)}</td><td class="lbl">Email</td><td colspan="3">${esc(d.partyEmail ?? "")}</td></tr>
