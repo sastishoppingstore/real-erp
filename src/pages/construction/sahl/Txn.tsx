@@ -439,6 +439,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       const s: any = (suppliers ?? []).find((x: any) => String(x.id) === String(po.supplierId));
       if (s) setPartyQ(s.nameAr || s.name);
     }
+    setReason(String(po.notes ?? ""));
     setDocDate(String(po.date ?? today()).slice(0, 10));
     setMsg(T("وضع العرض — الحفظ معطل", "View mode — saving disabled"));
   }, [poViewData]);
@@ -471,6 +472,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         });
       }
       setDiscount(Number(inv?.discountAmount || 0));
+      setReason(String(inv?.notes ?? ""));
       setDocDate(String(inv?.date ?? today()).slice(0, 10));
       setMsg(T("وضع العرض — الحفظ معطل", "View mode — saving disabled"));
     }
@@ -1417,10 +1419,11 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
               </label>
             </div>
             <div className="flex flex-wrap items-center gap-1">
-              <label className="flex min-w-[240px] flex-1 items-center gap-1">
-                <b className="text-[11px]">{T("ملاحظات", "Notes")}</b>
-                <input value={reason} onChange={(e) => setReason(e.target.value)} disabled={isViewing}
-                  placeholder={T("سبب / ملاحظة الفاتورة", "Invoice note / reason")} className={`${inputCls} h-8 flex-1`} />
+              <label className="flex min-w-[260px] flex-1 items-start gap-1">
+                <b className="mt-1 whitespace-nowrap text-[11px]">{T("ملاحظة", "Note")}</b>
+                <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} disabled={isViewing}
+                  placeholder={T("ملاحظة تظهر على الفاتورة", "Note shown on the invoice")}
+                  className="min-h-9 flex-1 resize-y border border-[#888] bg-white px-1 py-0.5 text-[12px] text-black disabled:bg-[#f0f0f0]" />
               </label>
               {kind.endsWith("return") && (
                 <label className="flex items-center gap-1">
@@ -1448,10 +1451,19 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           </div>
         </div>
 
-        {kind === "sales" && viewId === null && (
+        {isViewing && String(reason).trim() !== "" && (
+          <div className="flex items-start gap-2 border-b border-[#c8a419] bg-[#fff8e1] px-2 py-1 text-[12px]">
+            <b className="shrink-0">{T("ملاحظة", "Note")}:</b>
+            <span className="whitespace-pre-wrap">{reason}</span>
+          </div>
+        )}
+
+        {kind === "sales" && (viewId === null || isViewing) && (
           <details className="border-b border-[#bbb] bg-[#f7f7f7] px-1.5 py-1" open={!!partyId}>
             <summary className="cursor-pointer text-[11px] text-[#555]">
-              {T("بيانات العميل (تُعبأ تلقائياً — قابلة للتعديل)", "Customer details (auto-filled — editable)")}
+              {isViewing
+                ? T("بيانات العميل", "Customer details")
+                : T("بيانات العميل (تُعبأ تلقائياً — قابلة للتعديل)", "Customer details (auto-filled — editable)")}
             </summary>
             <div className="grid grid-cols-2 gap-1 py-1 lg:grid-cols-4">
               {([
@@ -1461,7 +1473,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                 ["vat", T("الضريبي", "VAT")], ["cr", T("السجل", "CR")],
               ] as [string, string][]).map(([k, lbl]) => (
                 <label key={k} className="flex items-center gap-1 text-[11px]">{lbl}
-                  <input className={inputCls} value={(cd as any)[k]} onChange={(e) => setCd({ ...cd, [k]: e.target.value })} />
+                  <input className={inputCls} value={(cd as any)[k]} disabled={isViewing} onChange={(e) => setCd({ ...cd, [k]: e.target.value })} />
                 </label>
               ))}
             </div>

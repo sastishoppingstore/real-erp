@@ -815,7 +815,7 @@ function invoice060Html(
     <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td class="lbl">Phone No.</td><td colspan="3">${esc(d.partyPhone ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Due Date</td><td>${esc(d.dueDate ?? d.date)}</td><td class="lbl">Email</td><td colspan="3">${esc(d.partyEmail ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Cashier</td><td>${esc(d.cashier ?? "")}</td><td colspan="4"></td></tr>
-    ${d.notes ? `<tr><td></td><td class="lbl">Remarks</td><td colspan="5">${esc(d.notes)}</td></tr>` : ""}
+    ${d.notes ? `<tr><td></td><td></td><td></td><td class="lbl">Note</td><td colspan="3" style="font-size:9pt;white-space:pre-wrap;word-break:break-word">${esc(d.notes)}</td></tr>` : ""}
     <tr style="height:30pt;font-weight:700" class="c">
       <td></td><td class="bd">Item No.</td><td class="bd">Job Description</td><td class="bd">Unit</td>
       <td class="bd">Qty</td><td class="bd">Price</td><td class="bd">Total</td>
