@@ -1061,6 +1061,52 @@ function patchTemplateSheet(
   return outXml;
 }
 
+// Replace the pictures of an uploaded design: the picture named
+// "<#invoice_qrcode>" gets the real ZATCA QR, the first other picture gets
+// the company logo.
+async function applyTemplateImages(
+  zip: any, qr: Uint8Array | null, logo: Uint8Array | null,
+): Promise<void> {
+  try {
+    const rels = zip.file("xl/drawings/_rels/drawing1.xml.rels");
+    const drw = zip.file("xl/drawings/drawing1.xml");
+    if (!rels || !drw) return;
+    const relXml = await rels.async("string");
+    const drwXml = await drw.async("string");
+    const relMap: Record<string, string> = {};
+    for (const m of relXml.matchAll(/Id="([^"]+)"[^>]*Target="\.\.\/media\/([^"]+)"/g)) relMap[m[1]] = m[2];
+    let logoDone = false;
+    for (const pic of drwXml.match(/<xdr:pic>[\s\S]*?<\/xdr:pic>/g) || []) {
+      const name = (pic.match(/name="([^"]*)"/) || [])[1] || "";
+      const rid = (pic.match(/r:embed="([^"]+)"/) || [])[1] || "";
+      const target = relMap[rid];
+      if (!target) continue;
+      if (/qrcode/i.test(name)) {
+        if (qr) zip.file(`xl/media/${target}`, qr);
+      } else if (!logoDone && logo) {
+        zip.file(`xl/media/${target}`, logo);
+        logoDone = true;
+      }
+    }
+  } catch { /* images optional */ }
+}
+
+// Is this uploaded file the 0060 tax-invoice form? Then the proven 0060
+// patcher is used instead of the tag based one (the 0060 form carries no
+// Sahl tags — its cells are at fixed positions).
+function looksLike0060(sheetXml: string, shared: string[], drawingXml: string): boolean {
+  const texts: string[] = [];
+  for (const m of sheetXml.matchAll(/<c\b[^>]*?(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+    const t = cellTextOf(m[0], shared);
+    if (t) texts.push(t);
+  }
+  const all = texts.join(" | ");
+  const hasQrSlot = /invoice_qrcode/i.test(drawingXml);
+  const docNo = /Doc\.?\s*No|Doc\.?\s*Number|رقم\s*المستند/i.test(all);
+  const client = /Client|العميل/i.test(all);
+  return hasQrSlot && docNo && client;
+}
+
 // Render an invoice from the tenant's uploaded Excel design.
 export async function renderTemplateXlsx(
   templateB64: string, cfg: PrintConfig, d: DocData,
@@ -1073,17 +1119,45 @@ export async function renderTemplateXlsx(
   const sharedFile = zip.file("xl/sharedStrings.xml");
   const shared = sharedFile ? readSharedStrings(await sharedFile.async("string")) : [];
   const sheet = await sheetFile.async("string");
-  zip.file("xl/worksheets/sheet1.xml", patchTemplateSheet(sheet, d, company, shared));
-  // company logo replaces the first picture of the uploaded design
-  const jpg = await logoToJpegBytes(company.logoBase64);
-  if (jpg) {
-    const rels = zip.file("xl/drawings/_rels/drawing1.xml.rels");
-    if (rels) {
-      const relXml = await rels.async("string");
-      const first = relXml.match(/Target="\.\.\/media\/([^"]+)"/);
-      if (first) zip.file(`xl/media/${first[1]}`, jpg);
-    }
+  const drawFile = zip.file("xl/drawings/drawing1.xml");
+  const drawing = drawFile ? await drawFile.async("string") : "";
+
+  // real ZATCA QR (png) for the QR slot
+  let qrPng: Uint8Array | null = null;
+  if (d.qrText) {
+    try {
+      const QRCode = (await import("qrcode")).default;
+      const url = await QRCode.toDataURL(d.qrText, { width: 260, margin: 0, errorCorrectionLevel: "M" });
+      qrPng = b64ToBytes(url.split(",")[1]);
+    } catch { /* qr optional */ }
   }
+  const logoJpg = await logoToJpegBytes(company.logoBase64);
+
+  if (looksLike0060(sheet, shared, drawing)) {
+    // ---- the uploaded file IS the 0060 tax form: patch it the proven way ----
+    const { xml: patchedSheet, thankRow } = patchSheet060(sheet, cfg, d, company);
+    zip.file("xl/worksheets/sheet1.xml", patchedSheet);
+    await applyTemplateImages(zip, qrPng, logoJpg);
+    // keep the QR anchor beside the Thank-You row
+    try {
+      const drwFile = zip.file("xl/drawings/drawing1.xml");
+      if (drwFile) {
+        const drw = await drwFile.async("string");
+        const m = drw.match(/<xdr:twoCellAnchor[^>]*>[\s\S]*?<\/xdr:twoCellAnchor>/);
+        if (m) {
+          let a = m[0];
+          a = a.replace(/(<xdr:from>[\s\S]*?<xdr:row>)\d+(<\/xdr:row>)/, `$1${thankRow - 1}$2`);
+          a = a.replace(/(<xdr:to>[\s\S]*?<xdr:row>)\d+(<\/xdr:row>)/, `$1${thankRow - 1 + 5}$2`);
+          zip.file("xl/drawings/drawing1.xml", drw.replace(m[0], a));
+        }
+      }
+    } catch { /* keep original anchors */ }
+  } else {
+    // ---- any other design: replace the Sahl tags inside it ----
+    zip.file("xl/worksheets/sheet1.xml", patchTemplateSheet(sheet, d, company, shared));
+    await applyTemplateImages(zip, qrPng, logoJpg);
+  }
+
   const out = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
   return new Blob([out as any], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
