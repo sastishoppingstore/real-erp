@@ -611,7 +611,7 @@ export const salesRouter = createRouter({
         workedMonth: invoiceData.workedMonth || null,
         time: invoiceData.time || null,
         paymentMethod: invoiceData.paymentType || null,
-        cashier: invoiceData.cashier || null,
+        cashier: invoiceData.cashier || (ctx.user as any)?.name || (ctx.user as any)?.username || null,
         poNumber: invoiceData.poNumber || null,
         tenantId,
         zatcaQrCode: isAboveThreshold ? zatcaQrCode : undefined,
@@ -862,6 +862,11 @@ export const salesRouter = createRouter({
 
       const invoiceUpdateData: Record<string, any> = { ...invoiceData };
       delete invoiceUpdateData.id;
+      // Keep the original author when the client does not send a cashier.
+      if (!invoiceUpdateData.cashier) {
+        invoiceUpdateData.cashier = existingInvoice.cashier
+          || (ctx.user as any)?.name || (ctx.user as any)?.username || null;
+      }
       if (!invoiceUpdateData.dueDate) invoiceUpdateData.dueDate = null;
       if (invoiceUpdateData.paymentType) invoiceUpdateData.paymentMethod = invoiceUpdateData.paymentType;
       delete invoiceUpdateData.paymentType;
@@ -1150,7 +1155,8 @@ export const salesRouter = createRouter({
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
       const amount = Number(input.amount || 0);
-      const paymentBase = { ...input, tenantId };
+      // The receipt is always attributed to the user who collected it.
+      const paymentBase = { ...input, tenantId, createdBy: ctx.user.id };
       let firstPaymentId = 0;
       let firstInvoiceId: number | undefined;
       let appliedTotal = 0;
