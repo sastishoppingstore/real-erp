@@ -23,6 +23,7 @@ import {
   sahlShifts,
 } from "@db/schema";
 import { eq, and, like, desc, or, gte, lte, sql } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 
 const DEFAULT_LISTS = [
   { code: "P1", name: "Retail", nameAr: "تجزئة" },
@@ -916,13 +917,30 @@ export const sahlRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
+      const tenantId = ctx.user.tenantId!;
+      const username = input.username.trim().toLowerCase();
+      const email = (input.email || `${username}@local`).toLowerCase();
+      // The session token is built from `email:<email>` in auth.passwordLogin
+      // and the session is resolved through users.unionId — so the new user
+      // MUST be stored with the same unionId, otherwise the login succeeds
+      // once and every later request comes back as UNAUTHORIZED.
+      const unionId = `email:${email}`;
+      const clash = await db.select({ id: users.id, username: users.username })
+        .from(users)
+        .where(or(eq(users.unionId, unionId), eq(users.username, username)))
+        .limit(1);
+      if (clash.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Login "${username}" is already taken. Pick another login name.`,
+        });
+      }
       const salt = crypto.randomBytes(16).toString("hex");
       const hash = crypto.scryptSync(input.password, salt, 64).toString("hex");
-      const email = (input.email || `${input.username}@local`).toLowerCase();
       const [{ id }] = await db.insert(users).values({
-        tenantId: ctx.user.tenantId!,
-        unionId: `local:${ctx.user.tenantId}:${input.username.toLowerCase()}`,
-        name: input.name, email, username: input.username.toLowerCase(),
+        tenantId,
+        unionId,
+        name: input.name, email, username,
         passwordEncrypted: `scrypt$${salt}$${hash}`,
         role: input.role as any, phone: input.phone, isActive: true,
       }).$returningId();

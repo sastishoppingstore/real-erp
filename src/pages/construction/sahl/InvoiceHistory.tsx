@@ -278,7 +278,7 @@ export default function SahlInvoiceHistory() {
       tax, net,
       paid: Number(inv?.paidAmount || 0),
       notes: [inv?.notes, inv?.notesAr].map((x: any) => String(x ?? "").trim()).filter(Boolean).join(" / ") || undefined,
-      qrText: inv?.zatcaQrCode || inv?.invoiceNumber || undefined,
+      qrText: inv?.zatcaQrCode || undefined,
       dueDate: String(inv?.dueDate ?? "").slice(0, 10) || undefined,
       cashier: inv?.cashier || undefined,
       paymentType: pay,
@@ -383,7 +383,11 @@ export default function SahlInvoiceHistory() {
       if (mode === "html") {
         await printInvoice060(
           d,
-          { nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber, taxNumber: comp.taxNumber, crNumber: comp.crNumber ?? comp.commercialRegistration },
+          {
+            nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber,
+            taxNumber: comp.taxNumber, crNumber: comp.crNumber ?? comp.commercialRegistration,
+            logoBase64: comp.logo || undefined,
+          },
           tar,
         );
       } else {

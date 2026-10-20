@@ -504,6 +504,10 @@ export async function render060(
         zip.file("xl/media/image1.png", b64ToBytes(url.split(",")[1]));
       } catch { /* keep placeholder */ }
     }
+    // Company logo (Settings → Company) replaces the sample letterhead logo
+    // (media/image2.jpeg) so the exported sheet carries OUR logo.
+    const logoBytes = await logoToJpegBytes(company.logoBase64);
+    if (logoBytes) zip.file("xl/media/image2.jpeg", logoBytes);
     // floating QR anchor follows the Thank-You row (template: rows 28..33)
     try {
       const drawFile = zip.file("xl/drawings/drawing1.xml");
@@ -525,6 +529,44 @@ export async function render060(
     return new Blob([out as any], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   } catch {
     return render060Scratch(cfg, d, company as any);
+  }
+}
+
+// Turn the company logo (data URL or raw base64) into JPEG bytes so it can
+// replace the template's xl/media/image2.jpeg without breaking the file.
+async function logoToJpegBytes(logo?: string | null): Promise<Uint8Array | null> {
+  if (!logo) return null;
+  try {
+    const raw = String(logo).trim();
+    const m = raw.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/s);
+    const mime = m ? m[1] : "";
+    const b64 = m ? m[2] : raw;
+    if (!b64) return null;
+    if (mime === "image/jpeg" || mime === "image/jpg") return b64ToBytes(b64);
+    // PNG / SVG / WEBP → draw on a canvas and export as JPEG (keeps the
+    // template's .jpeg part name and content type intact).
+    const src = mime ? `data:${mime};base64,${b64}` : `data:image/png;base64,${b64}`;
+    const img = await new Promise<HTMLImageElement | null>((resolve) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => resolve(null);
+      el.src = src;
+    });
+    if (!img) return null;
+    const maxW = 320;
+    const scale = Math.min(1, maxW / (img.width || maxW));
+    const cv = document.createElement("canvas");
+    cv.width = Math.max(1, Math.round((img.width || maxW) * scale));
+    cv.height = Math.max(1, Math.round((img.height || maxW) * scale));
+    const ctx = cv.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    const dataUrl = cv.toDataURL("image/jpeg", 0.92);
+    return b64ToBytes(dataUrl.split(",")[1]);
+  } catch {
+    return null;
   }
 }
 
@@ -624,8 +666,11 @@ async function render060Scratch(
   if (cfg.footerText.trim()) ws.addRow(["", cfg.footerText]);
   if (company.logoBase64) {
     try {
-      const imgId = wb.addImage({ base64: company.logoBase64, extension: "png" });
-      ws.addImage(imgId, { tl: { col: 6, row: 0 }, ext: { width: 90, height: 60 } });
+      const jpg = await logoToJpegBytes(company.logoBase64);
+      if (jpg) {
+        const imgId = wb.addImage({ base64: bytesToB64(jpg), extension: "jpeg" });
+        ws.addImage(imgId, { tl: { col: 6, row: 0 }, ext: { width: 90, height: 60 } });
+      }
     } catch { /* logo optional */ }
   }
   if (d.qrText) {
@@ -850,16 +895,21 @@ function invoice060Html(
 // Printing (or "Save as PDF") yields the invoice document itself.
 export async function printInvoice060(
   d: DocData,
-  company: { nameAr?: string; name?: string; tax?: string; taxNumber?: string; crNumber?: string },
+  company: { nameAr?: string; name?: string; tax?: string; taxNumber?: string; crNumber?: string; logoBase64?: string },
   title?: string,
 ): Promise<void> {
   const w = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;
   let logoUrl = "";
   try {
-    const JSZip = (await import("jszip")).default;
-    const zip = await JSZip.loadAsync(FORM0060_B64, { base64: true });
-    const img = zip.file("xl/media/image2.jpeg");
-    if (img) logoUrl = "data:image/jpeg;base64," + bytesToB64(await img.async("uint8array"));
+    // company logo first, template letterhead logo as fallback
+    const jpg = await logoToJpegBytes(company.logoBase64);
+    if (jpg) logoUrl = "data:image/jpeg;base64," + bytesToB64(jpg);
+    else {
+      const JSZip = (await import("jszip")).default;
+      const zip = await JSZip.loadAsync(FORM0060_B64, { base64: true });
+      const img = zip.file("xl/media/image2.jpeg");
+      if (img) logoUrl = "data:image/jpeg;base64," + bytesToB64(await img.async("uint8array"));
+    }
   } catch { /* logo optional */ }
   let qrUrl = "";
   if (d.qrText) {

@@ -967,7 +967,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         tax: Number(inv?.taxAmount || taxAmt),
         net: Number(inv?.totalAmount || grand),
         notes: [inv?.notes, inv?.notesAr].map((x: any) => String(x ?? "").trim()).filter(Boolean).join(" / ") || reason || undefined,
-        qrText: inv?.zatcaQrCode || inv?.invoiceNumber,
+        qrText: inv?.zatcaQrCode || undefined,
         dueDate: String(inv?.dueDate ?? "").slice(0, 10) || undefined,
         cashier: inv?.cashier ?? userName ?? undefined,
         paymentType: inv?.paymentType ?? inv?.payment_method ?? inv?.paymentMethod ?? undefined,
@@ -1033,7 +1033,11 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     if (mode === "html" || mode === "both")
       await printInvoice060(
         d,
-        { nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber, taxNumber: comp.taxNumber, crNumber: comp.crNumber ?? comp.commercialRegistration },
+        {
+          nameAr: comp.companyNameAr, name: comp.companyName, tax: comp.taxNumber,
+          taxNumber: comp.taxNumber, crNumber: comp.crNumber ?? comp.commercialRegistration,
+          logoBase64: comp.logo || undefined,
+        },
         cfg?.titleAr ?? tar,
       );
     if (mode === "xlsx" || mode === "both") {
