@@ -193,6 +193,7 @@ function DropMenu({ m, rtl, onExit }: { m: (typeof dropMenus)[number]; rtl: bool
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ left: 0, top: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | null>(null);
   const navigate = useNavigate();
 
@@ -223,18 +224,28 @@ function DropMenu({ m, rtl, onExit }: { m: (typeof dropMenus)[number]; rtl: bool
   useEffect(() => {
     if (!open) return;
     const close = () => setOpen(false);
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
     window.addEventListener("scroll", close, true);
-    return () => window.removeEventListener("scroll", close, true);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      document.removeEventListener("pointerdown", onDown);
+    };
   }, [open]);
 
   return (
     <div className="relative" onMouseEnter={openNow} onMouseLeave={closeSoon}>
-      <button ref={btnRef} onClick={() => (open ? setOpen(false) : openNow())}
+      <button ref={btnRef} onClick={openNow}
         className="whitespace-nowrap px-2.5 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-200">
         {rtl ? m.labelAr : m.label}
       </button>
       {open && createPortal(
         <div
+          ref={menuRef}
           style={{ position: "fixed", left: pos.left, top: pos.top, width: 190, zIndex: 1000 }}
           className="border border-[#888] bg-white py-1 shadow-lg"
           onMouseEnter={openNow} onMouseLeave={closeSoon}>
