@@ -46,6 +46,12 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
   const { data: suppliers } = trpc.purchase.supplierList.useQuery();
   const parties: any[] = f.accountKind === "customer" ? customers ?? [] : suppliers ?? [];
   const partyName = parties.find((a: any) => String(a.id) === String(f.accountId))?.name ?? "";
+  const { data: custInvoices } = trpc.sales.invoiceList.useQuery(
+    { customerId: Number(f.accountId) },
+    { enabled: mode === "receipt" && f.accountKind === "customer" && !!f.accountId },
+  );
+  const outstanding = ((custInvoices ?? []) as any[])
+    .reduce((a: number, i: any) => a + Number(i.balanceDue || 0), 0);
 
   const save = (stay: boolean, expense: boolean) => {
     setMsg("");
@@ -68,17 +74,12 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
         const custId = Number(f.accountId);
         (async () => {
           try {
-            let invId: number | undefined;
-            try {
-              const invs: any[] = ((await utils.sales.invoiceList.fetch({ customerId: custId })) as any[]) ?? [];
-              const open = invs.filter((i: any) => Number(i.balanceDue || 0) > 0.001)
-                .sort((a: any, b: any) => String(a.date || "").localeCompare(String(b.date || "")))[0];
-              invId = open ? Number(open.id) : undefined;
-            } catch { /* no open invoice — record the receipt anyway */ }
+            // No invoiceId → the server applies the receipt to the customer's
+            // open invoices oldest-first, so a full-balance receipt clears
+            // every old invoice instead of only the first one.
             await payCreate.mutateAsync({
               paymentNumber: `RC-${String(Date.now()).slice(-9)}`,
               customerId: custId,
-              ...(invId ? { invoiceId: invId } : {}),
               date: new Date().toISOString().slice(0, 10),
               amount: String(f.amount),
               paymentMethod: (f.method === "card" ? "card" : f.method === "cash" ? "cash"
@@ -87,6 +88,7 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
             });
             utils.sales.paymentList.invalidate();
             utils.sales.invoiceList.invalidate();
+            utils.sales.customerList.invalidate();
           } catch (e: any) { showErr(e); }
         })();
         return;
@@ -133,6 +135,23 @@ export default function SahlCash({ mode }: { mode: "receipt" | "payment" }) {
                 {parties.map((a: any) => <option key={a.id} value={a.id}>{a.nameAr || a.name}</option>)}
               </select>
             </span></label>
+          {mode === "receipt" && f.accountKind === "customer" && f.accountId && (
+            <div className="flex flex-wrap items-center justify-between gap-1 border border-[#888] bg-[#e8f5e9] px-2 py-1">
+              <span>
+                {T("المستحق على العميل", "Customer outstanding")}:{" "}
+                <b className="tabular-nums">{outstanding.toFixed(2)}</b>
+                <span className="ms-1 text-[10px] text-[#555]">
+                  {T("(يوزّع على أقدم الفواتير أولاً)", "(applied to oldest invoices first)")}
+                </span>
+              </span>
+              {outstanding > 0 && (
+                <button type="button" className="border border-[#1d7a37] bg-white px-2 py-0.5 text-[11px] font-bold text-[#1b5e20]"
+                  onClick={() => setF({ ...f, amount: outstanding.toFixed(2) })}>
+                  {T("كامل المبلغ", "Full amount")}
+                </button>
+              )}
+            </div>
+          )}
           <label className="flex items-center gap-2"><span className="w-24 shrink-0">{T("المشروع", "Project")}</span>
             <input className={inputCls} value={f.project} onChange={(e) => setF({ ...f, project: e.target.value })}
               placeholder={T("تسجيل مصروف للمشروع", "Project expense")} /></label>

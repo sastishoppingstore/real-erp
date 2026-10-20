@@ -225,7 +225,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     : String(v));
 
   const { data: lookup } = trpc.sahl.lookup.useQuery(
-    { q, limit: 8 }, { enabled: q.trim().length > 0 && viewId === null && kind !== "sales-return" });
+    { q, limit: 8 }, { enabled: q.trim().length > 0 && viewId === null });
   const { data: customers } = trpc.sales.customerList.useQuery(isSales && partyQ ? { search: partyQ } : undefined);
   const { data: suppliers } = trpc.purchase.supplierList.useQuery(!isSales && partyQ ? { search: partyQ } : undefined);
   const { data: warehouses } = trpc.inventory.warehouseList.useQuery();
@@ -1442,6 +1442,13 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                   <>
                     <span className="border border-[#c8a419] bg-[#fff8e1] px-1 font-bold">{T("الرصيد السابق", "Prev. Balance")}: {numAr(balBefore.toFixed(2))}</span>
                     <span className="border border-[#c8a419] bg-[#fff8e1] px-1 font-bold">{T("الرصيد الحالي", "Current Balance")}: {numAr(balAfter.toFixed(2))}</span>
+                    {balBefore > 0 && (
+                      <button type="button" onClick={() => navigate(`/app/construction/sahl/receipts?accountId=${partyId}`)}
+                        className="border border-[#c8a419] bg-[#ffeb3b] px-1 font-bold text-black"
+                        title={T("استلام الرصيد السابق من العميل", "Receive the customer's previous balance")}>
+                        {T("قبض الرصيد", "Receive balance")}
+                      </button>
+                    )}
                   </>
                 )}
                 <span className="border border-[#ccc] bg-white px-1">{T("أصناف", "Lines")}: {lines.length}</span>

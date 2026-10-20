@@ -12,7 +12,7 @@ import {
   FileEdit, Handshake, FileBarChart, ScrollText, CalendarCheck,
   Users, ShieldCheck, HardHat, Thermometer, GraduationCap, Eye,
   Wrench, Package, ChevronDown, ChevronRight, Briefcase, Landmark,
-  Receipt, ShoppingCart, Warehouse, Boxes, ArrowLeftRight,
+  ShoppingCart, Warehouse, Boxes, ArrowLeftRight,
   LogOut, Globe, Plus,
 } from "lucide-react";
 
@@ -38,7 +38,6 @@ const navSections = [
       { label: "CVR Reports", path: "/app/construction/cvr", icon: FileBarChart },
       { label: "Subcontractors", path: "/app/construction/subcontractors", icon: Users },
       { label: "Sub Payments", path: "/app/construction/sub-payments", icon: Users },
-      { label: "Tax Invoices", path: "/app/construction/invoices", icon: Receipt },
       { label: "Sales Invoices", path: "/app/construction/sahl/sales", icon: ShoppingCart },
     ],
   },

@@ -1077,14 +1077,21 @@ export const salesRouter = createRouter({
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const tenantId = ctx.user.tenantId!;
-      const [{ id }] = await db.insert(customerPayments).values({ ...input, tenantId }).$returningId();
+      const amount = Number(input.amount || 0);
+      const paymentBase = { ...input, tenantId };
+      let firstPaymentId = 0;
+      let firstInvoiceId: number | undefined;
+      let appliedTotal = 0;
+
       if (input.invoiceId) {
-        // Apply the receipt to the invoice: paid / due / status.
+        // Payment aimed at one specific invoice (e.g. a credit invoice's
+        // partial payment from the invoice screen).
+        const [row] = await db.insert(customerPayments).values(paymentBase).$returningId();
+        firstPaymentId = row.id;
         const inv: any = await db.query.invoices.findFirst({
           where: and(eq(invoices.id, input.invoiceId), eq(invoices.tenantId, tenantId)),
         });
         if (inv) {
-          const amount = Number(input.amount || 0);
           const paidNow = Number(inv.paidAmount || 0) + amount;
           const due = Math.max(0, Number(inv.totalAmount || 0) - paidNow);
           await db.update(invoices).set({
@@ -1092,32 +1099,108 @@ export const salesRouter = createRouter({
             balanceDue: String(due),
             status: due <= 0.001 ? "paid" : (paidNow > 0 ? "partial" : inv.status),
           }).where(eq(invoices.id, inv.id));
-          // Cash / card collections increase the cashbox (General Safe) balance.
-          if (input.paymentMethod === "cash" || input.paymentMethod === "card") {
-            try {
-              const lastTx = await db.select({ bal: cashboxTransactions.balanceAfter })
-                .from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, tenantId))
-                .orderBy(desc(cashboxTransactions.createdAt)).limit(1);
-              const prevBal = Number(lastTx[0]?.bal || 0);
-              await db.insert(cashboxTransactions).values({
-                tenantId, userId: ctx.user.id,
-                transactionNumber: `PAY-${input.paymentNumber}`.slice(0, 50),
-                transactionType: "customer_payment", amount: String(amount),
-                paymentMethod: input.paymentMethod === "card" ? "card" : "cash",
-                referenceType: "Invoice", referenceId: inv.id,
-                description: `Payment for ${inv.invoiceNumber}${input.reference ? " - " + input.reference : ""}`,
-                balanceBefore: String(prevBal), balanceAfter: String(prevBal + amount),
-                status: "completed",
-              });
-            } catch (e) {
-              console.warn("cashbox receipt failed:", e);
-            }
-          }
+          firstInvoiceId = inv.id;
+          appliedTotal = amount;
         }
-        onPaymentReceived(ctx.user.tenantId!, input.customerId, input.invoiceId, input.amount).catch((err) =>
+        onPaymentReceived(tenantId, input.customerId, input.invoiceId, input.amount).catch((err) =>
           console.error("[notify] onPaymentReceived error:", err)
         );
+      } else {
+        // General customer receipt: settle open invoices oldest-first so the
+        // whole outstanding balance can be collected in one go (the previous
+        // code applied the entire amount to the oldest invoice only and lost
+        // the excess).
+        const open: any[] = await db.select().from(invoices).where(and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.customerId, input.customerId),
+        )).orderBy(invoices.date, invoices.id);
+        let remaining = amount;
+        let seq = 0;
+        for (const inv of open) {
+          if (remaining <= 0.001) break;
+          const due = Number(inv.balanceDue || 0);
+          if (due <= 0.001) continue;
+          const pay = Math.min(remaining, due);
+          seq += 1;
+          const [row] = await db.insert(customerPayments).values({
+            ...paymentBase,
+            invoiceId: inv.id,
+            amount: String(pay),
+            paymentNumber: `${input.paymentNumber}-${seq}`.slice(0, 50),
+          }).$returningId();
+          if (!firstPaymentId) firstPaymentId = row.id;
+          if (!firstInvoiceId) firstInvoiceId = inv.id;
+          const paidNow = Number(inv.paidAmount || 0) + pay;
+          const newDue = Math.max(0, due - pay);
+          await db.update(invoices).set({
+            paidAmount: String(paidNow),
+            balanceDue: String(newDue),
+            status: newDue <= 0.001 ? "paid" : "partial",
+          }).where(eq(invoices.id, inv.id));
+          appliedTotal += pay;
+          remaining -= pay;
+        }
+        if (remaining > 0.001) {
+          // Amount beyond all open invoices → keep it as an on-account advance.
+          const [row] = await db.insert(customerPayments).values({
+            ...paymentBase,
+            invoiceId: null,
+            amount: String(remaining),
+            paymentNumber: `${input.paymentNumber}-ADV`.slice(0, 50),
+          }).$returningId();
+          if (!firstPaymentId) firstPaymentId = row.id;
+        }
+        if (firstInvoiceId) {
+          onPaymentReceived(tenantId, input.customerId, firstInvoiceId, String(appliedTotal)).catch((err) =>
+            console.error("[notify] onPaymentReceived error:", err)
+          );
+        }
       }
-      return { id, success: true };
+
+      // Cash / card collections increase the cashbox (General Safe) balance.
+      // One cashbox row per receipt, not one per allocated invoice.
+      if ((input.paymentMethod === "cash" || input.paymentMethod === "card") && amount > 0) {
+        try {
+          const lastTx = await db.select({ bal: cashboxTransactions.balanceAfter })
+            .from(cashboxTransactions).where(eq(cashboxTransactions.tenantId, tenantId))
+            .orderBy(desc(cashboxTransactions.createdAt)).limit(1);
+          const prevBal = Number(lastTx[0]?.bal || 0);
+          await db.insert(cashboxTransactions).values({
+            tenantId, userId: ctx.user.id,
+            transactionNumber: `PAY-${input.paymentNumber}`.slice(0, 50),
+            transactionType: "customer_payment", amount: String(amount),
+            paymentMethod: input.paymentMethod === "card" ? "card" : "cash",
+            referenceType: firstInvoiceId ? "Invoice" : "Customer",
+            referenceId: firstInvoiceId ?? input.customerId,
+            description: firstInvoiceId
+              ? `Customer payment${input.reference ? " - " + input.reference : ""}`
+              : `Customer advance${input.reference ? " - " + input.reference : ""}`,
+            balanceBefore: String(prevBal), balanceAfter: String(prevBal + amount),
+            status: "completed",
+          });
+        } catch (e) {
+          console.warn("cashbox receipt failed:", e);
+        }
+      }
+
+      // Keep the customer master balance in sync with open invoices.
+      try {
+        const dueAgg = await db.select({
+          total: sql<number>`COALESCE(SUM(CAST(${invoices.balanceDue} AS DECIMAL(15,2))), 0)`,
+        }).from(invoices).where(and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.customerId, input.customerId),
+        ));
+        await db.update(customers).set({
+          currentBalance: String(Number(dueAgg[0]?.total || 0)),
+        }).where(and(
+          eq(customers.id, input.customerId),
+          eq(customers.tenantId, tenantId),
+        ));
+      } catch (e) {
+        console.warn("customer balance update failed:", e);
+      }
+
+      return { id: firstPaymentId, success: true };
     }),
 });

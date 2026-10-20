@@ -231,7 +231,7 @@ export default function ConstructionDashboard() {
           <div>
             <div className="mb-1 flex items-center justify-between text-[12px]">
               <span className="font-bold">{rtl ? "أحدث الفواتير" : "Recent invoices"}</span>
-              <button onClick={() => navigate("/app/construction/invoices")} className="text-[11px] text-white/70 hover:text-white">{rtl ? "عرض الكل" : "View all"}</button>
+              <button onClick={() => navigate("/app/construction/sahl/sales")} className="text-[11px] text-white/70 hover:text-white">{rtl ? "عرض الكل" : "View all"}</button>
             </div>
             {recentInvoices.length === 0 ? (
               <p className="border border-[#333] bg-black px-2 py-4 text-center text-[12px] text-white/50">{rtl ? "لا توجد فواتير بعد" : "No invoices yet"}</p>

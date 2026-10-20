@@ -274,7 +274,6 @@ const menuGroups = [
     titleAr: "المقاولات",
     items: [
       { label: "Construction Panel", labelAr: "لوحة المقاولات", icon: HardHat, path: "/app/construction" },
-      { label: "Construction Invoices", labelAr: "فواتير المقاولات", icon: FileText, path: "/app/verticals/construction/invoices" },
       { label: "WBS Structure", labelAr: "هيكل العمل WBS", icon: GitBranch, path: "/app/construction/wbs" },
       { label: "BOQ / Quantities", labelAr: "جدول الكميات BOQ", icon: ClipboardList, path: "/app/construction/boq" },
       { label: "Contracts", labelAr: "العقود والمشاريع", icon: FileText, path: "/app/construction/contracts" },

@@ -423,7 +423,6 @@ const ConstructionProjects = lazy(() => import("./pages/verticals/construction/P
 const ConstructionSubcontractors = lazy(() => import("./pages/verticals/construction/Subcontractors"));
 const ConstructionEquipment = lazy(() => import("./pages/verticals/construction/Equipment"));
 const ConstructionProgressBilling = lazy(() => import("./pages/verticals/construction/ProgressBilling"));
-const ConstructionInvoicePage = lazy(() => import("./pages/verticals/construction/ConstructionInvoice"));
 const ConstructionQuality = lazy(() => import("./pages/verticals/construction/Quality"));
 const TransportFleet = lazy(() => import("./pages/verticals/transport/Fleet"));
 const TransportRoutes = lazy(() => import("./pages/verticals/transport/Routes"));
@@ -812,7 +811,7 @@ export default function App() {
       <Route path="/app/verticals/construction/subcontractors" element={<LayoutWrapper><ConstructionSubcontractors /></LayoutWrapper>} />
       <Route path="/app/verticals/construction/equipment" element={<LayoutWrapper><ConstructionEquipment /></LayoutWrapper>} />
       <Route path="/app/verticals/construction/progress-billing" element={<LayoutWrapper><ConstructionProgressBilling /></LayoutWrapper>} />
-      <Route path="/app/verticals/construction/invoices" element={<LayoutWrapper><ConstructionInvoicePage /></LayoutWrapper>} />
+      <Route path="/app/verticals/construction/invoices" element={<Navigate to="/app/construction/sahl/sales" replace />} />
       <Route path="/app/verticals/construction/quality" element={<LayoutWrapper><ConstructionQuality /></LayoutWrapper>} />
 
       {/* Transport Verticals */}
@@ -936,7 +935,7 @@ export default function App() {
         <Route path="products" element={<ProductsPage />} />
         <Route path="transfers" element={<StockTransfersPage />} />
         <Route path="progress-billing" element={<ConstructionProgressBilling />} />
-        <Route path="invoices" element={<ConstructionInvoicePage />} />
+        <Route path="invoices" element={<Navigate to="/app/construction/sahl/sales" replace />} />
         <Route path="sales-invoices" element={<Navigate to="/app/construction/sahl/sales" replace />} />
         <Route path="sahl/settings" element={<SahlSettings />} />
         <Route path="sahl/products" element={<SahlProducts />} />
