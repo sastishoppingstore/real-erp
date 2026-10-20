@@ -405,10 +405,17 @@ export default function SahlInvoiceHistory() {
     }
   };
 
-  const th = "whitespace-nowrap border border-[#1d7a37] px-1.5 py-1 font-normal";
-  const td = "whitespace-nowrap border border-[#ddd] px-1.5 py-1";
+  // Table zoom: the action column must stay visible on small screens, so the
+  // user can shrink the grid (and scroll sideways) instead of losing buttons.
+  const [zoom, setZoom] = useState<1 | 2 | 3>(2); // 3 = smallest
+  const zoomTx = zoom === 3 ? "text-[9px]" : zoom === 2 ? "text-[10px]" : "text-[11px]";
+  const zoomPad = zoom === 3 ? "px-1 py-0" : zoom === 2 ? "px-1.5 py-0.5" : "px-2 py-1";
+  const zoomMin = zoom === 3 ? "min-w-[900px]" : zoom === 2 ? "min-w-[1060px]" : "min-w-[1200px]";
+
+  const th = `whitespace-nowrap border border-[#1d7a37] ${zoomPad} font-normal ${zoomTx}`;
+  const td = `whitespace-nowrap border border-[#ddd] ${zoomPad} ${zoomTx}`;
   const tdNum = `${td} text-end tabular-nums`;
-  const miniBtn = "border border-[#888] bg-white px-1.5 py-0.5 text-[11px] leading-none hover:bg-[#e8f5e9] disabled:opacity-40";
+  const miniBtn = `border border-[#888] bg-white px-1.5 py-0.5 ${zoomTx} leading-none hover:bg-[#e8f5e9] disabled:opacity-40`;
 
   return (
     <div className="flex min-h-full flex-col gap-2 text-[12px] text-black">
@@ -416,7 +423,14 @@ export default function SahlInvoiceHistory() {
       <div className="border border-[#bbb] bg-white">
         <div className="flex items-center justify-between px-2 py-1 text-white" style={{ background: "#006d34" }}>
           <b className="text-[13px]">{T("سجل الفواتير والتدقيق", "Invoice History & Audit")}</b>
-          <span className="text-[11px]">{T("كل المستندات — عرض / طباعة / إكسل / مرتجع", "All documents — view / print / excel / return")}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px]">{T("كل المستندات — عرض / طباعة / إكسل / مرتجع", "All documents — view / print / excel / return")}</span>
+            <span className="flex items-center gap-1 border border-white/50 px-1 py-0.5 text-[10px]">
+              <button title={T("تكبير", "Zoom in")} className="px-1" onClick={() => setZoom((z) => (z > 1 ? ((z - 1) as 1 | 2 | 3) : 1))}>＋</button>
+              <span className="min-w-[34px] text-center">{zoom === 3 ? "80%" : zoom === 2 ? "90%" : "100%"}</span>
+              <button title={T("تصغير", "Zoom out")} className="px-1" onClick={() => setZoom((z) => (z < 3 ? ((z + 1) as 1 | 2 | 3) : 3))}>－</button>
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap items-end gap-1.5 border-t border-[#ddd] bg-[#f4f4f4] p-2">
           <label className="flex min-w-[220px] flex-1 flex-col gap-0.5">
@@ -468,9 +482,11 @@ export default function SahlInvoiceHistory() {
         <div className="border border-[#c8a419] bg-[#fff8e1] px-2 py-1 text-[11px] font-bold text-[#7a6100]">{msg}</div>
       )}
 
-      {/* Invoice History table */}
-      <div className="overflow-x-auto border border-[#888] bg-white">
-        <table className="w-full border-collapse text-[11px]">
+      {/* Invoice History table — the action buttons must always be reachable:
+          the table keeps a readable min-width and scrolls sideways, and the
+          Actions column is pinned to the right edge. */}
+      <div className="w-full min-w-0 overflow-x-auto border border-[#888] bg-white">
+        <table className={`w-full ${zoomMin} border-collapse ${zoomTx}`}>
           <thead>
             <tr style={{ background: "#2fae4e", color: "#fff" }}>
               <th className={th}>#</th>
@@ -486,7 +502,9 @@ export default function SahlInvoiceHistory() {
               <th className={th}>{T("المدفوع", "Paid")}</th>
               <th className={th}>{T("الآجل / الرصيد", "Balance / Credit")}</th>
               <th className={th}>{T("أمين الصندوق", "Cashier")}</th>
-              <th className={th}>{T("إجراءات", "Actions")}</th>
+              <th className={`${th} sticky right-0 z-20 shadow-[-3px_0_5px_rgba(0,0,0,0.12)]`} style={{ background: "#2fae4e" }}>
+                {T("إجراءات", "Actions")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -516,8 +534,8 @@ export default function SahlInvoiceHistory() {
                 <td className={tdNum}>{money(r.paid)}</td>
                 <td className={tdNum}>{money(r.balance)}</td>
                 <td className={td}>{r.cashier || "—"}</td>
-                <td className={td}>
-                  <div className="flex flex-wrap gap-1">
+                <td className={`${td} sticky right-0 z-10 bg-inherit shadow-[-3px_0_5px_rgba(0,0,0,0.12)]`}>
+                  <div className="flex flex-nowrap gap-1">
                     {(r.kind === "sale" || r.kind === "purchase" || r.kind === "quotation" || r.kind === "sale-return") && (
                       <button className={miniBtn} title={T("عرض الفاتورة", "View invoice")} onClick={() => openRow(r)}>👁</button>
                     )}
