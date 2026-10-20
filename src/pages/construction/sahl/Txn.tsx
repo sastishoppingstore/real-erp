@@ -1421,7 +1421,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
             <div className="flex flex-wrap items-center gap-1">
               <label className="flex min-w-[260px] flex-1 items-start gap-1">
                 <b className="mt-1 whitespace-nowrap text-[11px]">{T("ملاحظة", "Note")}</b>
-                <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} disabled={isViewing}
+                <textarea rows={2} dir="auto" value={reason} onChange={(e) => setReason(e.target.value)} disabled={isViewing}
                   placeholder={T("ملاحظة تظهر على الفاتورة", "Note shown on the invoice")}
                   className="min-h-9 flex-1 resize-y border border-[#888] bg-white px-1 py-0.5 text-[12px] text-black disabled:bg-[#f0f0f0]" />
               </label>
@@ -1454,7 +1454,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         {isViewing && String(reason).trim() !== "" && (
           <div className="flex items-start gap-2 border-b border-[#c8a419] bg-[#fff8e1] px-2 py-1 text-[12px]">
             <b className="shrink-0">{T("ملاحظة", "Note")}:</b>
-            <span className="whitespace-pre-wrap">{reason}</span>
+            <span className="whitespace-pre-wrap" dir="auto">{reason}</span>
           </div>
         )}
 
