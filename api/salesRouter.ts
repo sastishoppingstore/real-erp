@@ -5,7 +5,7 @@ import {
   customers, salesQuotations, salesQuotationItems,
   salesOrders, salesOrderItems, invoices, invoiceItems,
   creditNotes, customerPayments, companySettings, auditLogs, companies, products,
-  inventoryBalances, inventoryMovements, warehouses, cashboxTransactions
+  inventoryBalances, inventoryMovements, warehouses, cashboxTransactions, users
 } from "@db/schema";
 import { eq, sql, and, like, or, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -1027,7 +1027,15 @@ export const salesRouter = createRouter({
   creditNoteList: authedQuery
     .query(async ({ ctx }) => {
       const db = getDb();
-      return db.select().from(creditNotes).where(eq(creditNotes.tenantId, ctx.user.tenantId!));
+      const rows = await db.select().from(creditNotes).where(eq(creditNotes.tenantId, ctx.user.tenantId!));
+      // who made each return (the history prints it like a sale invoice)
+      const staff = await db.select({ id: users.id, name: users.name, username: users.username })
+        .from(users).where(eq(users.tenantId, ctx.user.tenantId!));
+      const byId = new Map(staff.map((u: any) => [Number(u.id), u.name || u.username || ""]));
+      return rows.map((cn: any) => ({
+        ...cn,
+        cashier: cn.createdBy ? (byId.get(Number(cn.createdBy)) || "") : "",
+      }));
     }),
 
   creditNoteCreate: authedQuery
@@ -1124,7 +1132,14 @@ export const salesRouter = createRouter({
       const inv = cn.invoiceId
         ? await db.query.invoices.findFirst({ where: and(eq(invoices.id, cn.invoiceId), eq(invoices.tenantId, tenantId)) })
         : null;
-      return { creditNote: cn, items, reason, customer: cust, invoice: inv };
+      // Who made the return — the printed document shows it like a sale.
+      const creator: any = cn.createdBy
+        ? await db.query.users.findFirst({ where: eq(users.id, cn.createdBy) })
+        : null;
+      return {
+        creditNote: cn, items, reason, customer: cust, invoice: inv,
+        cashier: creator?.name ?? creator?.username ?? null,
+      };
     }),
 
   // Customer Payments

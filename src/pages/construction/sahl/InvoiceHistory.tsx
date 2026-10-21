@@ -136,9 +136,9 @@ export default function SahlInvoiceHistory() {
         date: String(cn.date ?? "").slice(0, 10),
         clientEn: String(c?.name ?? ""), clientAr: String(c?.nameAr ?? ""),
         phone: String(c?.phone ?? c?.mobile ?? ""), taxNo: String(c?.vatNumber ?? c?.taxNumber ?? ""),
-        payment: "", total: 0, discount: 0, vat: 0,
+        payment: "", total: Number(cn.amount || 0), discount: 0, vat: 0,
         grand: Number(cn.amount || 0), paid: 0, balance: Number(cn.amount || 0),
-        cashier: "",
+        cashier: String(cn.cashier ?? ""),
       });
     }
     for (const qt of (quotes ?? []) as any[]) {
@@ -343,17 +343,66 @@ export default function SahlInvoiceHistory() {
     } as DocData;
   };
 
+  // Sales return (credit note) — printed on the very same 0060 form as the
+  // sale invoice, only the document type and the title differ.
+  const docFromCreditNote = (data: any): DocData => {
+    const cn: any = data?.creditNote ?? {};
+    const items: any[] = data?.items ?? [];
+    const cust: any = data?.customer;
+    const comp: any = company ?? {};
+    const joinTwo = (a: string, b: string) => (a && b && a !== b ? `${a} / ${b}` : a || b);
+    const nameEn = String(cust?.name ?? "").trim();
+    const nameAr = String(cust?.nameAr ?? "").trim();
+    const amount = Number(cn.amount || 0);
+    const linesTotal = items.reduce((a: number, it: any) => a + Number(it.totalAmount || 0), 0);
+    const subTotal = linesTotal || amount;
+    const tax = Math.max(0, amount - subTotal);
+    return {
+      no: cn?.creditNoteNumber ?? `#${cn?.id}`,
+      date: String(cn?.date ?? "").slice(0, 10),
+      party: joinTwo(nameEn, nameAr),
+      partyAr: nameAr && nameAr !== nameEn ? nameAr : undefined,
+      partyTax: cust?.vatNumber ?? cust?.taxNumber ?? undefined,
+      partyPhone: cust?.phone ?? cust?.mobile ?? undefined,
+      partyEmail: cust?.email ?? undefined,
+      partyCr: cust?.crNumber ?? cust?.commercialRegistration ?? undefined,
+      branch: "",
+      lines: items.map((it: any) => ({
+        code: it.code ?? "", name: it.description ?? "", nameAr: it.descriptionAr || undefined,
+        unit: it.unit ?? "", qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0),
+        disc: 0, total: Number(it.totalAmount || 0),
+      })),
+      subtotal: subTotal, discount: 0, tax, net: amount,
+      paid: 0,
+      notes: String(data?.reason ?? "").trim() || undefined,
+      qrText: undefined,
+      dueDate: String(cn?.date ?? "").slice(0, 10) || undefined,
+      cashier: (data as any)?.cashier ?? undefined,
+      paymentType: T("آجل", "Credit"),
+      taxPct: 15,
+      qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
+      companyTax: comp.taxNumber ?? undefined,
+      companyContacts: compContacts(comp).length ? compContacts(comp) : undefined,
+      docType: "sales-return",
+    } as DocData;
+  };
+
   const printRow = async (r: HRow, mode: "html" | "xlsx") => {
     if (busy) return;
     setMsg(""); setBusy(r.key);
     try {
       let d: DocData;
-      let docType: "sale" | "purchase" | "quotation";
+      let docType: "sale" | "purchase" | "quotation" | "sales-return";
       if (r.kind === "sale") {
         const data = await utils.sales.invoiceGet.fetch({ id: r.id });
         if (!data || !(data as any).invoice) { setMsg(T("لم يتم العثور على الفاتورة", "Invoice not found")); return; }
         d = docFromInvoice(data);
         docType = "sale";
+      } else if (r.kind === "sale-return") {
+        const data = await utils.sales.creditNoteGet.fetch({ id: r.id });
+        if (!data || !(data as any).creditNote) { setMsg(T("لم يتم العثور على المرتجع", "Sales return not found")); return; }
+        d = docFromCreditNote(data);
+        docType = "sales-return";
       } else if (r.kind === "purchase") {
         const po = await utils.sahl.poDetail.fetch({ id: r.id });
         if (!po) { setMsg(T("لم يتم العثور على أمر الشراء", "Purchase order not found")); return; }
@@ -371,7 +420,7 @@ export default function SahlInvoiceHistory() {
       const comp: any = company ?? {};
       const [tar] = DOC_TITLES[docType];
       // ZATCA QR: keep the stored code, else build a valid TLV for sales.
-      if (docType === "sale" && !d.qrText && comp.taxNumber) {
+      if ((docType === "sale" || docType === "sales-return") && !d.qrText && comp.taxNumber) {
         try {
           d.qrText = zatcaQrTlv({
             seller: comp.companyNameAr || comp.companyName || "",
@@ -561,10 +610,10 @@ export default function SahlInvoiceHistory() {
                     {r.kind === "sale" && (
                       <button className={miniBtn} title={T("تعديل الفاتورة", "Edit invoice")} onClick={() => editRow(r)}>✎ Edit</button>
                     )}
-                    {(r.kind === "sale" || r.kind === "purchase" || r.kind === "quotation") && (
+                    {(r.kind === "sale" || r.kind === "purchase" || r.kind === "quotation" || r.kind === "sale-return") && (
                       <button className={miniBtn} disabled={!!busy} title={T("طباعة / PDF", "Print / PDF")} onClick={() => printRow(r, "html")}>PDF</button>
                     )}
-                    {(r.kind === "sale" || r.kind === "purchase" || r.kind === "quotation") && (
+                    {(r.kind === "sale" || r.kind === "purchase" || r.kind === "quotation" || r.kind === "sale-return") && (
                       <button className={miniBtn} disabled={!!busy} title={T("تصدير إكسل 0060", "Excel 0060 export")} onClick={() => printRow(r, "xlsx")}>Excel ↓</button>
                     )}
                     {r.kind === "sale" && (

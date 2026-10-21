@@ -186,6 +186,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const [viewId, setViewId] = useState<number | null>(null);
   const [viewNav, setViewNav] = useState(0);
   const [poViewId, setPoViewId] = useState<number | null>(null);
+  // Who created the sales return being viewed (shown as its cashier).
+  const [cnCashier, setCnCashier] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   // view mode flag (must exist BEFORE the queries below read it)
   const isViewing = viewId !== null || poViewId !== null;
@@ -518,6 +520,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     }
     setDocDate(String(cn?.date ?? today()).slice(0, 10));
     setReason(String((cnViewData as any).reason ?? ""));
+    setCnCashier(String((cnViewData as any).cashier ?? ""));
     setMsg(T("وضع العرض — الحفظ معطل", "View mode — saving disabled"));
   }, [cnViewData]);
 
@@ -996,7 +999,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       })),
       subtotal, discount: Number(discount), tax: taxAmt, net: grand,
       notes: reason || undefined, qrText: undefined,
-      dueDate: dueDate || undefined, cashier: userName || undefined,
+      dueDate: dueDate || undefined, cashier: cnCashier || userName || undefined,
       paymentType: payLabel, taxPct: Number(taxPct),
       qtyTotal: lines.reduce((a, l) => a + Number(l.qty || 0), 0),
       balBefore, balAfter, hasAccount: !!partyId,
