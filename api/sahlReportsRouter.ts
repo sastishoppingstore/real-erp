@@ -435,17 +435,34 @@ function reportTable(
   title: string,
   headers: string[],
   rows: Array<Array<string | number>>,
-  limit = 100,
+  limit = 200,
 ) {
   const shown = rows.slice(0, limit);
-  const head = headers.map((h) => `<th style="background:#2fae4e;color:#fff;border:1px solid #1d7a37;padding:5px 6px;text-align:center;font-size:12px">${esc(h)}</th>`).join("");
+  const head = headers
+    .map((h) => `<th style="background:#0f172a;color:#e2e8f0;border:1px solid #0f172a;padding:6px 7px;text-align:center;font-size:11px;font-weight:bold">${esc(h)}</th>`)
+    .join("");
   const body = shown.length
-    ? shown.map((row) => `<tr>${row.map((cell) => `<td style="border:1px solid #c9c9c9;padding:4px 6px;font-size:12px;text-align:center">${esc(cell)}</td>`).join("")}</tr>`).join("")
-    : `<tr><td colspan="${headers.length}" style="border:1px solid #c9c9c9;padding:8px;text-align:center;color:#777;font-size:12px">—</td></tr>`;
+    ? shown
+        .map(
+          (row, i) =>
+            `<tr style="background:${i % 2 ? "#f8fafc" : "#ffffff"}">${row
+              .map(
+                (cell, ci) =>
+                  `<td style="border:1px solid #e2e8f0;padding:5px 7px;font-size:11.5px;text-align:${
+                    ci >= headers.length - 3 ? "right" : "center"
+                  };color:#1e293b">${esc(cell)}</td>`,
+              )
+              .join("")}</tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="${headers.length}" style="border:1px solid #e2e8f0;padding:10px;text-align:center;color:#94a3b8;font-size:11px">—</td></tr>`;
   const more = rows.length > shown.length
-    ? `<div style="padding:4px 2px;font-size:11px;color:#666">Showing ${shown.length} of ${rows.length}</div>`
+    ? `<div style="padding:5px 2px;font-size:10.5px;color:#64748b">Showing ${shown.length} of ${rows.length}</div>`
     : "";
-  return `<h3 style="margin:18px 0 6px;font-size:13px;color:#0a5c2a">${esc(title)}</h3>
+  return `
+    <div style="margin:24px 0 8px;border-bottom:2px solid #10b981;padding-bottom:5px">
+      <span style="font-size:13px;font-weight:bold;color:#0f172a">${esc(title)}</span>
+    </div>
     <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%">
       <thead><tr>${head}</tr></thead><tbody>${body}</tbody>
     </table>${more}`;
@@ -462,56 +479,68 @@ function buildReportHtml(company: {
     ? company.logo
     : "";
 
-  const kpis: Array<[string, string]> = [
-    ["Sales / المبيعات", money(data.sales.total)],
+  const net = data.sales.total - data.returns.total - data.purchases.total - data.expenses.total;
+  const cards: Array<{ label: string; value: string; color: string; bg: string }> = [
+    { label: "Sales / المبيعات", value: money(data.sales.total), color: "#047857", bg: "#ecfdf5" },
+    { label: "Collected / المحصّل", value: money(data.sales.paid), color: "#0f766e", bg: "#f0fdfa" },
+    { label: "Due / المتبقي", value: money(data.sales.due), color: "#b45309", bg: "#fffbeb" },
+    { label: "Purchases / المشتريات", value: money(data.purchases.total), color: "#1d4ed8", bg: "#eff6ff" },
+    { label: "Expenses / المصروفات", value: money(data.expenses.total), color: "#be123c", bg: "#fff1f2" },
+    { label: "Returns / المرتجعات", value: money(data.returns.total), color: "#6d28d9", bg: "#f5f3ff" },
+    { label: "Net / الصافي", value: money(net), color: net >= 0 ? "#334155" : "#be123c", bg: "#f8fafc" },
+    { label: "Invoices / الفواتير", value: String(data.sales.count), color: "#0f172a", bg: "#f1f5f9" },
+  ];
+  const cardRows: string[] = [];
+  for (let i = 0; i < cards.length; i += 4) {
+    const slice = cards.slice(i, i + 4);
+    cardRows.push(`<tr>${slice.map((c) => `
+      <td width="25%" style="padding:5px">
+        <div style="background:${c.bg};border:1px solid #e2e8f0;border-top:3px solid ${c.color};border-radius:8px;padding:9px 10px">
+          <div style="font-size:10px;font-weight:bold;color:#64748b;letter-spacing:.4px">${esc(c.label)}</div>
+          <div style="font-size:16px;font-weight:bold;color:#0f172a;margin-top:3px">${esc(c.value)}</div>
+        </div>
+      </td>`).join("")}</tr>`);
+  }
+  const extraRows: Array<[string, string]> = [
     ["VAT / الضريبة", money(data.sales.tax)],
-    ["Paid / المحصّل", money(data.sales.paid)],
-    ["Due / المتبقي", money(data.sales.due)],
-    ["Invoices / الفواتير", String(data.sales.count)],
-    ["Returns / المرتجعات", money(data.returns.total)],
-    ["Purchases / المشتريات", money(data.purchases.total)],
-    ["Expenses / المصروفات", money(data.expenses.total)],
     ["Payments / المقبوضات", money(data.payments.total)],
     ["Contracts / العقود", `${data.contracts.count} — ${money(data.contracts.value)}`],
     ["Invoiced on contracts / المفوتر على العقود", money(data.contracts.invoiced)],
     ["Purchase orders / أوامر الشراء", String(data.purchases.count)],
   ];
-
-  const kpiRows: string[] = [];
-  for (let i = 0; i < kpis.length; i += 2) {
-    const left = kpis[i];
-    const right = kpis[i + 1];
-    kpiRows.push(`<tr>
-      <td style="border:1px solid #d5d5d5;background:#f4f8f4;padding:5px 7px;font-size:12px;color:#444;width:23%">${esc(left[0])}</td>
-      <td style="border:1px solid #d5d5d5;padding:5px 7px;font-size:12px;font-weight:bold;text-align:right;width:27%">${esc(left[1])}</td>
-      <td style="border:1px solid #d5d5d5;background:#f4f8f4;padding:5px 7px;font-size:12px;color:#444;width:23%">${esc(right?.[0] ?? "")}</td>
-      <td style="border:1px solid #d5d5d5;padding:5px 7px;font-size:12px;font-weight:bold;text-align:right;width:27%">${esc(right?.[1] ?? "")}</td>
-    </tr>`);
-  }
+  const extraHtml = extraRows.map(([k, v]) => `
+    <tr>
+      <td style="border:1px solid #e2e8f0;background:#f8fafc;padding:6px 8px;font-size:11.5px;color:#475569;width:34%">${esc(k)}</td>
+      <td style="border:1px solid #e2e8f0;padding:6px 8px;font-size:12px;font-weight:bold;text-align:right;color:#0f172a">${esc(v)}</td>
+    </tr>`).join("");
 
   return `<!doctype html>
 <html dir="rtl">
 <head><meta charset="utf-8"><title>Period report ${esc(data.from)} — ${esc(data.to)}</title></head>
-<body style="margin:0;padding:0;background:#f2f4f3;font-family:Tahoma,Arial,sans-serif;color:#111">
-  <div style="max-width:920px;margin:0 auto;background:#fff;padding:18px 20px 24px">
-    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border-bottom:3px solid #2fae4e">
+<body style="margin:0;padding:0;background:#eef2f7;font-family:Tahoma,Arial,sans-serif;color:#0f172a">
+  <div style="max-width:960px;margin:0 auto;background:#fff;padding:0 0 24px">
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#0b1220">
       <tr>
-        <td style="vertical-align:middle;padding-bottom:10px">
-          <div style="font-size:20px;font-weight:bold;color:#0a5c2a">Period report / تقرير فترة</div>
-          <div style="font-size:13px;color:#333;margin-top:4px">${esc(companyName)}${companyNameAr ? ` — ${esc(companyNameAr)}` : ""}</div>
-          <div style="font-size:12px;color:#555;margin-top:2px">${esc(data.from)} — ${esc(data.to)}</div>
+        <td style="padding:18px 20px;vertical-align:middle">
+          <div style="font-size:10px;font-weight:bold;letter-spacing:2px;color:#6ee7b7;text-transform:uppercase">${esc(companyName)}${companyNameAr ? ` — ${esc(companyNameAr)}` : ""}</div>
+          <div style="font-size:22px;font-weight:bold;color:#fff;margin-top:4px">Period report / تقرير فترة</div>
+          <div style="font-size:12px;color:#cbd5e1;margin-top:4px">${esc(data.from)} — ${esc(data.to)}</div>
         </td>
-        <td style="text-align:left;vertical-align:middle;padding-bottom:10px">${logo ? `<img src="${esc(logo)}" alt="" style="max-height:64px;max-width:180px">` : ""}</td>
+        <td style="text-align:left;vertical-align:middle;padding:18px 20px;width:170px">${logo ? `<img src="${esc(logo)}" alt="" style="max-height:60px;max-width:150px">` : ""}</td>
       </tr>
     </table>
 
-    <p style="font-size:11px;color:#666;margin:10px 0 12px">
+    <div style="padding:16px 20px 0">
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">
+      <tbody>${cardRows.join("")}</tbody>
+    </table>
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-top:8px">
+      <tbody>${extraHtml}</tbody>
+    </table>
+
+    <p style="font-size:11px;color:#64748b;margin:12px 0 4px">
       Sales invoices are labour invoices. Figures are inclusive of the selected period only.
     </p>
-
-    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%">
-      <tbody>${kpiRows.join("")}</tbody>
-    </table>
 
     ${reportTable("Sales invoices / فواتير البيع", ["No.", "Date", "Customer", "Type", "Total", "Paid", "Due"], data.invoices.map((r) => [r.no, r.date, r.customer, r.type, money(r.total), money(r.paid), money(r.due)]), 200)}
     ${reportTable("Returns / المرتجعات", ["No.", "Date", "Customer", "Amount", "Reason"], data.returnRows.map((r) => [r.no, r.date, r.customer, money(r.amount), r.reason]))}
@@ -521,9 +550,10 @@ function buildReportHtml(company: {
     ${reportTable("Top items / أعلى الأصناف", ["Item", "Qty", "Total"], data.topItems.map((r) => [r.name, r.qty, money(r.total)]))}
     ${reportTable("Contracts / العقود", ["No.", "Title", "Client", "Date", "Value", "Status"], data.contractRows.map((r) => [r.no, r.title, r.client, r.date, money(r.value), r.status]))}
 
-    <p style="font-size:10px;color:#888;margin-top:18px;border-top:1px solid #ddd;padding-top:8px">
+    <p style="font-size:10px;color:#94a3b8;margin-top:18px;border-top:1px solid #e2e8f0;padding-top:8px">
       Generated by ${esc(companyName)} ERP — ${esc(new Date().toLocaleString("en-GB"))}
     </p>
+    </div>
   </div>
 </body>
 </html>`;
@@ -785,6 +815,91 @@ export const sahlReportsRouter = createRouter({
     }))
     .query(async ({ input, ctx }) => {
       return buildPeriodSummary(ctx.user.tenantId!, input.from, input.to);
+    }),
+
+  // Aggregates only (no row lists) — used to compare the selected period with
+  // the previous one so every report box can show a % up / down.
+  periodTotals: authedQuery
+    .input(z.object({
+      from: z.string().regex(DATE_RE),
+      to: z.string().regex(DATE_RE),
+    }))
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const tenantId = ctx.user.tenantId!;
+      const { from, to } = normalizeRange(input.from, input.to);
+
+      const [salesRows, returnRows, purchaseRows, paymentRows, expenseRows] = await Promise.all([
+        db.select({
+          count: sql<number>`count(*)`,
+          total: sql<string>`coalesce(sum(${invoices.totalAmount}), 0)`,
+          tax: sql<string>`coalesce(sum(${invoices.taxAmount}), 0)`,
+          paid: sql<string>`coalesce(sum(${invoices.paidAmount}), 0)`,
+          due: sql<string>`coalesce(sum(${invoices.balanceDue}), 0)`,
+        }).from(invoices).where(and(
+          eq(invoices.tenantId, tenantId),
+          ne(invoices.status, "cancelled"),
+          between(invoices.date, from, to),
+        )),
+
+        db.select({
+          count: sql<number>`count(*)`,
+          total: sql<string>`coalesce(sum(${creditNotes.amount}), 0)`,
+        }).from(creditNotes).where(and(
+          eq(creditNotes.tenantId, tenantId),
+          between(creditNotes.date, from, to),
+        )),
+
+        db.select({
+          count: sql<number>`count(*)`,
+          total: sql<string>`coalesce(sum(${purchaseOrders.totalAmount}), 0)`,
+        }).from(purchaseOrders).where(and(
+          eq(purchaseOrders.tenantId, tenantId),
+          ne(purchaseOrders.status, "cancelled"),
+          between(purchaseOrders.date, from, to),
+        )),
+
+        db.select({
+          count: sql<number>`count(*)`,
+          total: sql<string>`coalesce(sum(${customerPayments.amount}), 0)`,
+        }).from(customerPayments).where(and(
+          eq(customerPayments.tenantId, tenantId),
+          between(customerPayments.date, from, to),
+        )),
+
+        db.select({
+          count: sql<number>`count(*)`,
+          total: sql<string>`coalesce(sum(${cashboxTransactions.amount}), 0)`,
+        }).from(cashboxTransactions).where(and(
+          eq(cashboxTransactions.tenantId, tenantId),
+          ne(cashboxTransactions.status, "cancelled"),
+          eq(cashboxTransactions.transactionType, "expense"),
+          gte(cashboxTransactions.createdAt, dayStart(from)),
+          lte(cashboxTransactions.createdAt, dayEnd(to)),
+        )),
+      ]);
+
+      const sales = salesRows[0];
+      const returns = returnRows[0];
+      const purchases = purchaseRows[0];
+      const payments = paymentRows[0];
+      const expenses = expenseRows[0];
+
+      return {
+        from,
+        to,
+        sales: {
+          count: Number(sales?.count ?? 0),
+          total: Number(sales?.total ?? 0),
+          tax: Number(sales?.tax ?? 0),
+          paid: Number(sales?.paid ?? 0),
+          due: Number(sales?.due ?? 0),
+        },
+        returns: { count: Number(returns?.count ?? 0), total: Number(returns?.total ?? 0) },
+        purchases: { count: Number(purchases?.count ?? 0), total: Number(purchases?.total ?? 0) },
+        payments: { count: Number(payments?.count ?? 0), total: Number(payments?.total ?? 0) },
+        expenses: { count: Number(expenses?.count ?? 0), total: Number(expenses?.total ?? 0) },
+      };
     }),
 
   settingsGet: authedQuery.query(async ({ ctx }) => {
