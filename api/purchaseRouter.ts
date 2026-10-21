@@ -136,6 +136,7 @@ export const purchaseRouter = createRouter({
       taxAmount: z.string().optional(),
       totalAmount: z.string(),
       notes: z.string().optional(),
+      terms: z.string().optional(),
       items: z.array(z.object({
         productId: z.number().optional(),
         description: z.string(),

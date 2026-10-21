@@ -64,6 +64,7 @@ import { thermalPrintRouter } from "./thermalPrintRouter";
 import { hotelRouter } from "./hotelRouter";
 import { constructionRouter } from "./constructionRouter";
 import { sahlRouter } from "./sahlRouter";
+import { sahlReportsRouter } from "./sahlReportsRouter";
 import { constructionInvoiceRouter } from "./constructionInvoiceRouter";
 import { constructionPaymentRouter } from "./constructionPaymentRouter";
 import { jobCostingRouter } from "./jobCostingRouter";
@@ -161,6 +162,7 @@ word: wordRouter,
   hotel: hotelRouter,
   construction: constructionRouter,
   sahl: sahlRouter,
+  sahlReports: sahlReportsRouter,
   constructionInvoices: constructionInvoiceRouter,
   constructionPayment: constructionPaymentRouter,
   jobCosting: jobCostingRouter,

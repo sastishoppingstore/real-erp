@@ -289,6 +289,7 @@ export default function SahlInvoiceHistory() {
       companyContacts: contacts.length ? contacts : undefined,
       accountAddress: joinTwo(addrEn, addrAr) || undefined,
       docType: "sale",
+      invoiceType: String(inv?.invoiceType ?? "") === "standard" ? "simple" : "zatca",
     } as DocData;
   };
 
@@ -308,12 +309,18 @@ export default function SahlInvoiceHistory() {
         qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0),
         disc: 0, total: Number(it.totalAmount || 0),
       })),
-      subtotal: Number(po?.subTotal || 0), discount: 0, tax: Number(po?.taxAmount || 0),
+      subtotal: Number(po?.subTotal || 0), discount: Number(po?.discountAmount || 0), tax: Number(po?.taxAmount || 0),
       net: Number(po?.totalAmount || 0),
       notes: String(po?.notes ?? "").trim() || undefined,
+      dueDate: String(po?.expectedDelivery ?? "").slice(0, 10) || undefined,
+      terms: String(po?.terms ?? "").trim() || undefined,
+      cashier: comp.companyName || comp.companyNameAr || undefined,
+      paymentType: "Credit",
+      labels: { docNo: "PO No.", party: "Supplier", payment: "Payment Terms", dueDate: "Delivery Date", cashier: "Buyer", banner: "Purchase Order" },
       qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
       companyTax: comp.taxNumber ?? undefined,
       companyContacts: contacts.length ? contacts : undefined,
+      docType: "purchase",
     } as DocData;
   };
 
@@ -333,13 +340,19 @@ export default function SahlInvoiceHistory() {
         qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0),
         disc: 0, total: Number(it.totalAmount || 0),
       })),
-      subtotal: Number(qt?.subTotal || 0), discount: 0, tax: Number(qt?.taxAmount || 0),
+      subtotal: Number(qt?.subTotal || 0), discount: Number(qt?.discountAmount || 0), tax: Number(qt?.taxAmount || 0),
       net: Number(qt?.totalAmount || 0),
       dueDate: String(qt?.expiryDate ?? "").slice(0, 10) || undefined,
       notes: String(qt?.notes ?? "").trim() || undefined,
+      terms: String(qt?.terms ?? "").trim() || undefined,
+      cashier: comp.companyName || comp.companyNameAr || undefined,
+      paymentType: "Payment on acceptance",
+      labels: { docNo: "Quote No.", party: "Client", payment: "Payment Terms", dueDate: "Valid Until", cashier: "Prepared By", banner: "Quotation", total: "Total" },
+      hideBalances: true,
       qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
       companyTax: comp.taxNumber ?? undefined,
       companyContacts: contacts.length ? contacts : undefined,
+      docType: "quotation",
     } as DocData;
   };
 
@@ -376,10 +389,13 @@ export default function SahlInvoiceHistory() {
       paid: 0,
       notes: String(data?.reason ?? "").trim() || undefined,
       qrText: undefined,
-      dueDate: String(cn?.date ?? "").slice(0, 10) || undefined,
+      dueDate: String(data?.invoice?.invoiceNumber ?? "").trim() || undefined,
+      dueDateText: String(data?.invoice?.invoiceNumber ?? "").trim() || undefined,
       cashier: (data as any)?.cashier ?? undefined,
-      paymentType: T("آجل", "Credit"),
+      paymentType: String(data?.invoice?.paymentMethod ?? "").trim() || "Cash",
       taxPct: 15,
+      labels: { docNo: "Return No.", party: "Client", payment: "Refund Mode", dueDate: "Original Invoice", cashier: "Cashier", banner: "Sales Return" },
+      hideBalances: true,
       qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
       companyTax: comp.taxNumber ?? undefined,
       companyContacts: compContacts(comp).length ? compContacts(comp) : undefined,
@@ -420,7 +436,7 @@ export default function SahlInvoiceHistory() {
       const comp: any = company ?? {};
       const [tar] = DOC_TITLES[docType];
       // ZATCA QR: keep the stored code, else build a valid TLV for sales.
-      if ((docType === "sale" || docType === "sales-return") && !d.qrText && comp.taxNumber) {
+      if ((docType === "sale" || docType === "sales-return") && !d.qrText && comp.taxNumber && d.invoiceType !== "simple") {
         try {
           d.qrText = zatcaQrTlv({
             seller: comp.companyNameAr || comp.companyName || "",

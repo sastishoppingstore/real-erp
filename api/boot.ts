@@ -237,6 +237,15 @@ async function bootstrap() {
     startPlanExpiryChecker();
   }
 
+  // Scheduled Sahl period reports (daily / weekly / monthly). Runs after DB
+  // bootstrap; the scheduler itself silently no-ops until the settings table
+  // has been migrated.
+  try {
+    const { runSahlReportScheduler } = await import("./sahlReportsRouter");
+    setInterval(() => { runSahlReportScheduler().catch(() => {}); }, 30 * 60 * 1000);
+    console.log("[sahl-reports] Scheduler started (runs every 30 minutes)");
+  } catch { /* optional */ }
+
   const { serve } = await import("@hono/node-server");
   const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);

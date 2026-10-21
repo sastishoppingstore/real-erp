@@ -259,8 +259,11 @@ export const salesRouter = createRouter({
       expiryDate: z.string().optional(),
       subTotal: z.string(),
       taxAmount: z.string().optional(),
+      discountAmount: z.string().optional(),
+      taxPercent: z.string().optional(),
       totalAmount: z.string(),
       notes: z.string().optional(),
+      terms: z.string().optional(),
       items: z.array(z.object({
         productId: z.number().optional(),
         description: z.string(),
@@ -423,6 +426,10 @@ export const salesRouter = createRouter({
         where: eq(companySettings.tenantId, tenantId),
       });
       const isForcedZatca = invoiceData.invoiceType === "zatca";
+      // Explicit "standard" from the invoice screen means a plain (non-ZATCA)
+      // invoice. It must not be silently turned into a ZATCA invoice just
+      // because the tenant is Saudi and has a valid VAT number.
+      const explicitSimple = invoiceData.invoiceType === "standard";
       const saudiInvoice = isSaudiCompany(settings) || isForcedZatca;
       const currency = settings?.defaultCurrency || (saudiInvoice ? "SAR" : "USD");
       const taxPercent = invoiceData.taxPercent || (settings?.vatRate ? String(settings.vatRate) : saudiInvoice ? "15" : "0");
@@ -476,6 +483,10 @@ export const salesRouter = createRouter({
             message: `ZATCA mandatory: Total sales (SAR ${totalSales.toLocaleString()}) exceeded SAR ${ZATCA_THRESHOLD.toLocaleString()}. Please add a valid 15-digit VAT number in Settings → Company Legal Information before creating invoices.`,
           });
         }
+      } else if (explicitSimple) {
+        invoiceType = "standard";
+      } else if (isForcedZatca) {
+        invoiceType = isZatcaEligible ? "zatca" : "simplified";
       } else {
         invoiceType = isZatcaEligible ? "zatca" : (isSimplified ? "simplified" : (invoiceData.invoiceType || "standard"));
       }
@@ -494,7 +505,7 @@ export const salesRouter = createRouter({
       // ZATCA: standard TLV base64 per ZATCA spec
       // Standard/Simplified: simple base64 JSON payload (scannable by any QR reader)
       let zatcaQrCode: string | undefined;
-      if (isZatcaEligible || isSimplified) {
+      if (invoiceType === "zatca" || invoiceType === "simplified") {
         // ZATCA-style TLV QR (works even without full ZATCA certification)
         zatcaQrCode = buildZatcaQrPayload(sellerName, vatNumber || "0000000000000000", timestamp, invoiceData.totalAmount, taxAmount);
       } else {
@@ -509,8 +520,8 @@ export const salesRouter = createRouter({
         zatcaQrCode = Buffer.from(JSON.stringify(simpleQrObj)).toString("base64");
       }
 
-      // ZATCA XML only when fully eligible
-      const zatcaXml = isZatcaEligible
+      // ZATCA XML only for real ZATCA invoices
+      const zatcaXml = invoiceType === "zatca"
         ? buildSaudiInvoiceXml({
             invoiceNumber: invoiceData.invoiceNumber,
             date: invoiceData.date,
@@ -614,9 +625,9 @@ export const salesRouter = createRouter({
         cashier: invoiceData.cashier || (ctx.user as any)?.name || (ctx.user as any)?.username || null,
         poNumber: invoiceData.poNumber || null,
         tenantId,
-        zatcaQrCode: isAboveThreshold ? zatcaQrCode : undefined,
-        zatcaXml: isAboveThreshold ? zatcaXml : undefined,
-        zatcaStatus: isAboveThreshold && isZatcaEligible ? "pending" : undefined,
+        zatcaQrCode,
+        zatcaXml,
+        zatcaStatus: invoiceType === "zatca" ? "pending" : undefined,
         terms: settings?.invoiceTerms,
         paidAmount: isPaidNow ? String(invoiceData.totalAmount || "0") : "0",
         balanceDue: isPaidNow ? "0" : invoiceData.totalAmount,
@@ -818,45 +829,68 @@ export const salesRouter = createRouter({
       const currency = settings?.defaultCurrency || (saudiInvoice ? "SAR" : "USD");
       const taxPercent = invoiceData.taxPercent || (settings?.vatRate ? String(settings.vatRate) : saudiInvoice ? "15" : "0");
       const taxAmount = invoiceData.taxAmount || "0";
-      const invoiceType = saudiInvoice ? "zatca" : (invoiceData.invoiceType || existingInvoice.invoiceType);
+      // Honour the invoice-type selector: "standard" is a plain invoice and
+      // must not be converted to ZATCA merely because the tenant is Saudi.
       const sellerName = settings?.companyName || settings?.companyNameAr || "";
       const vatNumber = settings?.taxNumber || "";
+      const explicitSimple = invoiceData.invoiceType === "standard";
+      const explicitZatca = invoiceData.invoiceType === "zatca";
+      const invoiceType = explicitSimple
+        ? "standard"
+        : explicitZatca
+          ? (isValidSaudiVatNumber(vatNumber) && sellerName.trim() ? "zatca" : "simplified")
+          : (existingInvoice.invoiceType === "standard"
+            ? "standard"
+            : (invoiceData.invoiceType || existingInvoice.invoiceType));
 
       let zatcaQrCode = existingInvoice.zatcaQrCode;
       let zatcaXml = existingInvoice.zatcaXml;
       let zatcaStatus = existingInvoice.zatcaStatus;
 
-      if (saudiInvoice) {
-        if (!sellerName.trim()) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Saudi ZATCA invoices require company name in Settings before billing.",
-          });
-        }
-        if (!isValidSaudiVatNumber(vatNumber)) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Saudi ZATCA invoices require a valid 15-digit VAT number that starts and ends with 3.",
-          });
-        }
-        // Only invoices that already carry a regulator payload get it
-        // refreshed — an edit must not create a ZATCA XML out of nothing
-        // (that would lock the document against further corrections).
-        if (existingInvoice.zatcaXml || existingInvoice.zatcaQrCode) {
-          const timestamp = new Date(`${invoiceData.date || existingInvoice.date}T00:00:00.000Z`).toISOString();
+      const regulatorLocked = ["signed", "submitted", "cleared", "reported"].includes(String(existingInvoice.zatcaStatus || ""));
+      if (!regulatorLocked) {
+        const timestamp = new Date(`${invoiceData.date || existingInvoice.date}T00:00:00.000Z`).toISOString();
+        if (invoiceType === "zatca" || invoiceType === "simplified") {
+          if (!sellerName.trim()) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Saudi ZATCA invoices require company name in Settings before billing.",
+            });
+          }
+          if (!isValidSaudiVatNumber(vatNumber)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Saudi ZATCA invoices require a valid 15-digit VAT number that starts and ends with 3.",
+            });
+          }
           zatcaQrCode = buildZatcaQrPayload(sellerName, vatNumber, timestamp, invoiceData.totalAmount || existingInvoice.totalAmount, taxAmount);
-          zatcaXml = buildSaudiInvoiceXml({
-            invoiceNumber: invoiceData.invoiceNumber || existingInvoice.invoiceNumber,
+          if (invoiceType === "zatca") {
+            zatcaXml = buildSaudiInvoiceXml({
+              invoiceNumber: invoiceData.invoiceNumber || existingInvoice.invoiceNumber,
+              date: invoiceData.date || existingInvoice.date,
+              sellerName,
+              vatNumber,
+              crNumber: settings?.crNumber,
+              currency,
+              subTotal: invoiceData.subTotal || existingInvoice.subTotal,
+              taxAmount,
+              totalAmount: invoiceData.totalAmount || existingInvoice.totalAmount,
+            });
+            zatcaStatus = "pending";
+          } else {
+            zatcaXml = null;
+            zatcaStatus = "simplified";
+          }
+        } else {
+          zatcaQrCode = Buffer.from(JSON.stringify({
+            seller: sellerName,
+            total: invoiceData.totalAmount || existingInvoice.totalAmount,
+            tax: taxAmount,
             date: invoiceData.date || existingInvoice.date,
-            sellerName,
-            vatNumber,
-            crNumber: settings?.crNumber,
-            currency,
-            subTotal: invoiceData.subTotal || existingInvoice.subTotal,
-            taxAmount,
-            totalAmount: invoiceData.totalAmount || existingInvoice.totalAmount,
-          });
-          zatcaStatus = "pending";
+            invoice: invoiceData.invoiceNumber || existingInvoice.invoiceNumber,
+          })).toString("base64");
+          zatcaXml = null;
+          zatcaStatus = null;
         }
       }
 

@@ -49,12 +49,17 @@ export interface DocData {
   // "Tax Invoice" for sales (مؤسسة name stays on other doc types).
   docType?: DocType;
   // 0060-form extras (all optional; missing values hide their rows like <#if>)
-  dueDate?: string; cashier?: string; paymentType?: string;
+  dueDate?: string; dueDateText?: string; cashier?: string; paymentType?: string;
   additions?: number; additionType?: string;
   qtyTotal?: number; taxPct?: number;
   balBefore?: number; balAfter?: number; hasAccount?: boolean;
   companyTax?: string; companyCr?: string; companyContacts?: string[];
   accountAddress?: string;
+  labels?: { docNo?: string; party?: string; payment?: string; dueDate?: string; cashier?: string; banner?: string; total?: string; };
+  terms?: string;
+  origInvoiceNo?: string;
+  invoiceType?: "zatca" | "simple";
+  hideBalances?: boolean;
 }
 
 export const DOC_TITLES: Record<DocType, [string, string]> = {
@@ -337,6 +342,17 @@ function setCell(rowXml: string, row: number, col: string, val?: string | number
     return `<c r="${col}${row}"${sAttr} t="inlineStr"><is><t xml:space="preserve">${escX(val)}</t></is></c>`;
   });
 }
+// A few template rows (e.g. D14 on the Cashier row) have no D cell at all.
+// Insert the value right after the anchor cell, cloning its style.
+function insertCellAfter(rowXml: string, row: number, col: string, afterCol: string, val: string): string {
+  const anchorRe = new RegExp(`<c r="${afterCol}${row}"[^>]*?(?:/>|>[\\s\\S]*?</c>)`);
+  const m = rowXml.match(anchorRe);
+  if (!m) return rowXml;
+  const found = m[0];
+  const sAttr = (found.match(/\ss="\d+"/) || [""])[0];
+  const cell = `<c r="${col}${row}"${sAttr} t="inlineStr"><is><t xml:space="preserve">${escX(val)}</t></is></c>`;
+  return rowXml.replace(anchorRe, () => found + cell);
+}
 function renumRow(rowXml: string, oldRow: number, newRow: number): string {
   if (oldRow === newRow) return rowXml;
   return rowXml
@@ -354,6 +370,8 @@ function patchSheet060(
   while ((mm = rowRe.exec(sheet))) rows.set(Number(mm[1]), mm[0]);
 
   const note = String(d.notes ?? "").trim();
+  const terms = String(d.terms ?? "").trim();
+  const noteCell = [note, terms ? `Terms: ${terms}` : ""].filter(Boolean).join("\n");
   const addl = r2(d.additions ?? 0);
   const disc = r2(d.discount ?? 0);
   const net = r2(d.net ?? 0);
@@ -371,7 +389,7 @@ function patchSheet060(
   type Step = { old: number; itemIdx?: number };
   const plan: Step[] = [];
   for (let r = 7; r <= 14; r++) plan.push({ old: r });
-  if (note) plan.push({ old: 15 });
+  if (note || terms) plan.push({ old: 15 });
   plan.push({ old: 16 });
   const nItems = Math.max(1, lines.length);
   for (let i = 0; i < nItems; i++) plan.push({ old: 17, itemIdx: i });
@@ -380,9 +398,9 @@ function patchSheet060(
   if (disc !== 0) plan.push({ old: 20 });
   plan.push({ old: 21 });
   plan.push({ old: 22 });
-  plan.push({ old: 23 });
-  if (creditDue !== 0) plan.push({ old: 24 });
-  if (d.hasAccount) { plan.push({ old: 25 }); plan.push({ old: 26 }); }
+  if (!d.hideBalances) plan.push({ old: 23 });
+  if (!d.hideBalances && creditDue !== 0) plan.push({ old: 24 });
+  if (!d.hideBalances && d.hasAccount) { plan.push({ old: 25 }); plan.push({ old: 26 }); }
   plan.push({ old: 28 });
   plan.push({ old: 29 }); plan.push({ old: 30 }); plan.push({ old: 31 });
 
@@ -413,8 +431,8 @@ function patchSheet060(
           xml = setCell(xml, r, "B", cfg.titleAr || "");
           // The gray merged banner (C7:G7) announces the document: sales invoices
           // carry "Tax Invoice" (as in the original 0060 form), other doc types
-          // keep the company name they always had.
-          xml = setCell(xml, r, "C", cfg.docType === "sale" ? "Tax Invoice" : companyName);
+          // keep the company name they always had unless labels.banner overrides.
+          xml = setCell(xml, r, "C", d.labels?.banner ?? (cfg.docType === "sale" ? (d.invoiceType === "simple" ? "Invoice" : "Tax Invoice") : companyName));
           break;
         case 8:
           xml = setCell(xml, r, "C", d.partyCr ? `C.R. No. ${d.partyCr}` : null);
@@ -425,10 +443,12 @@ function patchSheet060(
           xml = setCell(xml, r, "E", null);
           break;
         case 9:
+          xml = setCell(xml, r, "B", d.labels?.docNo ?? "Doc. No.");
           xml = setCell(xml, r, "C", d.no);
-          xml = setCell(xml, r, "D", d.party ? `Client: ${d.party}` : null);
+          xml = setCell(xml, r, "D", d.party ? `${d.labels?.party ?? "Client"}: ${d.party}` : null);
           break;
         case 10:
+          xml = setCell(xml, r, "B", d.labels?.payment ?? "Payment");
           xml = setCell(xml, r, "C", d.paymentType ?? null);
           xml = setCell(xml, r, "D", d.partyAr ? `Arabic Name: ${d.partyAr}` : null);
           break;
@@ -441,11 +461,19 @@ function patchSheet060(
           xml = setCell(xml, r, "D", d.partyPhone ? `Phone No.: ${d.partyPhone}` : null);
           break;
         case 13:
-          xml = setCell(xml, r, "C", xlSerial(d.dueDate || d.date) ?? null);
+          xml = setCell(xml, r, "B", d.labels?.dueDate ?? "Due Date");
+          xml = setCell(xml, r, "C", d.dueDateText ? d.dueDateText : (xlSerial(d.dueDate || d.date) ?? null));
           xml = setCell(xml, r, "D", d.partyEmail ? `Email: ${d.partyEmail}` : null);
           break;
-        case 14: xml = setCell(xml, r, "C", d.cashier ?? null); break;
-        case 15: xml = setCell(xml, r, "C", note); break;
+        case 14: {
+          xml = setCell(xml, r, "B", d.labels?.cashier ?? "Cashier");
+          xml = setCell(xml, r, "C", d.cashier ?? null);
+          const orig = d.origInvoiceNo ? `Original Invoice: ${d.origInvoiceNo}` : null;
+          if (orig && !new RegExp(`<c r="D${r}"`).test(xml)) xml = insertCellAfter(xml, r, "D", "C", orig);
+          else xml = setCell(xml, r, "D", orig);
+          break;
+        }
+        case 15: xml = setCell(xml, r, "C", noteCell); break;
         case 18:
           xml = setCell(xml, r, "E", qtyTotal);
           xml = setCell(xml, r, "G", r2(d.subtotal));
@@ -776,6 +804,8 @@ function invoice060Html(
   const contacts = (d.companyContacts ?? []).map((x) => String(x ?? "")).filter((x) => x.trim());
   const co = company.nameAr || company.name || "";
   const words = amountWordsAr(net);
+  const noteTxt = [String(d.notes ?? ""), d.terms ? `Terms: ${String(d.terms)}` : ""]
+    .filter((x) => x !== "").join("\n");
   const cleanIt = (s: any) => String(s ?? "").replace(/^\[(?:custom-)?\d+\]\s*/, "").trim();
   const itRows = lines.length
     ? lines.map((l, i) =>
@@ -855,16 +885,16 @@ function invoice060Html(
   </colgroup><tbody>
     <tr class="gray" style="height:26.25pt">
       <td></td><td style="font-size:10pt">${esc(title)}</td>
-      <td colspan="5" class="c" style="font-size:16pt">${esc(d.docType === "sale" ? "Tax Invoice" : co)}</td>
+      <td colspan="5" class="c" style="font-size:16pt">${esc(d.labels?.banner ?? (d.docType === "sale" ? (d.invoiceType === "simple" ? "Invoice" : "Tax Invoice") : co))}</td>
     </tr>
     <tr><td></td><td class="lbl">C.R. No</td><td>${esc(d.partyCr ?? "")}</td><td class="lbl">Tax No.</td><td colspan="3">${esc(d.partyTax ?? "")}</td></tr>
-    <tr><td></td><td class="lbl">Doc. No.</td><td>${esc(d.no)}</td><td class="lbl">Client</td><td colspan="3">${esc(d.party ?? "")}</td></tr>
-    <tr><td></td><td class="lbl">Payment</td><td>${esc(d.paymentType ?? "")}</td><td class="lbl" style="white-space:normal">Arabic Name</td><td colspan="3">${esc(d.partyAr ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">${esc(d.labels?.docNo ?? "Doc. No.")}</td><td>${esc(d.no)}</td><td class="lbl">${esc(d.labels?.party ?? "Client")}</td><td colspan="3">${esc(d.party ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">${esc(d.labels?.payment ?? "Payment")}</td><td>${esc(d.paymentType ?? "")}</td><td class="lbl" style="white-space:normal">Arabic Name</td><td colspan="3">${esc(d.partyAr ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Date</td><td>${esc(d.date)}</td><td class="lbl">Address</td><td colspan="3">${esc(d.accountAddress ?? "")}</td></tr>
     <tr><td></td><td class="lbl">Time</td><td>${esc(t12)}</td><td class="lbl">Phone No.</td><td colspan="3">${esc(d.partyPhone ?? "")}</td></tr>
-    <tr><td></td><td class="lbl">Due Date</td><td>${esc(d.dueDate ?? d.date)}</td><td class="lbl">Email</td><td colspan="3">${esc(d.partyEmail ?? "")}</td></tr>
-    <tr><td></td><td class="lbl">Cashier</td><td>${esc(d.cashier ?? "")}</td><td colspan="4"></td></tr>
-    ${d.notes ? `<tr><td></td><td></td><td></td><td class="lbl">Note</td><td colspan="3" style="font-size:9pt;white-space:pre-wrap;word-break:break-word">${esc(d.notes)}</td></tr>` : ""}
+    <tr><td></td><td class="lbl">${esc(d.labels?.dueDate ?? "Due Date")}</td><td>${esc(d.dueDate ?? d.date)}</td><td class="lbl">Email</td><td colspan="3">${esc(d.partyEmail ?? "")}</td></tr>
+    <tr><td></td><td class="lbl">${esc(d.labels?.cashier ?? "Cashier")}</td><td>${esc(d.cashier ?? "")}</td><td colspan="4">${d.origInvoiceNo ? `Original Invoice: ${esc(d.origInvoiceNo)}` : ""}</td></tr>
+    ${noteTxt ? `<tr><td></td><td></td><td></td><td class="lbl">Note</td><td colspan="3" style="font-size:9pt;white-space:pre-wrap;word-break:break-word">${esc(noteTxt)}</td></tr>` : ""}
     <tr style="height:30pt;font-weight:700" class="c">
       <td></td><td class="bd">Item No.</td><td class="bd">Job Description</td><td class="bd">Unit</td>
       <td class="bd">Qty</td><td class="bd">Price</td><td class="bd">Total</td>
@@ -875,12 +905,12 @@ function invoice060Html(
     ${disc ? valRow("Discount", n2(disc)) : ""}
     <tr><td colspan="5"></td><td class="lbl">VAT ${Number(d.taxPct ?? 15)}%</td><td class="c bd">${n2(d.tax)}</td></tr>
     <tr style="height:17.25pt">
-      <td></td><td class="lbl">Due</td><td class="l">${esc(words)}</td><td colspan="2"></td>
+      <td></td><td class="lbl">${esc(d.labels?.total ?? "Due")}</td><td class="l">${esc(words)}</td><td colspan="2"></td>
       <td class="lbl" style="font-size:10pt">Due</td><td class="c bd bold" style="font-size:10pt">${n2(net)}</td>
     </tr>
-    ${valRow("Paid", n2(paid))}
-    ${creditDue ? valRow("Credit", n2(creditDue)) : ""}
-    ${d.hasAccount ? valRow("Bal. Prior", n2(d.balBefore)) + valRow("Bal. After", n2(d.balAfter ?? d.balBefore)) : ""}
+    ${d.hideBalances ? "" : valRow("Paid", n2(paid))}
+    ${!d.hideBalances && creditDue ? valRow("Credit", n2(creditDue)) : ""}
+    ${!d.hideBalances && d.hasAccount ? valRow("Bal. Prior", n2(d.balBefore)) + valRow("Bal. After", n2(d.balAfter ?? d.balBefore)) : ""}
     <tr style="height:8pt"><td colspan="7"></td></tr>
     <tr class="gray" style="height:26.25pt">
       <td></td><td colspan="6" class="c" style="font-size:16pt">Thank You</td>

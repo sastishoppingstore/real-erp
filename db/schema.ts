@@ -7782,3 +7782,17 @@ export const sahlShifts = mysqlTable("sahl_shifts", {
 });
 
 export type SahlShift = typeof sahlShifts.$inferSelect;
+
+// Scheduled period-report settings (one row per tenant).
+export const sahlReportSettings = mysqlTable("sahl_report_settings", {
+  id: serial("id").primaryKey(),
+  tenantId: bigint("tenant_id", { mode: "number", unsigned: true }).notNull().unique(),
+  enabled: boolean("enabled").default(false).notNull(),
+  frequency: mysqlEnum("frequency", ["daily", "weekly", "monthly"]).default("weekly").notNull(),
+  sendTime: varchar("send_time", { length: 5 }).default("08:00").notNull(), // HH:MM
+  periodDays: int("period_days").default(7).notNull(),
+  recipients: text("recipients"), // comma separated; empty => company email
+  lastSentAt: timestamp("last_sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+});

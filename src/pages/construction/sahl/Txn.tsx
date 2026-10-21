@@ -128,6 +128,16 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const [reason, setReason] = useState("");
   const [docDate, setDocDate] = useState(today());
   const [dueDate, setDueDate] = useState(today());
+  // Invoice type selector (sales only): ZATCA e-invoice or a plain invoice.
+  const [invType, setInvType] = useState<"zatca" | "simple">(() => {
+    try { return localStorage.getItem("sahl-invtype") === "simple" ? "simple" : "zatca"; } catch { return "zatca"; }
+  });
+  const setInvTypePersist = (v: "zatca" | "simple") => {
+    setInvType(v);
+    try { localStorage.setItem("sahl-invtype", v); } catch { /* ignore */ }
+  };
+  // Quotation validity / purchase payment terms (printed below the totals).
+  const [terms, setTerms] = useState("");
   const userName = (user as any)?.name ?? (user as any)?.username ?? "";
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -490,6 +500,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       const savedPm = String(inv?.paymentMethod ?? "").toLowerCase();
       setPayMode(savedPm === "credit" ? "credit" : savedPm === "card" ? "card" : "cash");
       setReason(String(inv?.notes ?? ""));
+      setInvType(String(inv?.invoiceType ?? "") === "standard" ? "simple" : "zatca");
       setDocDate(String(inv?.date ?? today()).slice(0, 10));
       setMsg(editParam
         ? T("وضع التعديل — عدّل ثم اضغط حفظ", "Edit mode — change then press Save")
@@ -546,6 +557,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       });
     }
     setDocDate(String(qt?.date ?? today()).slice(0, 10));
+    setDueDate(String(qt?.expiryDate ?? "").slice(0, 10) || today());
+    setTerms(String(qt?.terms ?? ""));
     setReason(String(qt?.notes ?? ""));
     setMsg(T("وضع العرض — الحفظ معطل", "View mode — saving disabled"));
   }, [quoteViewData]);
@@ -555,6 +568,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     setEditMode(false);
     setLines([]); setDiscount(0); setOrigId(""); setReason(""); setViewId(null); setPoViewId(null); setMsg("");
     setPartyId(""); setPartyQ(""); resetCd(); setDueDate(today()); setSavedNo(""); LAST_SAVED_NO = "";
+    setTerms("");
   };
 
   // Unlock the currently viewed sales invoice for editing.
@@ -930,6 +944,18 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     kind === "sales" ? "sale" : kind === "quotation" ? "quotation"
     : kind === "purchase" ? "purchase" : "sales-return";
 
+  // Type-specific labels for the shared 0060 form. Sales returns undefined so
+  // the sale invoice keeps its exact original wording.
+  const docLabels = () => {
+    if (kind === "quotation")
+      return { docNo: "Quote No.", party: "Client", payment: "Payment Terms", dueDate: "Valid Until", cashier: "Prepared By", banner: "Quotation", total: "Total" };
+    if (kind === "purchase")
+      return { docNo: "PO No.", party: "Supplier", payment: "Payment Terms", dueDate: "Delivery Date", cashier: "Buyer", banner: "Purchase Order" };
+    if (kind === "sales-return")
+      return { docNo: "Return No.", party: "Client", payment: "Refund Mode", dueDate: "Original Invoice", cashier: "Cashier", banner: "Sales Return" };
+    return undefined;
+  };
+
   const buildDoc = (): DocData => {
     const comp: any = company ?? {};
     const payLabel = payMode === "card" ? (rtl ? "شبكة" : "Card") : payMode === "credit" ? (rtl ? "آجل" : "Credit") : (rtl ? "نقدي" : "Cash");
@@ -981,6 +1007,126 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         companyContacts: contacts.length ? contacts : undefined,
         accountAddress: pairJoin(addrEn, addrAr) || undefined,
         docType: docTypeFor(),
+        invoiceType: String(inv?.invoiceType ?? "") === "standard" ? "simple" : "zatca",
+      };
+    }
+    if (isViewing && cnViewData && kind === "sales-return") {
+      const cn: any = (cnViewData as any).creditNote;
+      const items: any[] = (cnViewData as any).items ?? [];
+      const cust: any = (cnViewData as any).customer;
+      const orig: any = (cnViewData as any).invoice;
+      const nm = String(cust?.name ?? "").trim();
+      const nmAr = String(cust?.nameAr ?? "").trim();
+      const total = Number(cn?.amount ?? grand);
+      return {
+        no: cn?.creditNoteNumber ?? `CN-${viewId}`,
+        date: String(cn?.date ?? docDate).slice(0, 10),
+        party: nm || nmAr,
+        partyAr: nmAr && nmAr !== nm ? nmAr : undefined,
+        partyTax: cust?.vatNumber ?? cust?.taxNumber ?? undefined,
+        partyPhone: cust?.phone ?? undefined,
+        partyEmail: cust?.email ?? undefined,
+        partyCr: cust?.crNumber ?? cust?.commercialRegistration ?? undefined,
+        branch: "",
+        lines: items.map((it: any) => ({
+          code: it.sku ?? "", name: it.description ?? "", unit: it.unit ?? "",
+          qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0), disc: 0,
+          total: Number(it.totalAmount || 0),
+        })),
+        subtotal: total / 1.15,
+        discount: 0,
+        tax: total - total / 1.15,
+        net: total,
+        notes: reason || undefined,
+        qrText: undefined,
+        dueDate: orig?.invoiceNumber ?? undefined,
+        dueDateText: orig?.invoiceNumber ?? undefined,
+        cashier: cnCashier || userName || undefined,
+        paymentType: orig?.paymentMethod ?? undefined,
+        taxPct: 15,
+        qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
+        labels: docLabels(),
+        docType: "sales-return",
+        companyTax: comp.taxNumber ?? undefined,
+        companyContacts: contacts.length ? contacts : undefined,
+        accountAddress: pairJoin(cust?.address, cust?.addressAr) || undefined,
+      };
+    }
+    if (isViewing && quoteViewData && kind === "quotation") {
+      const qt: any = quoteViewData as any;
+      const items: any[] = qt.items ?? [];
+      const c: any = (customers ?? []).find((x: any) => String(x.id) === String(qt.customerId));
+      const nm = String(c?.name ?? "").trim();
+      const nmAr = String(c?.nameAr ?? "").trim();
+      return {
+        no: qt.quotationNumber ?? `Q-${viewId}`,
+        date: String(qt.date ?? docDate).slice(0, 10),
+        party: nm || nmAr,
+        partyAr: nmAr && nmAr !== nm ? nmAr : undefined,
+        partyTax: c?.vatNumber ?? c?.taxNumber ?? undefined,
+        partyPhone: c?.phone ?? undefined,
+        partyEmail: c?.email ?? undefined,
+        partyCr: c?.crNumber ?? c?.commercialRegistration ?? undefined,
+        branch: "",
+        lines: items.map((it: any) => ({
+          code: "", name: it.productName || it.description || "", unit: "",
+          qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0), disc: 0,
+          total: Number(it.totalAmount || 0),
+        })),
+        subtotal: Number(qt.subTotal || subtotal),
+        discount: Number(qt.discountAmount || 0),
+        tax: Number(qt.taxAmount || taxAmt),
+        net: Number(qt.totalAmount || grand),
+        notes: String(qt.notes ?? "") || undefined,
+        dueDate: String(qt.expiryDate ?? "").slice(0, 10) || undefined,
+        terms: String(qt.terms ?? "") || undefined,
+        cashier: userName || undefined,
+        paymentType: "Payment on acceptance",
+        taxPct: Number(qt.taxPercent ?? taxPct),
+        qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
+        labels: docLabels(),
+        hideBalances: true,
+        docType: "quotation",
+        companyTax: comp.taxNumber ?? undefined,
+        companyContacts: contacts.length ? contacts : undefined,
+        accountAddress: pairJoin(c?.address, c?.addressAr) || undefined,
+      };
+    }
+    if (isViewing && poViewData && kind === "purchase") {
+      const po: any = poViewData as any;
+      const items: any[] = po.items ?? [];
+      const s: any = (suppliers ?? []).find((x: any) => String(x.id) === String(po.supplierId));
+      return {
+        no: po.poNumber ?? `PO-${poViewId}`,
+        date: String(po.date ?? docDate).slice(0, 10),
+        party: String(s?.name ?? "").trim(),
+        partyAr: String(s?.nameAr ?? "").trim() || undefined,
+        partyTax: s?.vatNumber ?? s?.taxNumber ?? undefined,
+        partyPhone: s?.phone ?? undefined,
+        partyEmail: s?.email ?? undefined,
+        partyCr: s?.crNumber ?? s?.commercialRegistration ?? undefined,
+        branch: "",
+        lines: items.map((it: any) => ({
+          code: "", name: it.productName || it.description || "", unit: "",
+          qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0), disc: 0,
+          total: Number(it.totalAmount || 0),
+        })),
+        subtotal: Number(po.subTotal || subtotal),
+        discount: Number(po.discountAmount || 0),
+        tax: Number(po.taxAmount || taxAmt),
+        net: Number(po.totalAmount || grand),
+        notes: String(po.notes ?? "") || undefined,
+        dueDate: String(po.expectedDelivery ?? "").slice(0, 10) || undefined,
+        terms: String(po.terms ?? "") || undefined,
+        cashier: userName || undefined,
+        paymentType: "Credit",
+        taxPct: Number(taxPct),
+        qtyTotal: items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0),
+        labels: docLabels(),
+        docType: "purchase",
+        companyTax: comp.taxNumber ?? undefined,
+        companyContacts: contacts.length ? contacts : undefined,
+        accountAddress: pairJoin(s?.address, s?.addressAr) || undefined,
       };
     }
     const prem = parties.find((a: any) => String(a.id) === String(partyId));
@@ -999,8 +1145,14 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       })),
       subtotal, discount: Number(discount), tax: taxAmt, net: grand,
       notes: reason || undefined, qrText: undefined,
-      dueDate: dueDate || undefined, cashier: cnCashier || userName || undefined,
+      dueDate: (kind === "sales-return" && origDoc ? String(origDoc.invoiceNumber ?? "") : dueDate) || undefined,
+      dueDateText: kind === "sales-return" && origDoc ? String(origDoc.invoiceNumber ?? "") : undefined,
+      cashier: cnCashier || userName || undefined,
       paymentType: payLabel, taxPct: Number(taxPct),
+      labels: docLabels(),
+      terms: terms.trim() || undefined,
+      hideBalances: kind === "quotation" ? true : undefined,
+      invoiceType: kind === "sales" ? invType : undefined,
       qtyTotal: lines.reduce((a, l) => a + Number(l.qty || 0), 0),
       balBefore, balAfter, hasAccount: !!partyId,
       companyTax: comp.taxNumber ?? undefined,
@@ -1023,7 +1175,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     const [tar, ten] = DOC_TITLES[docTypeFor()];
     // ZATCA QR: keep the stored code when viewing a saved invoice, else build
     // the TLV so the 0060 QR slot always carries a real e-invoice QR.
-    if (!d.qrText && comp.taxNumber) {
+    if (!d.qrText && comp.taxNumber && d.invoiceType !== "simple") {
       try {
         d.qrText = zatcaQrTlv({
           seller: comp.companyNameAr || comp.companyName || "",
@@ -1184,6 +1336,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           await invUpdate.mutateAsync({
             id: viewId,
             invoiceNumber: savedNo,
+            invoiceType: invType === "simple" ? "standard" : "zatca",
             ...(partyId ? { customerId: Number(partyId) } : {}),
             date: docDate,
             dueDate: dueDate || undefined,
@@ -1220,6 +1373,7 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         }
         const inv = await invCreate.mutateAsync({
           invoiceNumber: `INV-${stamp}`,
+          invoiceType: invType === "simple" ? "standard" : "zatca",
           ...(partyId ? { customerId: Number(partyId) } : {}),
           date: docDate,
           dueDate: dueDate || undefined,
@@ -1265,7 +1419,10 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       } else if (kind === "quotation") {
         await quoteCreate.mutateAsync({
           quotationNumber: `Q-${stamp}`, customerId: Number(partyId), date: docDate,
-          subTotal: String(subtotal), totalAmount: String(net), notes: note,
+          expiryDate: dueDate || undefined,
+          subTotal: String(subtotal), discountAmount: String(discount),
+          taxPercent: String(taxPct), taxAmount: taxAmt.toFixed(2),
+          totalAmount: String(net), notes: note, terms: terms.trim() || undefined,
           items: lines.map((l) => ({
             productId: l.productId, description: l.name, quantity: l.qty,
             unitPrice: String(l.price), totalAmount: String(lineTotal(l)),
@@ -1275,7 +1432,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       } else if (kind === "purchase") {
         const po = await poCreate.mutateAsync({
           poNumber: `PO-${stamp}`, supplierId: Number(partyId), date: docDate,
+          expectedDelivery: dueDate || undefined,
           subTotal: String(subtotal), taxAmount: taxAmt.toFixed(2), totalAmount: String(grand), notes: note,
+          terms: terms.trim() || undefined,
           items: lines.map((l) => ({
             productId: l.productId, description: l.name, quantity: l.qty,
             unitPrice: String(l.price), totalAmount: String(lineTotal(l)),
@@ -1518,6 +1677,21 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                   {T("شبكة", "Card")}
                 </label>
               )}
+              {kind === "sales" && (
+                <label className="flex items-center gap-1">
+                  <b className="text-[11px]">{T("نوع الفاتورة", "Invoice type")}</b>
+                  <select
+                    className={`${inputCls} h-8 w-[150px]`}
+                    value={invType}
+                    onChange={(e) => setInvTypePersist(e.target.value as "zatca" | "simple")}
+                    disabled={readOnly}
+                    title={T("ضريبية = ZATCA، عادية = فاتورة بسيطة", "ZATCA = e-invoice, Simple = plain invoice")}
+                  >
+                    <option value="zatca">{T("ضريبية ZATCA", "ZATCA / Tax")}</option>
+                    <option value="simple">{T("عادية Simple", "Simple")}</option>
+                  </select>
+                </label>
+              )}
               <label className="ms-auto flex items-center gap-1">
                 <b className="text-[11px]">{T("المرجع", "Reference")}</b>
                 <input value={reference} onChange={(e) => setReference(e.target.value)} disabled={readOnly}
@@ -1531,6 +1705,14 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                   placeholder={T("ملاحظة تظهر على الفاتورة", "Note shown on the invoice")}
                   className="min-h-9 flex-1 resize-y border border-[#888] bg-white px-1 py-0.5 text-[12px] text-black disabled:bg-[#f0f0f0]" />
               </label>
+              {(kind === "quotation" || kind === "purchase") && (
+                <label className="flex min-w-[220px] flex-1 items-start gap-1">
+                  <b className="mt-1 whitespace-nowrap text-[11px]">{T("الشروط", "Terms")}</b>
+                  <textarea rows={2} dir="auto" value={terms} onChange={(e) => setTerms(e.target.value)} disabled={readOnly}
+                    placeholder={T("شروط الدفع، مدة الصلاحية، التسليم...", "Payment terms, validity, delivery...")}
+                    className="min-h-9 flex-1 resize-y border border-[#888] bg-white px-1 py-0.5 text-[12px] text-black disabled:bg-[#f0f0f0]" />
+                </label>
+              )}
               {kind.endsWith("return") && (
                 <label className="flex items-center gap-1">
                   <b className="text-[11px]">{T("الأصلي", "Original")}</b>

@@ -67,17 +67,23 @@ export default function ConstructionDashboard() {
   }, [location.key, location.search]);
   const { data: stats } = trpc.construction.constructionStats.useQuery(undefined);
   const { data: projects } = trpc.construction.projectList.useQuery(undefined);
-  const { data: invoices } = trpc.constructionInvoices.invoiceList.useQuery(undefined);
+  // Real Sahl numbers: the dashboard used to read the legacy construction
+  // invoice table, which shows 0 even when the shop has live sales.
+  const { data: sahl } = trpc.sahlReports.dashboard.useQuery(undefined);
+  const { data: sahlInvoices } = trpc.sales.invoiceList.useQuery(undefined);
   const { data: company } = trpc.settings.companySettingsGet.useQuery();
   const brandAr = (company as any)?.companyNameAr || (company as any)?.companyName || "سهل";
   const brandEn = (company as any)?.companyName || "SAHL";
 
   const activeProjects = projects?.filter((p) => p.status === "active") || [];
   const totalContractValue = projects?.reduce((sum, p) => sum + Number(p.contractValue || 0), 0) || 0;
-  const totalInvoiced = (invoices || []).reduce((s: number, i: any) => s + Number(i.grandTotal || 0), 0);
-  const outstanding = Math.max(0, totalContractValue - totalInvoiced);
-  const recentInvoices = [...(invoices || [])]
-    .sort((a: any, b: any) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+  const totalInvoiced = Number((sahl as any)?.totalSales ?? 0);
+  const outstanding = Number((sahl as any)?.totalDue ?? 0);
+  const recentInvoices = [...(sahlInvoices || [])]
+    .sort((a: any, b: any) => {
+      const d = String(b.date || "").localeCompare(String(a.date || ""));
+      return d !== 0 ? d : Number(b.id || 0) - Number(a.id || 0);
+    })
     .slice(0, 5);
 
   const monthlySales = (() => {
@@ -87,9 +93,9 @@ export default function ConstructionDashboard() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       buckets.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, 0);
     }
-    (invoices || []).forEach((inv: any) => {
-      const key = String(inv.createdAt || "").slice(0, 7);
-      if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + Number(inv.grandTotal || 0));
+    (sahlInvoices || []).forEach((inv: any) => {
+      const key = String(inv.date || "").slice(0, 7);
+      if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + Number(inv.totalAmount || 0));
     });
     const arr = [...buckets.entries()].map(([m, v]) => ({ month: m.slice(5), total: Math.round(v) }));
     const max = Math.max(1, ...arr.map((a) => a.total));
@@ -189,6 +195,25 @@ export default function ConstructionDashboard() {
         {utilTiles.map((t) => <SahlTile key={t.label} t={t} h={88} />)}
       </div>
 
+      {/* ===== live Sahl KPIs — real persisted sales, not the legacy table ===== */}
+      <div className="mt-2 grid gap-1" style={{ gridTemplateColumns: "repeat(6, minmax(80px, 1fr))" }}>
+        {([
+          { l: "Today sales", a: "مبيعات اليوم", v: (sahl as any)?.todaySales, c: C.green },
+          { l: "This month", a: "مبيعات الشهر", v: (sahl as any)?.monthSales, c: C.green },
+          { l: "Total sales", a: "إجمالي المبيعات", v: (sahl as any)?.totalSales, c: C.green },
+          { l: "Outstanding", a: "المتبقي", v: (sahl as any)?.totalDue, c: C.coral },
+          { l: "Returns", a: "المرتجعات", v: (sahl as any)?.returnsTotal, c: C.yellow },
+          { l: "Purchases", a: "المشتريات", v: (sahl as any)?.purchaseTotal, c: C.blue },
+        ] as Array<{ l: string; a: string; v: any; c: string }>).map((k) => (
+          <div key={k.l} className="border border-[#333] bg-[#111] px-2 py-1" title={`${k.l} / ${k.a}`}>
+            <div className="truncate text-[10px] leading-tight text-white/55">{rtl ? k.a : k.l}</div>
+            <div className="font-mono text-[16px] font-bold leading-tight tabular-nums" style={{ color: k.c }}>
+              {fmt(Number(k.v ?? 0))}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* ===== main transaction grid: uneven widths (2fr 1fr 2fr 2fr) ===== */}
       <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: "2fr 1fr 2fr 2fr" }}>
         {txnTiles.map((t) => <SahlTile key={t.label} t={t} h={96} />)}
@@ -246,9 +271,9 @@ export default function ConstructionDashboard() {
                 <tbody>
                   {recentInvoices.map((inv: any) => (
                     <tr key={inv.id} className="odd:bg-[#161616] even:bg-black hover:bg-[#1f1f1f]">
-                      <td className="border border-[#333] px-1 py-1 font-mono">{inv.invoiceNo}</td>
+                      <td className="border border-[#333] px-1 py-1 font-mono">{inv.invoiceNumber}</td>
                       <td className="max-w-[120px] truncate border border-[#333] px-1 py-1">{inv.customerName || ""}</td>
-                      <td className="border border-[#333] px-1 py-1 text-right tabular-nums">{fmt(Number(inv.grandTotal || 0))}</td>
+                      <td className="border border-[#333] px-1 py-1 text-right tabular-nums">{fmt(Number(inv.totalAmount || 0))}</td>
                       <td className="border border-[#333] px-1 py-1">{inv.status}</td>
                     </tr>
                   ))}
@@ -256,9 +281,12 @@ export default function ConstructionDashboard() {
               </table>
             )}
             <div className="mt-1 border border-[#333] bg-black px-2 py-1 text-[11px] text-white/70">
-              {rtl ? "المشاريع النشطة" : "Active projects"}: <b className="text-white">{activeProjects.length}</b>
+              {(sahl as any)?.invoiceCount ?? 0} {rtl ? "فاتورة" : "invoices"}
+              {" · "}{(sahl as any)?.customerCount ?? 0} {rtl ? "عميل" : "customers"}
+              {" · "}{(sahl as any)?.productCount ?? 0} {rtl ? "صنف" : "items"}
+              {" · "}{rtl ? "المشاريع النشطة" : "Active projects"}: <b className="text-white">{activeProjects.length}</b>
               {" · "}
-              <button onClick={() => navigate("/app/construction/contracts")} className="hover:text-white">{rtl ? "العقود" : "Contracts"}</button>
+              <button onClick={() => navigate("/app/construction/sahl/contracts")} className="hover:text-white">{rtl ? "العقود" : "Contracts"}</button>
               {" · "}
               <button onClick={() => navigate("/app/construction/daily-reports")} className="hover:text-white">{rtl ? "التقارير اليومية" : "Daily reports"}</button>
               {" · "}

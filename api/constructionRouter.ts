@@ -74,6 +74,32 @@ export const constructionRouter = createRouter({
       return { id, success: true };
     }),
 
+  subcontractorUpdate: authedQuery
+    .input(z.object({
+      id: z.number(),
+      code: z.string().optional(),
+      name: z.string().optional(),
+      contactPerson: z.string().optional(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+      trade: z.string().optional(),
+      licenseNumber: z.string().optional(),
+      contractAmount: z.string().optional(),
+      paidAmount: z.string().optional(),
+      retentionPercent: z.string().optional(),
+      isActive: z.boolean().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const { id, ...rest } = input;
+      const data = cleanInput(rest);
+      if (Object.keys(data).length === 0) return { success: true };
+      await db.update(subcontractors).set(data)
+        .where(and(eq(subcontractors.tenantId, ctx.user.tenantId!), eq(subcontractors.id, id)));
+      return { success: true };
+    }),
+
   equipmentList: authedQuery
     .input(z.object({ projectId: z.number().optional() }).optional())
     .query(async ({ input, ctx }) => {

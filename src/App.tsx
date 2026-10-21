@@ -358,6 +358,10 @@ const SahlMoreReports = lazy(() => import("./pages/construction/sahl/Reports").t
 const SahlSalesmen = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlSalesmen })));
 const SahlUsers = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlUsers })));
 const SahlPrices = lazy(() => import("./pages/construction/sahl/Prices"));
+const SahlContractors = lazy(() => import("./pages/construction/sahl/Contractors"));
+const SahlContracts = lazy(() => import("./pages/construction/sahl/Contracts"));
+const SahlZatcaSetup = lazy(() => import("./pages/construction/sahl/ZatcaSetup"));
+const SahlPeriodReport = lazy(() => import("./pages/construction/sahl/PeriodReport"));
 const WBSList = lazy(() => import("./pages/construction/wbs/WBSList"));
 const WBSCreate = lazy(() => import("./pages/construction/wbs/WBSCreate"));
 const WBSDetail = lazy(() => import("./pages/construction/wbs/WBSDetail"));
@@ -960,6 +964,10 @@ export default function App() {
         <Route path="sahl/prints" element={<SahlPrints />} />
         <Route path="sahl/admin" element={<SahlAdmin />} />
         <Route path="sahl/reports/more" element={<SahlMoreReports />} />
+        <Route path="sahl/reports/period" element={<SahlPeriodReport />} />
+        <Route path="sahl/contractors" element={<SahlContractors />} />
+        <Route path="sahl/contracts" element={<SahlContracts />} />
+        <Route path="sahl/zatca" element={<SahlZatcaSetup />} />
         <Route path="wbs" element={<WBSList />} />
         <Route path="wbs/new" element={<WBSCreate />} />
         <Route path="wbs/:id" element={<WBSDetail />} />
