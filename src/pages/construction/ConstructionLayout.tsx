@@ -92,7 +92,6 @@ const navSections = [
     items: [
       { label: "Contracts", labelAr: "العقود", path: "/app/construction/sahl/contracts", icon: FileText },
       { label: "Contractors", labelAr: "المقاولون", path: "/app/construction/sahl/contractors", icon: HardHat },
-      { label: "Progress billing", labelAr: "المستخلصات", path: "/app/construction/progress-billing", icon: ClipboardList },
     ],
   },
   {

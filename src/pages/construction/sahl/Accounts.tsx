@@ -95,7 +95,10 @@ export default function SahlAccounts() {
     setF({
       name: r.name ?? "", nameAr: r.nameAr ?? "", phone: r.phone ?? r.mobile ?? "",
       email: r.email ?? "", address: r.address ?? "", addressAr: r.addressAr ?? "",
-      taxNumber: r.taxNumber ?? r.vatNumber ?? "", crNumber: r.crNumber ?? "",
+      taxNumber: r.taxNumber ?? r.vatNumber ?? "",
+      // CR lives in cr_number and/or commercial_registration depending on how
+      // the row was written — read both so the field is never empty.
+      crNumber: r.crNumber ?? r.commercialRegistration ?? "",
       openingBalance: ob === 0 ? "" : String(Math.abs(ob)),
       openingBalanceDate: r.openingBalanceDate ?? "",
       openDir: ob < 0 ? "credit" : "debit",
@@ -116,20 +119,24 @@ export default function SahlAccounts() {
       const p = {
         name: f.name.trim(), nameAr: f.nameAr || undefined, phone: f.phone || undefined,
         email: f.email || undefined, address: f.address || undefined, addressAr: f.addressAr || undefined,
-        taxNumber: f.taxNumber || undefined, crNumber: f.crNumber || undefined,
+        taxNumber: f.taxNumber || undefined,
+        // sent as an explicit value (empty clears it) so the CR is never lost
+        crNumber: (f.crNumber ?? "").trim() || null,
         openingBalance: signedOpening(),
         openingBalanceDate: f.openingBalanceDate || undefined,
         notes: f.notes || undefined,
       };
-      if (selRow) updateCustomer.mutate({ id: selRow.id, ...p });
+      if (selRow) updateCustomer.mutate({ id: selRow.id, ...p } as any);
       else createCustomer.mutate(p as any);
     } else {
       const p = {
         name: f.name.trim(), nameAr: f.nameAr || undefined, phone: f.phone || undefined,
         email: f.email || undefined, address: f.address || undefined,
-        taxNumber: f.taxNumber || undefined, notes: f.notes || undefined,
+        taxNumber: f.taxNumber || undefined,
+        crNumber: (f.crNumber ?? "").trim() || null,
+        notes: f.notes || undefined,
       };
-      if (selRow) updateSupplier.mutate({ id: selRow.id, ...p });
+      if (selRow) updateSupplier.mutate({ id: selRow.id, ...p } as any);
       else createSupplier.mutate(p as any);
     }
   };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { useLanguage } from "@/providers/language";
@@ -72,7 +72,7 @@ function Stocktake({ T }: { T: (a: string, e: string) => string }) {
   const { msg, setMsg } = useMsg();
   const [wh, setWh] = useState("");
   const [q, setQ] = useState("");
-  const [lines, setLines] = useState<{ productId: number; name: string; qty: number }[]>([]);
+  const [lines, setLines] = useState<{ productId: number; name: string; qty: number; cost: number }[]>([]);
   const { data: warehouses } = trpc.inventory.warehouseList.useQuery();
   const { data: products } = trpc.inventory.productList.useQuery(q ? { search: q } : undefined);
   const { data: sessions } = trpc.inventory.adjustmentList.useQuery();
@@ -81,10 +81,15 @@ function Stocktake({ T }: { T: (a: string, e: string) => string }) {
   const sysQty = (pid: number) =>
     (bals ?? []).filter((b: any) => b.productId === pid)
       .reduce((a: number, b: any) => a + Number(b.quantity || 0), 0);
+  // Default the warehouse so the "post" button is never dead.
+  useEffect(() => {
+    if (!wh && warehouses && warehouses.length) setWh(String(warehouses[0].id));
+  }, [warehouses, wh]);
   const post = trpc.inventory.adjustmentCreate.useMutation({
     onSuccess: () => { setLines([]); setMsg(T("تم ترحيل الجرد", "Count posted")); utils.inventory.adjustmentList.invalidate(); utils.inventory.inventoryList.invalidate(); },
     onError: (e) => setMsg(e.message),
   });
+  const counted = (pid: number) => lines.find((l) => l.productId === pid);
   return (
     <div>
       <div className="mb-1 border border-[#333] bg-[#111] p-1.5">
@@ -98,30 +103,53 @@ function Stocktake({ T }: { T: (a: string, e: string) => string }) {
         </select>
         <input className={inputCls} style={{ width: 220 }} value={q} onChange={(e) => setQ(e.target.value)}
           placeholder={T("بحث صنف", "Search item")} />
+        <span className="self-center text-[11px] text-white/60">
+          {T("اترك الحقل فارغاً لعدم الاحتساب", "Leave a row empty to skip it")}
+        </span>
       </div>
-      {(products ?? []).slice(0, 6).map((p: any) => (
-        <div key={p.id} className="flex items-center gap-1 border-b border-[#333] px-1 py-0.5">
-          <span className="flex-1">{p.sku} — {p.nameAr || p.name}</span>
-          <span className="text-[11px] text-white/60">{T("الدفتري", "System")}: {wh ? sysQty(p.id) : "—"}</span>
-          <input type="number" min="0" className={inputCls} style={{ width: 90 }} placeholder={T("المجرد", "Counted")}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setLines((ls) => {
-                const rest = ls.filter((l) => l.productId !== p.id);
-                return Number.isFinite(v) && v >= 0 ? [...rest, { productId: p.id, name: p.nameAr || p.name, qty: v }] : rest;
-              });
-            }} />
-        </div>
-      ))}
+      <div className="max-h-[320px] overflow-auto">
+      {(products ?? []).slice(0, 50).map((p: any) => {
+        const cur = counted(p.id);
+        return (
+          <div key={p.id} className="flex items-center gap-1 border-b border-[#333] px-1 py-0.5">
+            <span className="flex-1">{p.sku} — {p.nameAr || p.name}</span>
+            <span className="text-[11px] text-white/60">{T("الدفتري", "System")}: {wh ? sysQty(p.id) : "—"}</span>
+            <input type="number" min="0" step="1" className={inputCls} style={{ width: 90 }}
+              placeholder={T("المجرد", "Counted")}
+              value={cur ? String(cur.qty) : ""}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw.trim() === "") {
+                  // empty = "not counted" (it used to post 0 and wipe the stock)
+                  setLines((ls) => ls.filter((l) => l.productId !== p.id));
+                  return;
+                }
+                const v = Number(raw);
+                if (!Number.isFinite(v) || v < 0) return;
+                setLines((ls) => [
+                  ...ls.filter((l) => l.productId !== p.id),
+                  { productId: p.id, name: p.nameAr || p.name, qty: Math.round(v), cost: Number(p.purchasePrice ?? 0) },
+                ]);
+              }} />
+          </div>
+        );
+      })}
+      </div>
       <div className="mt-1 flex gap-1">
         <button className={btnGreenCls} style={{ background: "#0a5c2a" }} disabled={post.isPending || !wh || !lines.length}
           onClick={() => post.mutate({
             adjustmentDate: new Date().toISOString().slice(0, 10), adjustmentType: "count",
             reason: T("جرد", "Count"), warehouseId: Number(wh),
-            items: lines.map((l) => ({ productId: l.productId, quantity: l.qty })),
+            items: lines.map((l) => ({
+              productId: l.productId, productName: l.name,
+              quantity: Math.round(l.qty), unitCost: String(l.cost ?? 0),
+            })),
           })}>
           {T("ترحيل الجرد", "Post count")}
         </button>
+        <span className="self-center text-[11px] text-white/70">
+          {T("الأسطر المحسوبة", "Counted lines")}: {lines.length}
+        </span>
       </div>
       <div className="mt-2 text-[11px] text-white/60">{T("الجلسات السابقة", "Past sessions")}</div>
       <SahlGrid
@@ -337,18 +365,38 @@ function Archive({ T }: { T: (a: string, e: string) => string }) {
 function Cheques({ T }: { T: (a: string, e: string) => string }) {
   const utils = trpc.useUtils();
   const { msg, setMsg } = useMsg();
-  const [f, setF] = useState({ number: "", bank: "", amount: "", dueDate: "", notes: "" });
+  const [f, setF] = useState({ number: "", bank: "", amount: "", dueDate: "", notes: "", partyType: "customer", partyId: "" });
   const [st, setSt] = useState("");
   const [showAll, setShowAll] = useState(false);
   const { data: rows } = trpc.sahl.chequeList.useQuery(st ? { status: st } : undefined);
+  const { data: customers } = trpc.sales.customerList.useQuery();
+  const { data: suppliers } = trpc.purchase.supplierList.useQuery();
+  const parties = f.partyType === "supplier" ? (suppliers ?? []) : (customers ?? []);
   const create = trpc.sahl.chequeCreate.useMutation({
-    onSuccess: () => { setF({ number: "", bank: "", amount: "", dueDate: "", notes: "" }); utils.sahl.chequeList.invalidate(); },
-    onError: (e) => setMsg(e.message),
+    onSuccess: () => {
+      setF({ number: "", bank: "", amount: "", dueDate: "", notes: "", partyType: f.partyType, partyId: "" });
+      setSt(""); // drop the status filter so the new cheque is visible at once
+      utils.sahl.chequeList.invalidate();
+      setMsg(T("تم تسجيل الشيك", "Cheque registered"));
+    },
+    onError: (e) => setMsg(`${T("فشل تسجيل الشيك", "Cheque failed")}: ${e.message}`),
   });
   const setStatus = trpc.sahl.chequeSetStatus.useMutation({
-    onSuccess: () => utils.sahl.chequeList.invalidate(),
+    onSuccess: () => { utils.sahl.chequeList.invalidate(); setMsg(T("تم تحديث حالة الشيك", "Cheque status updated")); },
     onError: (e) => setMsg(e.message),
   });
+  const dueText = (value: any) => {
+    if (!value) return "";
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
+    return d.toISOString().slice(0, 10);
+  };
+  const partyName = (c: any) => {
+    if (!c.partyId) return "";
+    const list = c.partyType === "supplier" ? (suppliers ?? []) : (customers ?? []);
+    const hit = (list as any[]).find((x: any) => String(x.id) === String(c.partyId));
+    return hit ? (hit.nameAr || hit.name) : String(c.partyId);
+  };
   return (
     <div>
       <div className="mb-1 flex items-center gap-2 border border-[#333] bg-[#111] p-1.5">
@@ -362,19 +410,36 @@ function Cheques({ T }: { T: (a: string, e: string) => string }) {
       <div className="mb-1 flex flex-wrap gap-1">
         <input className={inputCls} style={{ width: 120 }} value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder={T("الرقم", "No.")} />
         <input className={inputCls} style={{ width: 140 }} value={f.bank} onChange={(e) => setF({ ...f, bank: e.target.value })} placeholder={T("البنك", "Bank")} />
-        <input type="number" min="0" className={inputCls} style={{ width: 110 }} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} placeholder={T("المبلغ", "Amount")} />
+        <input type="number" min="0" step="any" className={inputCls} style={{ width: 110 }} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} placeholder={T("المبلغ", "Amount")} />
         <input type="date" className={inputCls} style={{ width: 150 }} value={f.dueDate} onChange={(e) => setF({ ...f, dueDate: e.target.value })} />
+        <select className={inputCls} style={{ width: 120 }} value={f.partyType}
+          onChange={(e) => setF({ ...f, partyType: e.target.value, partyId: "" })}>
+          <option value="customer">{T("عميل", "Customer")}</option>
+          <option value="supplier">{T("مورد", "Supplier")}</option>
+        </select>
+        <select className={inputCls} style={{ width: 170 }} value={f.partyId} onChange={(e) => setF({ ...f, partyId: e.target.value })}>
+          <option value="">—</option>
+          {(parties as any[]).map((p: any) => <option key={p.id} value={p.id}>{p.nameAr || p.name}</option>)}
+        </select>
         <input className={inputCls} style={{ width: 180 }} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder={T("ملاحظات", "Notes")} />
         <button className={btnGreenCls} style={{ background: "#0a5c2a" }} disabled={create.isPending}
           onClick={() => f.number.trim() && Number(f.amount) > 0
-            ? create.mutate({ number: f.number.trim(), bank: f.bank || undefined, amount: Number(f.amount), dueDate: f.dueDate || undefined, notes: f.notes || undefined })
+            ? create.mutate({
+                number: f.number.trim(), bank: f.bank || undefined,
+                partyType: f.partyType as "customer" | "supplier",
+                partyId: f.partyId ? Number(f.partyId) : undefined,
+                amount: Number(f.amount), dueDate: f.dueDate || undefined, notes: f.notes || undefined,
+              })
             : setMsg(T("الرقم والمبلغ مطلوبان", "Number and amount required"))}>
-          {T("تسجيل", "Register")}
+          {create.isPending ? T("جارٍ الحفظ...", "Saving...") : T("تسجيل", "Register")}
         </button>
       </div>
       <SahlGrid
-        columns={[T("الرقم", "No."), T("البنك", "Bank"), T("المبلغ", "Amount"), T("الاستحقاق", "Due"), T("الحالة", "Status"), ""]}
-        rows={(rows ?? []).map((c: any) => [c.number, c.bank ?? "", Number(c.amount || 0).toFixed(2), String(c.dueDate ?? "").slice(0, 10), c.status, ""])}
+        columns={[T("الرقم", "No."), T("البنك", "Bank"), T("المبلغ", "Amount"), T("الاستحقاق", "Due"), T("الجهة", "Party"), T("الحالة", "Status"), T("ملاحظات", "Notes"), ""]}
+        rows={(rows ?? []).map((c: any) => [
+          c.number, c.bank ?? "", Number(c.amount || 0).toFixed(2), dueText(c.dueDate),
+          partyName(c), c.status, c.notes ?? "", "",
+        ])}
         emptyText={T("لا توجد شيكات", "No cheques")}
       />
       <div className="mt-1 flex flex-wrap gap-1">

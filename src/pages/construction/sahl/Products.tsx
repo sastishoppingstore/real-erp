@@ -15,6 +15,15 @@ const empty = {
   isTaxable: true, taxRate: "15", isActive: true, isSerialTracked: false,
 };
 
+// DECIMAL columns are returned padded ("15.0000"). Prices must stay flat:
+// 15 -> "15", 15.5 -> "15.5" (never 15.000 / 15.0000).
+const flatNum = (value: any): string => {
+  if (value === null || value === undefined || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  return String(n);
+};
+
 export default function SahlProducts() {
   const { language } = useLanguage();
   const rtl = language === "ar";
@@ -105,10 +114,11 @@ export default function SahlProducts() {
     setF({
       sku: r.sku ?? "", name: r.name ?? "", nameAr: r.nameAr ?? "",
       categoryId: r.categoryId ?? "", unitId: r.unitId ?? "", barcode: r.barcode ?? "",
-      purchasePrice: r.purchasePrice ?? "", salePrice: r.salePrice ?? "",
-      minPrice: (r as any).minPrice ?? "", fixedDiscount: (r as any).fixedDiscount ?? "",
+      // DECIMAL columns come back padded ("15.0000") — show them flat.
+      purchasePrice: flatNum(r.purchasePrice), salePrice: flatNum(r.salePrice),
+      minPrice: flatNum((r as any).minPrice), fixedDiscount: flatNum((r as any).fixedDiscount),
       reorderLevel: r.reorderLevel ?? 0, description: r.description ?? "",
-      isTaxable: r.isTaxable ?? true, taxRate: r.taxRate ?? "15",
+      isTaxable: r.isTaxable ?? true, taxRate: flatNum(r.taxRate) || "15",
       isActive: r.isActive ?? true, isSerialTracked: r.isSerialTracked ?? false,
     });
   };
@@ -152,13 +162,13 @@ export default function SahlProducts() {
       categoryId: f.categoryId ? Number(f.categoryId) : undefined,
       unitId: f.unitId ? Number(f.unitId) : undefined,
       barcode: f.barcode || undefined,
-      purchasePrice: f.purchasePrice === "" ? undefined : String(f.purchasePrice),
-      salePrice: f.salePrice === "" ? undefined : String(f.salePrice),
-      minPrice: f.minPrice === "" ? undefined : String(f.minPrice),
-      fixedDiscount: f.fixedDiscount === "" ? undefined : String(f.fixedDiscount),
+      purchasePrice: f.purchasePrice === "" ? undefined : String(Number(f.purchasePrice)),
+      salePrice: f.salePrice === "" ? undefined : String(Number(f.salePrice)),
+      minPrice: f.minPrice === "" ? undefined : String(Number(f.minPrice)),
+      fixedDiscount: f.fixedDiscount === "" ? undefined : String(Number(f.fixedDiscount)),
       reorderLevel: Number(f.reorderLevel) || 0,
       description: f.description || undefined,
-      isTaxable: !!f.isTaxable, taxRate: String(f.taxRate ?? "15"),
+      isTaxable: !!f.isTaxable, taxRate: String(Number(f.taxRate ?? 15) || 15),
       isActive: !!f.isActive, isSerialTracked: !!f.isSerialTracked,
     };
     try {
@@ -272,7 +282,7 @@ export default function SahlProducts() {
         ]}
         rows={visible.map((r: any) => [
           r.sku ?? "", r.nameAr || r.name, r.unitId ?? "",
-          r.purchasePrice ?? 0, r.salePrice ?? 0, stockFor(r.id),
+          flatNum(r.purchasePrice) || "0", flatNum(r.salePrice) || "0", stockFor(r.id),
         ])}
         onSelect={(i) => {
           const r = visible[i];
@@ -305,6 +315,11 @@ export default function SahlProducts() {
             <div className="bg-white/10 p-2">
               <SahlField label={rtl ? "اسم الصنف" : "Name"}>
                 <input className={inputCls} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+              </SahlField>
+              <SahlField label={rtl ? "الاسم بالعربية" : "Arabic name"}>
+                <input className={inputCls} dir="rtl" value={f.nameAr}
+                  onChange={(e) => setF({ ...f, nameAr: e.target.value })}
+                  placeholder={rtl ? "الاسم بالعربية" : "Arabic name"} />
               </SahlField>
               <SahlField label={rtl ? "كود الصنف" : "SKU"}>
                 <input className={inputCls} value={f.sku} onChange={(e) => setF({ ...f, sku: e.target.value })} />
@@ -355,16 +370,20 @@ export default function SahlProducts() {
             </div>
             <div className="bg-white/10 p-2">
               <SahlField label={rtl ? "سعر الشراء" : "Cost"}>
-                <input type="number" min="0" className={inputCls} value={f.purchasePrice} onChange={(e) => setF({ ...f, purchasePrice: e.target.value })} />
+                <input type="number" min="0" step="any" className={inputCls} value={f.purchasePrice}
+                  onChange={(e) => setF({ ...f, purchasePrice: e.target.value })} />
               </SahlField>
               <SahlField label={rtl ? "سعر البيع" : "Price"}>
-                <input type="number" min="0" className={inputCls} value={f.salePrice} onChange={(e) => setF({ ...f, salePrice: e.target.value })} />
+                <input type="number" min="0" step="any" className={inputCls} value={f.salePrice}
+                  onChange={(e) => setF({ ...f, salePrice: e.target.value })} />
               </SahlField>
               <SahlField label={rtl ? "أقل سعر بيع" : "Floor price"}>
-                <input type="number" min="0" className={inputCls} value={f.minPrice} onChange={(e) => setF({ ...f, minPrice: e.target.value })} />
+                <input type="number" min="0" step="any" className={inputCls} value={f.minPrice}
+                  onChange={(e) => setF({ ...f, minPrice: e.target.value })} />
               </SahlField>
               <SahlField label={rtl ? "خصم ثابت" : "Fixed disc"}>
-                <input type="number" min="0" className={inputCls} value={f.fixedDiscount} onChange={(e) => setF({ ...f, fixedDiscount: e.target.value })} />
+                <input type="number" min="0" step="any" className={inputCls} value={f.fixedDiscount}
+                  onChange={(e) => setF({ ...f, fixedDiscount: e.target.value })} />
               </SahlField>
               <SahlField label={rtl ? "الوحدة" : "Unit"}>
                 <div className="flex gap-1">

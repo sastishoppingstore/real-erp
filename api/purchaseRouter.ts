@@ -140,6 +140,8 @@ export const purchaseRouter = createRouter({
       items: z.array(z.object({
         productId: z.number().optional(),
         description: z.string(),
+        descriptionAr: z.string().optional(),
+        sku: z.string().optional(),
         quantity: z.number(),
         unitPrice: z.string(),
         totalAmount: z.string(),
@@ -153,7 +155,16 @@ export const purchaseRouter = createRouter({
         tenantId: ctx.user.tenantId!,
       }).$returningId();
       for (const item of items) {
-        await db.insert(purchaseOrderItems).values({ ...item, poId: id });
+        await db.insert(purchaseOrderItems).values({
+          poId: id,
+          productId: item.productId ?? null,
+          description: item.description,
+          descriptionAr: item.descriptionAr ?? null,
+          sku: item.sku ?? null,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalAmount: item.totalAmount,
+        });
       }
       return { id, success: true };
     }),

@@ -189,6 +189,10 @@ export const salesRouter = createRouter({
         openingBalance: input.openingBalance || "0",
         openingBalanceDate: input.openingBalanceDate,
         notes: input.notes,
+        // CR number lives in two columns (cr_number + commercial_registration);
+        // keep both in sync so every screen (cards, invoices, prints) sees it.
+        crNumber: input.crNumber || null,
+        commercialRegistration: input.crNumber || null,
       }).$returningId();
       return { id, success: true };
     }),
@@ -232,6 +236,13 @@ export const salesRouter = createRouter({
       if (updateData.openingBalance === "" || updateData.openingBalance === undefined) updateData.openingBalance = "0";
       if (updateData.openingBalanceDate === "") updateData.openingBalanceDate = null;
       if (updateData.paymentTerms === undefined) delete updateData.paymentTerms;
+      // CR number is mirrored into commercial_registration (used by the print
+      // engine + invoice copy) whenever it is provided ("" clears both).
+      if (updateData.crNumber !== undefined) {
+        const cr = String(updateData.crNumber || "").trim();
+        updateData.crNumber = cr || null;
+        updateData.commercialRegistration = cr || null;
+      }
       const existing = await db.query.customers.findFirst({
         where: and(eq(customers.id, id), eq(customers.tenantId, ctx.user.tenantId!)),
       });
@@ -267,6 +278,9 @@ export const salesRouter = createRouter({
       items: z.array(z.object({
         productId: z.number().optional(),
         description: z.string(),
+        descriptionAr: z.string().optional(),
+        sku: z.string().optional(),
+        unit: z.string().optional(),
         quantity: z.number(),
         unitPrice: z.string(),
         totalAmount: z.string(),
@@ -365,7 +379,24 @@ export const salesRouter = createRouter({
       const invoice = await db.query.invoices.findFirst({
         where: and(eq(invoices.id, input.id), eq(invoices.tenantId, tenantId)),
       });
-      const items = await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, input.id));
+      // Items carry the Arabic name / SKU of the product (frozen on the
+      // document, otherwise joined from the product master).
+      const items = await db.select({
+        id: invoiceItems.id,
+        productId: invoiceItems.productId,
+        sku: invoiceItems.sku,
+        description: invoiceItems.description,
+        descriptionAr: invoiceItems.descriptionAr,
+        unit: invoiceItems.unit,
+        quantity: invoiceItems.quantity,
+        unitPrice: invoiceItems.unitPrice,
+        taxPercent: invoiceItems.taxPercent,
+        totalAmount: invoiceItems.totalAmount,
+        productNameAr: products.nameAr,
+        productSku: products.sku,
+      }).from(invoiceItems)
+        .leftJoin(products, eq(products.id, invoiceItems.productId))
+        .where(eq(invoiceItems.invoiceId, input.id));
       const customer = invoice ? await db.query.customers.findFirst({
         where: and(eq(customers.id, invoice.customerId), eq(customers.tenantId, tenantId)),
       }) : null;
@@ -552,6 +583,7 @@ export const salesRouter = createRouter({
             vatNumber: invoiceData.customerVat || null,
             taxNumber: invoiceData.customerVat || null,
             commercialRegistration: invoiceData.customerCr || null,
+            crNumber: invoiceData.customerCr || null,
             country: settings?.country || "Saudi Arabia",
             isActive: true,
           }).$returningId();
@@ -590,6 +622,7 @@ export const salesRouter = createRouter({
         setIf("vatNumber", invoiceData.customerVat);
         setIf("taxNumber", invoiceData.customerVat);
         setIf("commercialRegistration", invoiceData.customerCr);
+        setIf("crNumber", invoiceData.customerCr);
         if (Object.keys(refresh).length) {
           await db.update(customers).set(refresh).where(and(eq(customers.id, resolvedCustomerId), eq(customers.tenantId, tenantId)));
         }
@@ -925,6 +958,7 @@ export const salesRouter = createRouter({
         setIf("vatNumber", invoiceData.customerVat);
         setIf("taxNumber", invoiceData.customerVat);
         setIf("commercialRegistration", invoiceData.customerCr);
+        setIf("crNumber", invoiceData.customerCr);
         if (Object.keys(refresh).length) {
           await db.update(customers).set(refresh).where(and(eq(customers.id, updCustId), eq(customers.tenantId, tenantId)));
         }

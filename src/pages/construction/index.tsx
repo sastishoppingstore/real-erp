@@ -6,7 +6,7 @@ import {
   FileText, Receipt, Users, Wallet, Package,
   ArrowLeftRight, FileBarChart, ClipboardList,
   Calculator, Plus, ShoppingCart, ShoppingBag, ClipboardCheck, ListOrdered, Settings,
-  Presentation, PackageOpen, Tags, HandCoins, SlidersHorizontal, Headset, X,
+  Presentation, PackageOpen, Tags, HandCoins, SlidersHorizontal, Headset, X, HardHat, Warehouse,
 } from "lucide-react";
 
 const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -52,6 +52,19 @@ export default function ConstructionDashboard() {
   const [tour, setTour] = useState(false);
   const [step, setStep] = useState(0);
   const [showSupport, setShowSupport] = useState(false);
+  const [whOpen, setWhOpen] = useState(false);
+  const [whName, setWhName] = useState("");
+  const [whMsg, setWhMsg] = useState("");
+  const utils = trpc.useUtils();
+  const addWarehouse = trpc.inventory.warehouseCreate.useMutation({
+    onSuccess: () => {
+      setWhMsg(rtl ? "✓ تم إضافة المخزن" : "✓ Warehouse added");
+      setWhName("");
+      utils.inventory.warehouseList.invalidate();
+      setTimeout(() => { setWhOpen(false); setWhMsg(""); }, 1200);
+    },
+    onError: (e: any) => setWhMsg(String(e?.message ?? e)),
+  });
   const [dashBg, setDashBg] = useState(() => {
     try { return localStorage.getItem("sahl-dashbg") || "#000000"; } catch { return "#000000"; }
   });
@@ -104,12 +117,13 @@ export default function ConstructionDashboard() {
 
   const go = (t: Tile) => {
     if (t.action === "tour") { setStep(0); setTour(true); return; }
+    if (t.action === "addWarehouse") { setWhMsg(""); setWhName(""); setWhOpen(true); return; }
     if (t.path) navigate(t.path);
   };
 
   // SCR-002 top row: five green squares.
   const topTiles: Tile[] = [
-    { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/sahl/reports/daily", color: C.green },
+    { label: "Reports", labelAr: "التقارير", icon: FileBarChart, path: "/app/construction/sahl/reports/period", color: C.green },
     { label: "Invoices", labelAr: "الفواتير", icon: Receipt, path: "/app/construction/sahl/sales", color: C.green },
     { label: "Treasury", labelAr: "الخزينة", icon: Wallet, path: "/app/construction/sahl/treasury", color: C.green },
     { label: "Accounts", labelAr: "الحسابات", icon: Users, path: "/app/construction/sahl/accounts", color: C.green },
@@ -121,22 +135,22 @@ export default function ConstructionDashboard() {
     { label: "Daily movement", labelAr: "الحركة اليومية", icon: ClipboardList, path: "/app/construction/sahl/reports/daily", color: C.navy },
   ];
   const utilTiles: Tile[] = [
-    { label: "Enter accounts", labelAr: "إدخال الحسابات", icon: Users, path: "/app/construction/sahl/accounts", color: C.blue },
+    { label: "Add quotation", labelAr: "عرض سعر جديد", icon: Calculator, path: "/app/construction/sahl/quotation", color: C.blue },
     { label: "Enter products", labelAr: "إدخال الأصناف", icon: ListOrdered, path: "/app/construction/sahl/products", color: C.blue },
     { label: "Program settings", labelAr: "إعداد البرنامج", icon: Settings, path: "/app/construction/sahl/settings", color: C.blue },
     { label: "Quick tour", labelAr: "جولة سريعة", icon: Presentation, action: "tour", color: C.blue },
   ];
   // SCR-002 main transaction grid (uneven widths preserved).
   const txnTiles: Tile[] = [
-    { label: "Stocktaking", labelAr: "جرد مخزن", icon: ClipboardCheck, path: "/app/construction/sahl/reports/stock", color: C.teal, span: 2 },
+    { label: "Stocktake", labelAr: "جرد مخزن", icon: ClipboardCheck, path: "/app/construction/sahl/vault/stocktake", color: C.teal, span: 2 },
     { label: "Payment", labelAr: "صرف", icon: HandCoins, path: "/app/construction/sahl/cash", color: C.coral, span: 1 },
     { label: "Purchase", labelAr: "شراء", icon: ShoppingCart, path: "/app/construction/sahl/purchase", color: C.redOrange, span: 2 },
     { label: "Sales", labelAr: "بيع", icon: ShoppingBag, path: "/app/construction/sahl/sales", color: C.green, span: 2 },
   ];
   const txnTiles2: Tile[] = [
-    { label: "Warehouse adjustment", labelAr: "تسوية مخزن", icon: SlidersHorizontal, path: "/app/construction/sahl/reports/stock", color: C.turquoise },
-    { label: "Warehouse transfer", labelAr: "تحويل لمخزن", icon: ArrowLeftRight, path: "/app/construction/transfers", color: C.tealDark },
-    { label: "Quotations", labelAr: "عرض الأسعار", icon: Calculator, path: "/app/construction/sahl/quotation", color: C.green },
+    { label: "Add contract", labelAr: "عقد جديد", icon: FileText, path: "/app/construction/sahl/contracts", color: C.turquoise },
+    { label: "Contractors", labelAr: "المقاولون", icon: HardHat, path: "/app/construction/sahl/contractors", color: C.tealDark },
+    { label: "Add warehouse", labelAr: "مخزن جديد", icon: Warehouse, action: "addWarehouse", color: C.green },
     { label: "Purchase return", labelAr: "مرتجع شراء", icon: PackageOpen, path: "/app/construction/sahl/purchase-return", color: C.burgundy },
     { label: "Receipt", labelAr: "قبض", icon: Wallet, path: "/app/construction/sahl/receipts", color: C.green },
     { label: "Sales return", labelAr: "مرتجع بيع", icon: PackageOpen, path: "/app/construction/sahl/sales-return", color: C.green },
@@ -147,7 +161,6 @@ export default function ConstructionDashboard() {
     { label: "Salesmen", labelAr: "المندوبون", icon: Users, path: "/app/construction/sahl/salesmen", color: C.blue },
     { label: "Users", labelAr: "المستخدمون", icon: Settings, path: "/app/construction/sahl/users", color: C.navy },
     { label: "Prices", labelAr: "الأسعار", icon: Tags, path: "/app/construction/sahl/prices", color: C.green },
-    { label: "Stocktake", labelAr: "الجرد", icon: ClipboardCheck, path: "/app/construction/sahl/vault/stocktake", color: C.teal },
     { label: "Transfer", labelAr: "التحويل", icon: ArrowLeftRight, path: "/app/construction/sahl/vault/transfer", color: C.tealDark },
     { label: "Item moves", labelAr: "حركة صنف", icon: ClipboardList, path: "/app/construction/sahl/vault/moves", color: C.turquoise },
     { label: "Archive", labelAr: "الأرشيف", icon: FileText, path: "/app/construction/sahl/vault/archive", color: C.navy },
@@ -312,6 +325,42 @@ export default function ConstructionDashboard() {
         </div>
         <span className="font-mono text-white/40">640×342 ref</span>
       </div>
+
+      {whOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setWhOpen(false)}>
+          <div className="w-full max-w-xs border border-white/20 bg-[#161616] p-4 text-white" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-between">
+              <b className="text-[13px]">{rtl ? "إضافة مخزن جديد" : "Add a new warehouse"}</b>
+              <button onClick={() => setWhOpen(false)} className="text-white/60 hover:text-white"><X style={{ width: 16, height: 16 }} /></button>
+            </div>
+            <input
+              autoFocus
+              value={whName}
+              onChange={(e) => setWhName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && whName.trim()) {
+                  const code = `WH-${Date.now().toString().slice(-6)}`;
+                  addWarehouse.mutate({ name: whName.trim(), code });
+                }
+              }}
+              placeholder={rtl ? "اسم المخزن" : "Warehouse name"}
+              className="w-full border border-white/25 bg-black/40 px-2 py-1.5 text-[12px] text-white outline-none focus:border-emerald-400"
+            />
+            {whMsg && <div className="mt-1 text-[11px] text-emerald-300">{whMsg}</div>}
+            <button
+              className="mt-3 w-full px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+              style={{ background: C.green }}
+              disabled={!whName.trim() || addWarehouse.isPending}
+              onClick={() => {
+                const code = `WH-${Date.now().toString().slice(-6)}`;
+                addWarehouse.mutate({ name: whName.trim(), code });
+              }}
+            >
+              {addWarehouse.isPending ? (rtl ? "جارٍ الحفظ..." : "Saving...") : (rtl ? "إضافة" : "Add")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {showSupport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowSupport(false)}>

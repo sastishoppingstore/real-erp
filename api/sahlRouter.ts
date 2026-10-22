@@ -22,7 +22,7 @@ import {
   sahlSerials,
   sahlShifts,
 } from "@db/schema";
-import { eq, and, like, desc, or, gte, lte, sql } from "drizzle-orm";
+import { eq, and, like, desc, or, gte, lte, sql, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 const DEFAULT_LISTS = [
@@ -138,6 +138,19 @@ export const sahlRouter = createRouter({
       const map: Record<number, string> = {};
       for (const it of items) map[it.priceListId] = String(it.price);
       return lists.map((l: any) => ({ ...l, price: map[l.id] ?? null }));
+    }),
+  // All price-list prices of the given products in one round trip — the
+  // Prices grid shows the real saved price of every list.
+  priceItemsFor: authedQuery
+    .input(z.object({ productIds: z.array(z.number()).max(500).optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const db = getDb();
+      const lists = await ensurePriceLists(db, ctx.user.tenantId!);
+      const listIds = lists.map((l: any) => l.id);
+      if (!listIds.length) return [];
+      const conds = [inArray(sahlPriceItems.priceListId, listIds)];
+      if (input?.productIds?.length) conds.push(inArray(sahlPriceItems.productId, input.productIds));
+      return db.select().from(sahlPriceItems).where(and(...conds));
     }),
 
   // ---- Reservations (حجز بضاعة, expiry + convert/release) ----
@@ -646,6 +659,8 @@ export const sahlRouter = createRouter({
         unitPrice: purchaseOrderItems.unitPrice,
         totalAmount: purchaseOrderItems.totalAmount,
         productName: products.name,
+        productNameAr: products.nameAr,
+        sku: products.sku,
       }).from(purchaseOrderItems)
         .leftJoin(products, eq(products.id, purchaseOrderItems.productId))
         .where(eq(purchaseOrderItems.poId, input.id));
@@ -661,11 +676,14 @@ export const sahlRouter = createRouter({
       });
       if (!q) return null;
       const items = await db.select({
+        productId: salesQuotationItems.productId,
         description: salesQuotationItems.description,
         quantity: salesQuotationItems.quantity,
         unitPrice: salesQuotationItems.unitPrice,
         totalAmount: salesQuotationItems.totalAmount,
         productName: products.name,
+        productNameAr: products.nameAr,
+        sku: products.sku,
       }).from(salesQuotationItems)
         .leftJoin(products, eq(products.id, salesQuotationItems.productId))
         .where(eq(salesQuotationItems.quotationId, input.id));

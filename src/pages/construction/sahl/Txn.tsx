@@ -452,7 +452,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     const po: any = poViewData as any;
     const items: any[] = po.items ?? [];
     setLines(items.map((it: any) => ({
-      productId: undefined, code: "", name: it.productName || it.description,
+      productId: it.productId, code: it.sku ?? "", name: it.productName || it.description,
+      nameAr: it.productNameAr || undefined,
       unit: "", qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0),
       disc: 0, cost: Number(it.unitPrice || 0), serials: [], tracked: false,
     })));
@@ -472,7 +473,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
       const items: any[] = (viewData as any).items ?? [];
       const cust: any = (viewData as any).customer;
       setLines(items.map((it: any) => ({
-        productId: it.productId, code: it.sku ?? "", name: it.description || it.descriptionAr || "", nameAr: it.descriptionAr || undefined,
+        productId: it.productId, code: it.sku ?? it.productSku ?? "",
+        name: it.description || it.productNameAr || "",
+        nameAr: it.descriptionAr || it.productNameAr || undefined,
         unit: it.unit ?? "", qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0), disc: 0,
       })));
       if (cust) {
@@ -541,7 +544,8 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     const qt: any = quoteViewData as any;
     const items: any[] = qt.items ?? [];
     setLines(items.map((it: any) => ({
-      productId: it.productId, code: "", name: it.productName || it.description || "", nameAr: undefined,
+      productId: it.productId, code: it.sku ?? "", name: it.productName || it.description || "",
+      nameAr: it.productNameAr || undefined,
       unit: "", qty: Number(it.quantity || 0), price: Number(it.unitPrice || 0), disc: 0,
       cost: Number(it.unitPrice || 0), serials: [], tracked: false,
     })));
@@ -599,7 +603,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
     // Keep a quantity the user typed before picking the item (100/1000).
     // Only fall back to 1 when the field is empty/zero.
     setQtyInput(Number(qtyInput) > 0 ? qtyInput : "1");
-    setPriceInput("");
+    // Show the default price in the box (it used to stay empty and only the
+    // placeholder hinted at it, so the price looked "not applied").
+    setPriceInput(String(defaultPriceFor(p) || ""));
     setTimeout(() => { qtyRef.current?.focus(); qtyRef.current?.select(); }, 0);
   };
 
@@ -608,7 +614,11 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
   const defaultPriceFor = (p: any) => {
     if (isPurchaseDoc) {
       const cost = Number(p.purchasePrice ?? 0);
-      return cost > 0 ? cost : 0;
+      // No cost on the product master -> reuse the last price this item was
+      // bought at (so the supplier invoice is never priced at 0 by accident).
+      if (cost > 0) return cost;
+      const last = [...lines].reverse().find((l) => l.productId === p.id);
+      return Number(last?.price ?? last?.cost ?? 0);
     }
     return Number(p.salePrice ?? p.purchasePrice ?? 0);
   };
@@ -1422,9 +1432,13 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           expiryDate: dueDate || undefined,
           subTotal: String(subtotal), discountAmount: String(discount),
           taxPercent: String(taxPct), taxAmount: taxAmt.toFixed(2),
-          totalAmount: String(net), notes: note, terms: terms.trim() || undefined,
+          // total includes VAT (it used to exclude it, so the printed
+          // quotation total never matched subtotal + tax)
+          totalAmount: String(grand), notes: note, terms: terms.trim() || undefined,
           items: lines.map((l) => ({
-            productId: l.productId, description: l.name, quantity: l.qty,
+            productId: l.productId, description: l.name, descriptionAr: l.nameAr || undefined,
+            sku: l.code || undefined, unit: l.unit || undefined,
+            quantity: l.qty,
             unitPrice: String(l.price), totalAmount: String(lineTotal(l)),
           })),
         });
@@ -1436,7 +1450,9 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
           subTotal: String(subtotal), taxAmount: taxAmt.toFixed(2), totalAmount: String(grand), notes: note,
           terms: terms.trim() || undefined,
           items: lines.map((l) => ({
-            productId: l.productId, description: l.name, quantity: l.qty,
+            productId: l.productId, description: l.name, descriptionAr: l.nameAr || undefined,
+            sku: l.code || undefined, unit: l.unit || undefined,
+            quantity: l.qty,
             unitPrice: String(l.price), totalAmount: String(lineTotal(l)),
           })),
         });
@@ -1484,11 +1500,12 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
         const c = await creditCreate.mutateAsync({
           creditNoteNumber: `CN-${stamp}`, customerId: Number(partyId),
           ...(origId ? { invoiceId: Number(origId) } : {}),
-          date: docDate, amount: String(returnAmount),
+          date: docDate, amount: String(grand),
           reason: note,
           ...(wh ? { warehouseId: Number(wh) } : {}),
           items: lines.map((l) => ({
             productId: l.productId, code: l.code ?? "", description: l.name || l.nameAr || "-",
+            descriptionAr: l.nameAr || undefined,
             quantity: l.qty, unitPrice: String(l.price), totalAmount: String(lineTotal(l)),
           })),
         });
@@ -1691,6 +1708,38 @@ export default function SahlTxn({ kind }: { kind: TxnKind }) {
                     <option value="simple">{T("عادية Simple", "Simple")}</option>
                   </select>
                 </label>
+              )}
+              {/* Document type switcher: invoice / quotation / purchase / returns */}
+              <label className="flex items-center gap-1">
+                <b className="text-[11px]">{T("نوع المستند", "Doc type")}</b>
+                <select
+                  className={`${inputCls} h-8 w-[165px]`}
+                  value={kind}
+                  disabled={readOnly}
+                  onChange={(e) => {
+                    const next = e.target.value as TxnKind;
+                    if (next === kind) return;
+                    newDoc();
+                    navigate(`/app/construction/sahl/${next}`);
+                  }}
+                  title={T("بدّل بين فاتورة بيع وعرض سعر وفاتورة شراء والمرتجعات", "Switch between sales invoice, quotation, purchase and returns")}
+                >
+                  <option value="sales">{T("فاتورة بيع", "Sales invoice")}</option>
+                  <option value="quotation">{T("عرض سعر", "Quotation")}</option>
+                  <option value="purchase">{T("فاتورة شراء", "Purchase invoice")}</option>
+                  <option value="sales-return">{T("مرتجع بيع", "Sales return")}</option>
+                  <option value="purchase-return">{T("مرتجع شراء", "Purchase return")}</option>
+                </select>
+              </label>
+              {kind !== "quotation" && (
+                <button
+                  className="border border-[#1b6fa8] bg-[#1b9bd7] px-2 py-1 text-[12px] font-bold text-white hover:brightness-110"
+                  disabled={readOnly}
+                  onClick={() => { newDoc(); navigate("/app/construction/sahl/quotation"); }}
+                  title={T("إنشاء عرض سعر جديد", "Create a new quotation")}
+                >
+                  📝 {T("عرض سعر جديد", "New quotation")}
+                </button>
               )}
               <label className="ms-auto flex items-center gap-1">
                 <b className="text-[11px]">{T("المرجع", "Reference")}</b>

@@ -67,11 +67,17 @@ export default function SahlSettings() {
     onError: (e) => setMsg(e.message),
   });
   const addWarehouse = trpc.inventory.warehouseCreate.useMutation({
-    onSuccess: () => utils.inventory.warehouseList.invalidate(),
+    onSuccess: () => {
+      utils.inventory.warehouseList.invalidate();
+      setMsg(rtl ? "✓ تم إضافة المخزن" : "✓ Warehouse added");
+    },
     onError: (e) => setMsg(e.message),
   });
   const addCategory = trpc.inventory.categoryCreate.useMutation({
-    onSuccess: () => utils.inventory.categoryList.invalidate(),
+    onSuccess: () => {
+      utils.inventory.categoryList.invalidate();
+      setMsg(rtl ? "✓ تم إضافة التصنيف" : "✓ Category added");
+    },
     onError: (e) => setMsg(e.message),
   });
 
@@ -198,7 +204,12 @@ export default function SahlSettings() {
               title={rtl ? "المخازن / الفروع" : "Warehouses / branches"}
               items={warehouses ?? []}
               placeholder="+"
-              onAdd={(n) => addWarehouse.mutate({ name: n, code: n.slice(0, 4) } as any)}
+              onAdd={(n) => {
+                // unique code (the old 4-letter slice collided and the insert
+                // failed with a duplicate-code error)
+                const code = `WH-${Date.now().toString().slice(-6)}`;
+                addWarehouse.mutate({ name: n, code });
+              }}
             />
             <ListMgr
               title={rtl ? "التصنيفات" : "Categories"}
