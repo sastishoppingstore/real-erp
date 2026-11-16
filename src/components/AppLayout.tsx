@@ -561,7 +561,7 @@ const SidebarContent = memo(function SidebarContent({ collapsed, onNavigate }: {
 
   // Filter menu items by search query
   const filteredGroups = menuGroups
-    .filter(g => g.title === "DECORATION" || visibleGroups.includes(g.title) || g.items.some((it) => isItemEnabled(it.path)))
+    .filter(g => visibleGroups.includes(g.title) || g.items.some((it) => isItemEnabled(it.path)))
     .map((group) => ({ ...group, items: group.items.filter((item) => isItemEnabled(item.path)) }))
     .filter((group) => group.items.length > 0);
   const allItems = filteredGroups.flatMap(g => g.items.map(item => ({ ...item, group: rtl ? g.titleAr : g.title })));

@@ -33,12 +33,15 @@ export default function BusinessHomeRedirect() {
     );
   }
 
-  if (serverModules.includes("decoration")) {
-    return <Navigate to="/app/decoration" replace />;
-  }
-
   if (serverModules.includes("construction")) {
     return <Navigate to="/app/construction" replace />;
+  }
+
+  /* [decoration] Decoration & Construction tenants land on the 3-D launcher.
+   * Placed after the construction check so Sahl / construction tenants keep
+   * their existing landing — no pre-existing system is affected. */
+  if (serverModules.includes("decoration")) {
+    return <Navigate to="/app/decoration" replace />;
   }
 
   return (
