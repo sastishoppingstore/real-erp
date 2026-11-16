@@ -339,6 +339,31 @@ const CollaborationNotificationCenter = lazy(() => import("./pages/collaboration
 // Construction Module Pages
 const ConstructionLayout = lazy(() => import("./pages/construction/ConstructionLayout"));
 const ConstructionDashboard = lazy(() => import("./pages/construction"));
+
+// [decoration] Decoration & Construction suite — additive, see INSTALL.md §3.1
+const DecorationDashboard    = lazy(() => import("./pages/decoration"));
+const DecorationProjects     = lazy(() => import("./pages/decoration/Projects"));
+const DecorationProjectView  = lazy(() => import("./pages/decoration/ProjectDetail"));
+const DecorationStructure    = lazy(() => import("./pages/decoration/Structure"));
+const DecorationTakeoff      = lazy(() => import("./pages/decoration/Takeoff"));
+const DecorationBoq          = lazy(() => import("./pages/decoration/Boq"));
+const DecorationProcurement  = lazy(() => import("./pages/decoration/Procurement"));
+const DecorationLabour       = lazy(() => import("./pages/decoration/Labour"));
+const DecorationSubcontracts = lazy(() => import("./pages/decoration/Subcontracts"));
+const DecorationEstimating   = lazy(() => import("./pages/decoration/Estimating"));
+const DecorationContracts    = lazy(() => import("./pages/decoration/Contracts"));
+const DecorationExecution    = lazy(() => import("./pages/decoration/Execution"));
+const DecorationStores       = lazy(() => import("./pages/decoration/Stores"));
+const DecorationPayroll      = lazy(() => import("./pages/decoration/Payroll"));
+const DecorationTreasury     = lazy(() => import("./pages/decoration/Treasury"));
+const DecorationInvoices     = lazy(() => import("./pages/decoration/Invoices"));
+const DecorationQuality      = lazy(() => import("./pages/decoration/Quality"));
+const DecorationEquipment    = lazy(() => import("./pages/decoration/Equipment"));
+const DecorationMasterData   = lazy(() => import("./pages/decoration/MasterData"));
+const DecorationApprovals    = lazy(() => import("./pages/decoration/Approvals"));
+const DecorationReports      = lazy(() => import("./pages/decoration/Reports"));
+const DecorationPortal       = lazy(() => import("./pages/decoration/Portal"));
+const DecorationSettings     = lazy(() => import("./pages/decoration/Settings"));
 const SahlSettings = lazy(() => import("./pages/construction/sahl/Settings"));
 const SahlProducts = lazy(() => import("./pages/construction/sahl/Products"));
 const SahlAccounts = lazy(() => import("./pages/construction/sahl/Accounts"));
@@ -359,6 +384,7 @@ const SahlSalesmen = lazy(() => import("./pages/construction/sahl/People").then(
 const SahlUsers = lazy(() => import("./pages/construction/sahl/People").then((m) => ({ default: m.SahlUsers })));
 const SahlPrices = lazy(() => import("./pages/construction/sahl/Prices"));
 const SahlContractors = lazy(() => import("./pages/construction/sahl/Contractors"));
+const SahlManPower = lazy(() => import("./pages/construction/sahl/ManPower"));
 const SahlContracts = lazy(() => import("./pages/construction/sahl/Contracts"));
 const SahlZatcaSetup = lazy(() => import("./pages/construction/sahl/ZatcaSetup"));
 const SahlPeriodReport = lazy(() => import("./pages/construction/sahl/PeriodReport"));
@@ -570,6 +596,30 @@ export default function App() {
       <Route path="/app" element={<BusinessHomeRedirect />} />
 
       {/* Accounting Routes */}
+      {/* [decoration] Decoration & Construction suite — additive routes */}
+      <Route path="/app/decoration" element={<LayoutWrapper><DecorationDashboard /></LayoutWrapper>} />
+      <Route path="/app/decoration/projects" element={<LayoutWrapper><DecorationProjects /></LayoutWrapper>} />
+      <Route path="/app/decoration/projects/:id" element={<LayoutWrapper><DecorationProjectView /></LayoutWrapper>} />
+      <Route path="/app/decoration/structure" element={<LayoutWrapper><DecorationStructure /></LayoutWrapper>} />
+      <Route path="/app/decoration/takeoff" element={<LayoutWrapper><DecorationTakeoff /></LayoutWrapper>} />
+      <Route path="/app/decoration/boq" element={<LayoutWrapper><DecorationBoq /></LayoutWrapper>} />
+      <Route path="/app/decoration/procurement" element={<LayoutWrapper><DecorationProcurement /></LayoutWrapper>} />
+      <Route path="/app/decoration/labour" element={<LayoutWrapper><DecorationLabour /></LayoutWrapper>} />
+      <Route path="/app/decoration/subcontracts" element={<LayoutWrapper><DecorationSubcontracts /></LayoutWrapper>} />
+      <Route path="/app/decoration/estimating" element={<LayoutWrapper><DecorationEstimating /></LayoutWrapper>} />
+      <Route path="/app/decoration/contracts" element={<LayoutWrapper><DecorationContracts /></LayoutWrapper>} />
+      <Route path="/app/decoration/execution" element={<LayoutWrapper><DecorationExecution /></LayoutWrapper>} />
+      <Route path="/app/decoration/stores" element={<LayoutWrapper><DecorationStores /></LayoutWrapper>} />
+      <Route path="/app/decoration/payroll" element={<LayoutWrapper><DecorationPayroll /></LayoutWrapper>} />
+      <Route path="/app/decoration/treasury" element={<LayoutWrapper><DecorationTreasury /></LayoutWrapper>} />
+      <Route path="/app/decoration/invoices" element={<LayoutWrapper><DecorationInvoices /></LayoutWrapper>} />
+      <Route path="/app/decoration/quality" element={<LayoutWrapper><DecorationQuality /></LayoutWrapper>} />
+      <Route path="/app/decoration/equipment" element={<LayoutWrapper><DecorationEquipment /></LayoutWrapper>} />
+      <Route path="/app/decoration/masterdata" element={<LayoutWrapper><DecorationMasterData /></LayoutWrapper>} />
+      <Route path="/app/decoration/approvals" element={<LayoutWrapper><DecorationApprovals /></LayoutWrapper>} />
+      <Route path="/app/decoration/reports" element={<LayoutWrapper><DecorationReports /></LayoutWrapper>} />
+      <Route path="/app/decoration/portal" element={<LayoutWrapper><DecorationPortal /></LayoutWrapper>} />
+      <Route path="/app/decoration/settings" element={<LayoutWrapper><DecorationSettings /></LayoutWrapper>} />
       <Route path="/app/accounting" element={<LayoutWrapper><AccountingPage /></LayoutWrapper>} />
       <Route path="/app/accounting/coa" element={<LayoutWrapper><ChartOfAccountsPage /></LayoutWrapper>} />
       <Route path="/app/accounting/journal-entries" element={<LayoutWrapper><JournalEntriesPage /></LayoutWrapper>} />
@@ -966,6 +1016,7 @@ export default function App() {
         <Route path="sahl/reports/more" element={<SahlMoreReports />} />
         <Route path="sahl/reports/period" element={<SahlPeriodReport />} />
         <Route path="sahl/contractors" element={<SahlContractors />} />
+        <Route path="sahl/manpower" element={<SahlManPower />} />
         <Route path="sahl/contracts" element={<SahlContracts />} />
         <Route path="sahl/zatca" element={<SahlZatcaSetup />} />
         <Route path="wbs" element={<WBSList />} />

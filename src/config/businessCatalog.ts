@@ -109,6 +109,7 @@ export const MODULE_PATH_PREFIXES: Record<string, string[]> = {
   healthcare: ["/app/verticals/healthcare", "/app/pos/pharmacy"],
   workshop: ["/app/verticals/workshop"],
   construction: ["/app/construction", "/app/verticals/construction"],
+  decoration: ["/app/decoration"], // [decoration]
   education: ["/app/verticals/education"],
   hotel: ["/app/verticals/hotel", "/app/pos/restaurant"],
   real_estate: ["/app/verticals/real-estate"],

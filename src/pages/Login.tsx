@@ -27,6 +27,7 @@ export default function Login() {
   // Business home: tenants land on their own vertical's dashboard
   // (construction -> /app/construction), everyone else -> /app.
   const LANDING_PRIORITY: Array<[string, string]> = [
+    ["decoration", "/app/decoration"], // [decoration]
     ["construction", "/app/construction"],
     ["workshop", "/app/verticals/workshop"],
     ["healthcare", "/app/verticals/healthcare"],

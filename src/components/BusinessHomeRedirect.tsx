@@ -33,6 +33,10 @@ export default function BusinessHomeRedirect() {
     );
   }
 
+  if (serverModules.includes("decoration")) {
+    return <Navigate to="/app/decoration" replace />;
+  }
+
   if (serverModules.includes("construction")) {
     return <Navigate to="/app/construction" replace />;
   }

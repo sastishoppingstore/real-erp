@@ -63,6 +63,7 @@ import { educationRouter } from "./educationRouter";
 import { thermalPrintRouter } from "./thermalPrintRouter";
 import { hotelRouter } from "./hotelRouter";
 import { constructionRouter } from "./constructionRouter";
+import { decorationRouter } from "./decorationRouter"; // [decoration]
 import { sahlRouter } from "./sahlRouter";
 import { sahlReportsRouter } from "./sahlReportsRouter";
 import { constructionInvoiceRouter } from "./constructionInvoiceRouter";
@@ -70,6 +71,7 @@ import { constructionPaymentRouter } from "./constructionPaymentRouter";
 import { jobCostingRouter } from "./jobCostingRouter";
 import { hseSafetyRouter } from "./hseSafetyRouter";
 import { qiwaRouter } from "./qiwaRouter";
+import { manpowerRouter } from "./manpowerRouter";
 import { companyRouter } from "./companyRouter";
 import { invoiceRouter as completeInvoiceRouter } from "./completeAuthInvoiceRouter";
 import { aiRouter } from "./aiConstructionRouter";
@@ -161,6 +163,7 @@ word: wordRouter,
   education: educationRouter,
   hotel: hotelRouter,
   construction: constructionRouter,
+  decoration: decorationRouter, // [decoration]
   sahl: sahlRouter,
   sahlReports: sahlReportsRouter,
   constructionInvoices: constructionInvoiceRouter,
@@ -168,6 +171,7 @@ word: wordRouter,
   jobCosting: jobCostingRouter,
   hseSafety: hseSafetyRouter,
   qiwa: qiwaRouter,
+  manpower: manpowerRouter,
   company: companyRouter,
   invoice: completeInvoiceRouter,
   ai: aiRouter,

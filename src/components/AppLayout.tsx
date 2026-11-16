@@ -83,6 +83,15 @@ import {
   Mountain,
   ArrowLeft,
   ArrowRight,
+  Layers, // [decoration]
+  Ruler, // [decoration]
+  PaintBucket, // [decoration]
+  Network, // [decoration]
+  FileSignature, // [decoration]
+  Handshake, // [decoration]
+  Banknote, // [decoration]
+  BadgeCheck, // [decoration]
+  ChartColumn, // [decoration]
 } from "lucide-react";
 
 import { SyncStatusBar } from "./sync/SyncStatusBar";
@@ -145,7 +154,7 @@ const categoryGroupVisibility: Record<string, string[]> = {
   furniture_carpentry: ['MAIN', 'FINANCE', 'INVENTORY', 'SALES', 'PURCHASE', 'CRM', 'HRM', 'MANUFACTURING', 'PROJECTS', 'OPERATIONS', 'PLATFORM', 'SYSTEM'],
   printing_signage: ['MAIN', 'FINANCE', 'INVENTORY', 'SALES', 'PURCHASE', 'CRM', 'HRM', 'MANUFACTURING', 'PROJECTS', 'OPERATIONS', 'PLATFORM', 'SYSTEM'],
   water_sanitation_waste: ['MAIN', 'FINANCE', 'INVENTORY', 'SALES', 'PURCHASE', 'CRM', 'HRM', 'TRANSPORT', 'OPERATIONS', 'PLATFORM', 'SYSTEM'],
-  all: ['MAIN', 'FINANCE', 'INVENTORY', 'SALES', 'PURCHASE', 'CRM', 'HRM', 'MANUFACTURING', 'PROJECTS', 'WORKSHOP', 'CONSTRUCTION', 'HEALTHCARE', 'EDUCATION', 'HOTEL', 'REAL_ESTATE', 'TRANSPORT', 'TRAVEL', 'AVIATION', 'RESTAURANT', 'LAUNDRY', 'SALON', 'GYM', 'ECOMMERCE', 'PHARMACY', 'HOSTEL', 'OPERATIONS', 'PLATFORM', 'SYSTEM'],
+  all: ['MAIN', 'FINANCE', 'INVENTORY', 'SALES', 'PURCHASE', 'CRM', 'HRM', 'MANUFACTURING', 'PROJECTS', 'WORKSHOP', 'CONSTRUCTION', 'DECORATION', 'HEALTHCARE', 'EDUCATION', 'HOTEL', 'REAL_ESTATE', 'TRANSPORT', 'TRAVEL', 'AVIATION', 'RESTAURANT', 'LAUNDRY', 'SALON', 'GYM', 'ECOMMERCE', 'PHARMACY', 'HOSTEL', 'OPERATIONS', 'PLATFORM', 'SYSTEM'],
 };
 
 const menuGroups = [
@@ -300,6 +309,34 @@ const menuGroups = [
       { label: "HSE Safety", labelAr: "الصحة والسلامة", icon: ShieldCheck, path: "/app/construction/hse" },
       { label: "Saudization", labelAr: "التوظيف الهندسي", icon: Users, path: "/app/construction/saudization" },
       { label: "Equipment Schedule", labelAr: "جدول المعدات", icon: Truck, path: "/app/construction/equipment-schedule" },
+    ],
+  },
+  {
+    title: "DECORATION",
+    titleAr: "الديكور والإنشاءات",
+    items: [
+      { label: "Decoration Dashboard", labelAr: "لوحة الديكور",        icon: Layers,        path: "/app/decoration" },
+      { label: "Projects",             labelAr: "المشاريع",             icon: Building2,     path: "/app/decoration/projects" },
+      { label: "Structure & Rooms",    labelAr: "الهيكل والغرف",        icon: Network,       path: "/app/decoration/structure" },
+      { label: "Area Take-off",        labelAr: "حصر المساحات",         icon: Ruler,         path: "/app/decoration/takeoff" },
+      { label: "BOQ & Costing",        labelAr: "الجدول التقديري",      icon: ClipboardList, path: "/app/decoration/boq" },
+      { label: "Estimating & Tenders", labelAr: "التسعير والمناقصات",   icon: FileSignature, path: "/app/decoration/estimating" },
+      { label: "Contracts & Handover", labelAr: "العقود والتسليم",      icon: Handshake,     path: "/app/decoration/contracts" },
+      { label: "Site Execution",       labelAr: "تنفيذ الموقع",         icon: HardHat,       path: "/app/decoration/execution" },
+      { label: "Procurement",          labelAr: "المشتريات",            icon: ShoppingCart,  path: "/app/decoration/procurement" },
+      { label: "Stores & Inventory",   labelAr: "المخازن",              icon: Warehouse,     path: "/app/decoration/stores" },
+      { label: "Labour",               labelAr: "العمالة",              icon: Users,         path: "/app/decoration/labour" },
+      { label: "Payroll & WPS",        labelAr: "الرواتب",              icon: Banknote,      path: "/app/decoration/payroll" },
+      { label: "Subcontractors",       labelAr: "المقاولون الفرعيون",   icon: HardHat,       path: "/app/decoration/subcontracts" },
+      { label: "Billing & Invoices",   labelAr: "الفوترة والفواتير",    icon: Receipt,       path: "/app/decoration/invoices" },
+      { label: "Treasury",             labelAr: "الخزينة",              icon: Wallet,        path: "/app/decoration/treasury" },
+      { label: "Quality & HSE",        labelAr: "الجودة والسلامة",      icon: ShieldCheck,   path: "/app/decoration/quality" },
+      { label: "Equipment & Fleet",    labelAr: "المعدات",              icon: Truck,         path: "/app/decoration/equipment" },
+      { label: "Master Data",          labelAr: "البيانات الأساسية",    icon: Package,       path: "/app/decoration/masterdata" },
+      { label: "Approvals",            labelAr: "الاعتمادات",           icon: BadgeCheck,    path: "/app/decoration/approvals" },
+      { label: "Reports Hub",          labelAr: "مركز التقارير",        icon: ChartColumn,   path: "/app/decoration/reports" },
+      { label: "Client Portal",        labelAr: "بوابة العميل",         icon: Globe,         path: "/app/decoration/portal" },
+      { label: "Settings",             labelAr: "الإعدادات",            icon: Settings,      path: "/app/decoration/settings" },
     ],
   },
   {
@@ -524,7 +561,7 @@ const SidebarContent = memo(function SidebarContent({ collapsed, onNavigate }: {
 
   // Filter menu items by search query
   const filteredGroups = menuGroups
-    .filter(g => visibleGroups.includes(g.title) || g.items.some((it) => isItemEnabled(it.path)))
+    .filter(g => g.title === "DECORATION" || visibleGroups.includes(g.title) || g.items.some((it) => isItemEnabled(it.path)))
     .map((group) => ({ ...group, items: group.items.filter((item) => isItemEnabled(item.path)) }))
     .filter((group) => group.items.length > 0);
   const allItems = filteredGroups.flatMap(g => g.items.map(item => ({ ...item, group: rtl ? g.titleAr : g.title })));
