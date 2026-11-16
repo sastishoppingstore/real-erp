@@ -341,6 +341,7 @@ const ConstructionLayout = lazy(() => import("./pages/construction/ConstructionL
 const ConstructionDashboard = lazy(() => import("./pages/construction"));
 
 // [decoration] Decoration & Construction suite — additive, see INSTALL.md §3.1
+const DecorationGate       = lazy(() => import("./pages/decoration/DecorationGate"));
 const DecorationDashboard    = lazy(() => import("./pages/decoration"));
 const DecorationProjects     = lazy(() => import("./pages/decoration/Projects"));
 const DecorationProjectView  = lazy(() => import("./pages/decoration/ProjectDetail"));
@@ -597,29 +598,29 @@ export default function App() {
 
       {/* Accounting Routes */}
       {/* [decoration] Decoration & Construction suite — additive routes */}
-      <Route path="/app/decoration" element={<LayoutWrapper><DecorationDashboard /></LayoutWrapper>} />
-      <Route path="/app/decoration/projects" element={<LayoutWrapper><DecorationProjects /></LayoutWrapper>} />
-      <Route path="/app/decoration/projects/:id" element={<LayoutWrapper><DecorationProjectView /></LayoutWrapper>} />
-      <Route path="/app/decoration/structure" element={<LayoutWrapper><DecorationStructure /></LayoutWrapper>} />
-      <Route path="/app/decoration/takeoff" element={<LayoutWrapper><DecorationTakeoff /></LayoutWrapper>} />
-      <Route path="/app/decoration/boq" element={<LayoutWrapper><DecorationBoq /></LayoutWrapper>} />
-      <Route path="/app/decoration/procurement" element={<LayoutWrapper><DecorationProcurement /></LayoutWrapper>} />
-      <Route path="/app/decoration/labour" element={<LayoutWrapper><DecorationLabour /></LayoutWrapper>} />
-      <Route path="/app/decoration/subcontracts" element={<LayoutWrapper><DecorationSubcontracts /></LayoutWrapper>} />
-      <Route path="/app/decoration/estimating" element={<LayoutWrapper><DecorationEstimating /></LayoutWrapper>} />
-      <Route path="/app/decoration/contracts" element={<LayoutWrapper><DecorationContracts /></LayoutWrapper>} />
-      <Route path="/app/decoration/execution" element={<LayoutWrapper><DecorationExecution /></LayoutWrapper>} />
-      <Route path="/app/decoration/stores" element={<LayoutWrapper><DecorationStores /></LayoutWrapper>} />
-      <Route path="/app/decoration/payroll" element={<LayoutWrapper><DecorationPayroll /></LayoutWrapper>} />
-      <Route path="/app/decoration/treasury" element={<LayoutWrapper><DecorationTreasury /></LayoutWrapper>} />
-      <Route path="/app/decoration/invoices" element={<LayoutWrapper><DecorationInvoices /></LayoutWrapper>} />
-      <Route path="/app/decoration/quality" element={<LayoutWrapper><DecorationQuality /></LayoutWrapper>} />
-      <Route path="/app/decoration/equipment" element={<LayoutWrapper><DecorationEquipment /></LayoutWrapper>} />
-      <Route path="/app/decoration/masterdata" element={<LayoutWrapper><DecorationMasterData /></LayoutWrapper>} />
-      <Route path="/app/decoration/approvals" element={<LayoutWrapper><DecorationApprovals /></LayoutWrapper>} />
-      <Route path="/app/decoration/reports" element={<LayoutWrapper><DecorationReports /></LayoutWrapper>} />
-      <Route path="/app/decoration/portal" element={<LayoutWrapper><DecorationPortal /></LayoutWrapper>} />
-      <Route path="/app/decoration/settings" element={<LayoutWrapper><DecorationSettings /></LayoutWrapper>} />
+      <Route path="/app/decoration" element={<LayoutWrapper><DecorationGate><DecorationDashboard /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/projects" element={<LayoutWrapper><DecorationGate><DecorationProjects /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/projects/:id" element={<LayoutWrapper><DecorationGate><DecorationProjectView /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/structure" element={<LayoutWrapper><DecorationGate><DecorationStructure /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/takeoff" element={<LayoutWrapper><DecorationGate><DecorationTakeoff /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/boq" element={<LayoutWrapper><DecorationGate><DecorationBoq /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/procurement" element={<LayoutWrapper><DecorationGate><DecorationProcurement /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/labour" element={<LayoutWrapper><DecorationGate><DecorationLabour /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/subcontracts" element={<LayoutWrapper><DecorationGate><DecorationSubcontracts /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/estimating" element={<LayoutWrapper><DecorationGate><DecorationEstimating /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/contracts" element={<LayoutWrapper><DecorationGate><DecorationContracts /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/execution" element={<LayoutWrapper><DecorationGate><DecorationExecution /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/stores" element={<LayoutWrapper><DecorationGate><DecorationStores /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/payroll" element={<LayoutWrapper><DecorationGate><DecorationPayroll /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/treasury" element={<LayoutWrapper><DecorationGate><DecorationTreasury /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/invoices" element={<LayoutWrapper><DecorationGate><DecorationInvoices /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/quality" element={<LayoutWrapper><DecorationGate><DecorationQuality /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/equipment" element={<LayoutWrapper><DecorationGate><DecorationEquipment /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/masterdata" element={<LayoutWrapper><DecorationGate><DecorationMasterData /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/approvals" element={<LayoutWrapper><DecorationGate><DecorationApprovals /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/reports" element={<LayoutWrapper><DecorationGate><DecorationReports /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/portal" element={<LayoutWrapper><DecorationGate><DecorationPortal /></DecorationGate></LayoutWrapper>} />
+      <Route path="/app/decoration/settings" element={<LayoutWrapper><DecorationGate><DecorationSettings /></DecorationGate></LayoutWrapper>} />
       <Route path="/app/accounting" element={<LayoutWrapper><AccountingPage /></LayoutWrapper>} />
       <Route path="/app/accounting/coa" element={<LayoutWrapper><ChartOfAccountsPage /></LayoutWrapper>} />
       <Route path="/app/accounting/journal-entries" element={<LayoutWrapper><JournalEntriesPage /></LayoutWrapper>} />
